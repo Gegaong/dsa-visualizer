@@ -4,6 +4,7 @@ import './App.css'
 type GraphNode = {
   id: string
   label: string
+  value: number
   x: number
   y: number
 }
@@ -25,12 +26,14 @@ function App() {
       const nextIndex = prev.length + 1
       const col = (nextIndex - 1) % 6
       const row = Math.floor((nextIndex - 1) / 6)
+      const letter = String.fromCharCode(65 + ((nextIndex - 1) % 26))
 
       return [
         ...prev,
         {
           id: `n${nextIndex}`,
-          label: `N${nextIndex}`,
+          label: letter,
+          value: nextIndex,
           x: 24 + col * 110,
           y: 24 + row * 90,
         },
@@ -80,10 +83,13 @@ function App() {
             {nodes.map((node) => (
               <div
                 key={node.id}
-                className="node"
+                className="node-wrap"
                 style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
               >
-                {node.label}
+                <div className="node">
+                  <span className="node-value">{node.value}</span>
+                </div>
+                <span className="node-label">{node.label}</span>
               </div>
             ))}
           </div>

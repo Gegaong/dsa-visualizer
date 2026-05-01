@@ -8,12 +8,21 @@ An interactive web-based sandbox for Data Structures and Algorithms. Features a 
 - **Build Tool:** Vite
 
 ## Project Roadmap
-- [x] Project Setup & Base Architecture
-- [ ] Interactive Sandbox (Node Creation & Drag-and-Drop)
-- [ ] Connectivity Logic (Edges & Weights)
-- [ ] Algorithm Integration (BFS, DFS, Dijkstra)
-- [ ] Animation & State Engine (Step-by-step playback)
-- [ ] Final Testing & Documentation
+- [x] Project setup + tooling
+- [x] Base UI layout (top bar, canvas, sidebar)
+- [x] Node creation + basic canvas rendering
+- [ ] Graph canvas environment (drag, connect edges, edit nodes, preset templates)
+- [ ] Graph algorithms (BFS, DFS, Dijkstra, ...)
+- [ ] Weighted graph canvas environment (weights, edit edges, preset templates)
+- [ ] Weighted graph algorithms (Dijkstra, other weighted, ...)
+- [ ] Grid canvas environment (cells, walls, start/end, preset templates)
+- [ ] Grid algorithms (BFS, DFS, A*, ...)
+- [ ] Maze canvas environment (maze generation + edit, preset templates)
+- [ ] Maze algorithms (BFS, DFS, A*, ...)
+- [ ] Animation polish (colors, visited/path states)
+- [ ] Final testing + documentation
+
+I'll manage the actual details of this as I go on with the project so they'll get changed around a bit, the exact fitting algorithms for each dataset, exact steps I'll need, etc.
 
 ---
 **Author:** Gega Ormotsadze
