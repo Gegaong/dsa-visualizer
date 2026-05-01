@@ -1,6 +1,6 @@
 # Interactive DSA Visualizer
 
-An interactive web-based sandbox for Data Structures and Algorithms. Features a drag-and-drop canvas to build custom graphs and step-by-step animations for visualizing algorithms like BFS, DFS, and Dijkstra, etc.
+An interactive web-based sandbox for Data Structures and Algorithms. Features a drag-and-drop canvas to build custom graphs and step-by-step animations for visualizing algorithms like BFS, DFS, and weighted algorithms such as Dijkstra.
 
 ## Tech Stack
 - **Framework:** React
@@ -12,13 +12,13 @@ An interactive web-based sandbox for Data Structures and Algorithms. Features a 
 - [x] Base UI layout (top bar, canvas, sidebar)
 - [x] Node creation + basic canvas rendering
 - [ ] Graph canvas environment (drag, connect edges, edit nodes, preset templates)
-- [ ] Graph algorithms (BFS, DFS, Dijkstra, ...)
+- [ ] Graph algorithms (BFS, DFS, ...)
 - [ ] Weighted graph canvas environment (weights, edit edges, preset templates)
-- [ ] Weighted graph algorithms (Dijkstra, other weighted, ...)
+- [ ] Weighted graph algorithms (Dijkstra, Greedy Search, A*,  ...)
 - [ ] Grid canvas environment (cells, walls, start/end, preset templates)
-- [ ] Grid algorithms (BFS, DFS, A*, ...)
+- [ ] Grid algorithms (BFS, DFS, Greedy Search, A*, ...)
 - [ ] Maze canvas environment (maze generation + edit, preset templates)
-- [ ] Maze algorithms (BFS, DFS, A*, ...)
+- [ ] Maze algorithms (BFS, DFS, Greedy Search, A*, ...)
 - [ ] Animation polish (colors, visited/path states)
 - [ ] Final testing + documentation
 

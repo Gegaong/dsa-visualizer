@@ -12,8 +12,6 @@ type GraphNode = {
 type GoalType =
   | 'target-node'
   | 'target-value'
-  | 'over-value'
-  | 'under-value'
   | 'max-value'
   | 'min-value'
 
@@ -105,9 +103,6 @@ function App() {
               <button className="btn btn-pill" type="button">
                 DFS
               </button>
-              <button className="btn btn-pill" type="button">
-                Dijkstra
-              </button>
             </div>
           </div>
 
@@ -125,8 +120,6 @@ function App() {
               >
                 <option value="target-node">Target node</option>
                 <option value="target-value">Target value</option>
-                <option value="over-value">Over value</option>
-                <option value="under-value">Under value</option>
                 <option value="max-value">Find max value</option>
                 <option value="min-value">Find min value</option>
               </select>
@@ -137,9 +130,7 @@ function App() {
                 <input type="text" placeholder="F" />
               </label>
             )}
-            {(goalType === 'target-value' ||
-              goalType === 'over-value' ||
-              goalType === 'under-value') && (
+            {goalType === 'target-value' && (
               <label className="field">
                 <span>Goal value</span>
                 <input type="number" placeholder="10" />
