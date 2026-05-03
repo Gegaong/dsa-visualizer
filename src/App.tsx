@@ -31,6 +31,8 @@ type GraphEdge = {
 const NODE_SIZE = 48
 const NODE_RADIUS = NODE_SIZE / 2
 
+const toDegrees = (radians: number) => (radians * 180) / Math.PI
+
 // Convert array index (0, 1, 2, ...) to Alphabetical style column labels (A, B, C, ..., Z, AA, AB, ...)
 const indexToLabel = (index: number) => {
   let label = ''
@@ -89,6 +91,85 @@ const isOverlapping = (x: number, y: number, list: GraphNode[]) => {
   })
 }
 
+const DirectionIcon = ({ direction }: { direction: GraphEdge['direction'] }) => {
+  // Node-reference style:
+  // - forward: dot then arrow away (outbound)
+  // - backward: arrow toward dot (inbound)
+  // - both: arrows both ways with dot in center (bidirectional)
+  return (
+    <svg className="direction-icon" viewBox="0 0 24 24" aria-hidden="true">
+      {direction === 'forward' && (
+        <>
+          <circle cx="7" cy="12" r="2.7" />
+          <path
+            d="M10 12h8"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M16 9l3 3-3 3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
+      {direction === 'backward' && (
+        <>
+          <path
+            d="M14 12H6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M8 9l-3 3 3 3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="17" cy="12" r="2.7" />
+        </>
+      )}
+      {direction === 'both' && (
+        <>
+          <path
+            d="M6 12h12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M8 9l-3 3 3 3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M16 9l3 3-3 3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="12" cy="12" r="2.9" />
+        </>
+      )}
+    </svg>
+  )
+}
+
 function App() {
   const [nodes, setNodes] = useState<GraphNode[]>([])
   const [goalType, setGoalType] = useState<GoalType>('target-node')
@@ -101,6 +182,7 @@ function App() {
   const [edges, setEdges] = useState<GraphEdge[]>([])
   const [isConnectMode, setIsConnectMode] = useState(false)
   const [connectionSource, setConnectionSource] = useState<string | null>(null)
+  const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
 
@@ -155,6 +237,7 @@ function App() {
     clearSelection()
     setIsConnectMode(true)
     setConnectionSource(null)
+    setNewEdgeDirection('both')
     closeContextMenu()
   }
 
@@ -312,7 +395,7 @@ function App() {
   }
 
   // Create an edge between two nodes with validation to prevent duplicates and self-loops.
-  const createEdge = (fromId: string, toId: string) => {
+  const createEdge = (fromId: string, toId: string, direction: GraphEdge['direction']) => {
     // Prevent self-loops (a node cannot connect to itself)
     if (fromId === toId) {
       return
@@ -334,7 +417,7 @@ function App() {
       id: `edge-${nextId.current}`,
       fromNodeId: fromId,
       toNodeId: toId,
-      direction: 'both',
+      direction,
     }
 
     nextId.current += 1
@@ -368,7 +451,7 @@ function App() {
       setConnectionSource(nodeId)
     } else {
       // Second click: create edge from source to target, then reset
-      createEdge(connectionSource, nodeId)
+      createEdge(connectionSource, nodeId, newEdgeDirection)
       setConnectionSource(null)
     }
   }
@@ -410,6 +493,10 @@ function App() {
     enterConnectMode()
   }
 
+  const handleNewEdgeDirectionChange = (direction: GraphEdge['direction']) => {
+    setNewEdgeDirection(direction)
+  }
+
   const contextNode = contextMenu
     ? nodes.find((node) => node.id === contextMenu.nodeId) ?? null
     : null
@@ -440,18 +527,9 @@ function App() {
       <div className="workspace">
         <section className="canvas-panel">
           <div className="canvas-header">
-            <div>
+            <div className="canvas-copy">
               <h2>Graph Canvas</h2>
               <p>Place nodes and edges, then pick an algorithm on the right.</p>
-              <p className="canvas-hint">
-                {isConnectMode
-                  ? connectionSource
-                    ? 'Click target node to connect, or press Cancel to abort.'
-                    : 'Click source node to start connecting.'
-                  : isDeleteMode
-                    ? 'Select nodes below to delete, then press Delete selected.'
-                    : 'Click on the canvas to place nodes.'}
-              </p>
             </div>
             <div className="canvas-actions">
               <button
@@ -461,6 +539,38 @@ function App() {
               >
                 {isConnectMode ? 'Cancel connect' : 'Connect nodes'}
               </button>
+              <div className="edge-direction-picker" aria-label="New edge direction">
+                <button
+                  className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'forward' ? 'btn-active' : ''}`}
+                  type="button"
+                  disabled={!isConnectMode}
+                  aria-pressed={newEdgeDirection === 'forward'}
+                  title="Create outbound edge (from selected node)"
+                  onClick={() => handleNewEdgeDirectionChange('forward')}
+                >
+                  <DirectionIcon direction="forward" />
+                </button>
+                <button
+                  className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'both' ? 'btn-active' : ''}`}
+                  type="button"
+                  disabled={!isConnectMode}
+                  aria-pressed={newEdgeDirection === 'both'}
+                  title="Create bidirectional edge"
+                  onClick={() => handleNewEdgeDirectionChange('both')}
+                >
+                  <DirectionIcon direction="both" />
+                </button>
+                <button
+                  className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'backward' ? 'btn-active' : ''}`}
+                  type="button"
+                  disabled={!isConnectMode}
+                  aria-pressed={newEdgeDirection === 'backward'}
+                  title="Create inbound edge (toward selected node)"
+                  onClick={() => handleNewEdgeDirectionChange('backward')}
+                >
+                  <DirectionIcon direction="backward" />
+                </button>
+              </div>
               <button
                 className={`btn btn-pill ${isDeleteMode ? 'btn-active' : ''}`}
                 type="button"
@@ -479,7 +589,9 @@ function App() {
           </div>
 
           <div
-            className={`canvas ${isConnectMode || isDeleteMode ? 'is-connect' : 'is-place'}`}
+            className={`canvas ${
+              isConnectMode ? 'is-connect' : isDeleteMode ? 'is-select' : 'is-place'
+            }`}
             onClick={(e) => {
               if (!isConnectMode) {
                 handleCanvasClick(e)
@@ -491,13 +603,13 @@ function App() {
               <defs>
                 <marker
                   id="arrowhead"
-                  markerWidth="10"
-                  markerHeight="10"
-                  refX="9"
-                  refY="3"
+                  markerWidth="7"
+                  markerHeight="7"
+                  refX="6.2"
+                  refY="2.1"
                   orient="auto"
                 >
-                  <polygon points="0 0, 10 3, 0 6" fill="#4a7c59" />
+                  <polygon points="0 0, 7 2.1, 0 4.2" fill="#4a7c59" />
                 </marker>
               </defs>
               {edges.map((edge) => {
@@ -575,37 +687,33 @@ function App() {
               const midX = (x1 + x2) / 2
               const midY = (y1 + y2) / 2
 
-              const directionText = edge.direction === 'both' ? '↔' : edge.direction === 'forward' ? '→' : '←'
+              const baseAngle = toDegrees(Math.atan2(y2 - y1, x2 - x1))
+              const angle =
+                edge.direction === 'backward'
+                  ? baseAngle + 180
+                  : baseAngle
 
               return (
-                <div
+                <button
                   key={`toggle-${edge.id}`}
+                  className="edge-toggle"
                   onClick={(e) => {
                     e.stopPropagation()
                     toggleEdgeDirection(edge.id)
                   }}
+                  type="button"
+                  title="Toggle edge direction"
+                  aria-label="Toggle edge direction"
                   style={{
-                    position: 'absolute',
                     left: midX,
                     top: midY,
-                    transform: 'translate(-50%, -50%)',
-                    width: '24px',
-                    height: '24px',
-                    backgroundColor: '#f5f5f0',
-                    border: '2px solid #4a7c59',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    color: '#4a7c59',
-                    userSelect: 'none',
+                    ['--edge-angle' as never]: `${angle}deg`,
                   }}
                 >
-                  {directionText}
-                </div>
+                  <span className="edge-toggle-icon">
+                    <DirectionIcon direction={edge.direction === 'both' ? 'both' : 'forward'} />
+                  </span>
+                </button>
               )
             })}
 
@@ -648,7 +756,7 @@ function App() {
                   onContextMenu={
                     isConnectMode || isDeleteMode ? undefined : (event) => handleNodeContextMenu(event, node)
                   }
-                  style={{ cursor: isConnectMode || isDeleteMode ? 'crosshair' : 'text' }}
+                  style={{ cursor: undefined }}
                 >
                   {editingNodeId === node.id ? (
                     <input
@@ -663,7 +771,6 @@ function App() {
                   ) : (
                     <span className={valueClass}>{display.text}</span>
                   )}
-                  {isDeleteMode && <span className="node-select-indicator" />}
                 </div>
                 <span className="node-label">{node.label}</span>
                 {showHoverValue && (
