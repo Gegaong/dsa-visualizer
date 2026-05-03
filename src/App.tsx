@@ -221,7 +221,9 @@ function App() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [isDeleteMode, setIsDeleteMode] = useState(false)
+  const [isDeleteEdgeMode, setIsDeleteEdgeMode] = useState(false)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
+  const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([])
   const [edges, setEdges] = useState<GraphEdge[]>([])
   const [isConnectMode, setIsConnectMode] = useState(false)
   const [connectionSource, setConnectionSource] = useState<string | null>(null)
@@ -239,6 +241,16 @@ function App() {
     setEdges((prev) =>
       prev.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId),
     )
+    setSelectedEdgeIds((prev) =>
+      prev.filter(
+        (edgeId) =>
+          !edges.some(
+            (edge) =>
+              edge.id === edgeId &&
+              (edge.fromNodeId === nodeId || edge.toNodeId === nodeId),
+          ),
+      ),
+    )
   }
 
   // Delete multiple nodes at once (used in delete mode) and clean up their edges.
@@ -252,7 +264,32 @@ function App() {
     setEdges((prev) =>
       prev.filter((edge) => !idSet.has(edge.fromNodeId) && !idSet.has(edge.toNodeId)),
     )
+    setSelectedEdgeIds((prev) =>
+      prev.filter(
+        (edgeId) =>
+          !edges.some(
+            (edge) =>
+              edge.id === edgeId &&
+              (idSet.has(edge.fromNodeId) || idSet.has(edge.toNodeId)),
+          ),
+      ),
+    )
   }
+
+  const deleteSelectedEdges = (edgeIds: string[]) => {
+    if (edgeIds.length === 0) {
+      return
+    }
+
+    const idSet = new Set(edgeIds)
+    setEdges((prev) => prev.filter((edge) => !idSet.has(edge.id)))
+  }
+
+  // NOTE: Edge deletion workflow
+  // - `isDeleteEdgeMode` toggles a special interaction mode where edges are selectable for deletion.
+  // - We keep the visible edge line and its arrow markers unchanged to avoid resizing markers
+  //   (marker sizes are tied to the visual line width in SVG). Instead, selection is
+  //   indicated with an overlaid badge and a soft halo line so arrowheads never rescale.
 
   // Toggle a node's selected state for delete mode (add or remove from selection list).
   const toggleNodeSelection = (nodeId: string) => {
@@ -265,19 +302,43 @@ function App() {
     setSelectedNodeIds([])
   }
 
+  const toggleEdgeSelection = (edgeId: string) => {
+    setSelectedEdgeIds((prev) =>
+      prev.includes(edgeId) ? prev.filter((id) => id !== edgeId) : [...prev, edgeId],
+    )
+  }
+
+  const clearEdgeSelection = () => {
+    setSelectedEdgeIds([])
+  }
+
   // Mode management: Connect and Delete are mutually exclusive.
   // When entering one mode, we automatically exit the other and clean up.
   const enterDeleteMode = () => {
     setIsConnectMode(false) // Exit connect mode first
     setConnectionSource(null)
+    setIsDeleteEdgeMode(false)
+    clearEdgeSelection()
     setIsDeleteMode(true)
     clearSelection()
     closeContextMenu()
   }
 
+  const enterDeleteEdgeMode = () => {
+    setIsConnectMode(false)
+    setConnectionSource(null)
+    setIsDeleteMode(false)
+    clearSelection()
+    setIsDeleteEdgeMode(true)
+    clearEdgeSelection()
+    closeContextMenu()
+  }
+
   const enterConnectMode = () => {
     setIsDeleteMode(false) // Exit delete mode first
+    setIsDeleteEdgeMode(false)
     clearSelection()
+    clearEdgeSelection()
     setIsConnectMode(true)
     setConnectionSource(null)
     setNewEdgeDirection('both')
@@ -289,12 +350,19 @@ function App() {
     clearSelection()
   }
 
+  const exitDeleteEdgeMode = () => {
+    setIsDeleteEdgeMode(false)
+    clearEdgeSelection()
+  }
+
   // Enter inline-editing mode for a node's value. Cancel any active modes and prep the input field.
   const beginEditingNode = (node: GraphNode) => {
     setIsDeleteMode(false)
+    setIsDeleteEdgeMode(false)
     setIsConnectMode(false)
     setConnectionSource(null)
     clearSelection()
+    clearEdgeSelection()
     setEditingNodeId(node.id)
     setDraftValue(node.value === null ? '' : String(node.value))
   }
@@ -304,7 +372,7 @@ function App() {
       closeContextMenu()
     }
 
-    if (isDeleteMode || isConnectMode) {
+    if (isDeleteMode || isDeleteEdgeMode || isConnectMode) {
       return
     }
 
@@ -430,7 +498,9 @@ function App() {
     setShowClearConfirm(false)
     closeContextMenu()
     setIsDeleteMode(false)
+    setIsDeleteEdgeMode(false)
     clearSelection()
+    clearEdgeSelection()
   }
 
   const cancelClearCanvas = () => {
@@ -524,6 +594,22 @@ function App() {
     enterDeleteMode()
   }
 
+  const handleDeleteEdgeModeToggle = () => {
+    if (isDeleteEdgeMode) {
+      if (selectedEdgeIds.length > 0) {
+        deleteSelectedEdges(selectedEdgeIds)
+        setIsDeleteEdgeMode(false)
+        clearEdgeSelection()
+        return
+      }
+
+      exitDeleteEdgeMode()
+      return
+    }
+
+    enterDeleteEdgeMode()
+  }
+
   // Connect button behavior: toggle connect mode on/off.
   const handleConnectModeToggle = () => {
     if (isConnectMode) {
@@ -576,7 +662,7 @@ function App() {
             </div>
             <div className="canvas-actions">
               <button
-                className={`btn btn-pill ${isConnectMode ? 'btn-active' : ''}`}
+                className={`btn btn-pill connect-toggle-btn ${isConnectMode ? 'btn-active' : ''}`}
                 type="button"
                 onClick={handleConnectModeToggle}
               >
@@ -614,17 +700,30 @@ function App() {
                   <DirectionIcon direction="backward" />
                 </button>
               </div>
-              <button
-                className={`btn btn-pill ${isDeleteMode ? 'btn-active' : ''}`}
-                type="button"
-                onClick={handleDeleteModeToggle}
-              >
-                {isDeleteMode
-                  ? selectedNodeIds.length > 0
-                    ? 'Delete selected'
-                    : 'Cancel delete'
-                  : 'Delete nodes'}
-              </button>
+              <div className="delete-stack" role="group" aria-label="Delete controls">
+                <button
+                  className={`btn delete-stack-btn ${isDeleteMode ? 'btn-active' : ''}`}
+                  type="button"
+                  onClick={handleDeleteModeToggle}
+                >
+                  {isDeleteMode
+                    ? selectedNodeIds.length > 0
+                      ? 'Delete selected nodes'
+                      : 'Cancel node delete'
+                    : 'Delete nodes'}
+                </button>
+                <button
+                  className={`btn delete-stack-btn ${isDeleteEdgeMode ? 'btn-active' : ''}`}
+                  type="button"
+                  onClick={handleDeleteEdgeModeToggle}
+                >
+                  {isDeleteEdgeMode
+                    ? selectedEdgeIds.length > 0
+                      ? 'Delete selected edges'
+                      : 'Cancel edge delete'
+                    : 'Delete edges'}
+                </button>
+              </div>
               <button className="btn btn-clear" type="button" onClick={handleClearCanvas}>
                 Clear canvas
               </button>
@@ -633,7 +732,11 @@ function App() {
 
           <div
             className={`canvas ${
-              isConnectMode ? 'is-connect' : isDeleteMode ? 'is-select' : 'is-place'
+              isConnectMode
+                ? 'is-connect'
+                : isDeleteMode || isDeleteEdgeMode
+                  ? 'is-select'
+                  : 'is-place'
             }`}
             onClick={(e) => {
               if (!isConnectMode) {
@@ -642,7 +745,7 @@ function App() {
             }}
             onContextMenu={handleCanvasContextMenu}
           >
-            <svg className="edges-layer" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+            <svg className="edges-layer" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: isDeleteEdgeMode ? 'auto' : 'none' }}>
               <defs>
                 <marker
                   id="arrowhead"
@@ -686,6 +789,20 @@ function App() {
                 if (!geometry) return null
 
                 const { startX, startY, endX, endY } = geometry
+                const isSelected = selectedEdgeIds.includes(edge.id)
+                const strokeColor = '#4a7c59'
+                const strokeWidth = 2
+                // Click handler for the invisible hit-line placed over the visual line.
+                // This lets users reliably pick short/stationary edges without changing
+                // the visual appearance of the edge itself.
+                const handleEdgePick = (event: React.MouseEvent<SVGLineElement>) => {
+                  if (!isDeleteEdgeMode) {
+                    return
+                  }
+
+                  event.stopPropagation()
+                  toggleEdgeSelection(edge.id)
+                }
                 const markerId =
                   geometry.edgeLength < TINY_EDGE_MARKER_EDGE_LENGTH
                     ? 'arrowhead-tiny'
@@ -696,37 +813,118 @@ function App() {
                 return (
                   <g key={edge.id}>
                     {(edge.direction === 'both' || edge.direction === 'forward') && (
-                      <line
-                        x1={startX}
-                        y1={startY}
-                        x2={endX}
-                        y2={endY}
-                        stroke="#4a7c59"
-                        strokeWidth="2"
-                        markerEnd={`url(#${markerId})`}
-                      />
+                      <>
+                        {isDeleteEdgeMode && isSelected && (
+                          <line
+                            x1={startX}
+                            y1={startY}
+                            x2={endX}
+                            y2={endY}
+                            stroke="#2a4f9c"
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            opacity="0.22"
+                          />
+                        )}
+                        <line
+                          x1={startX}
+                          y1={startY}
+                          x2={endX}
+                          y2={endY}
+                          stroke={strokeColor}
+                          strokeWidth={strokeWidth}
+                          markerEnd={`url(#${markerId})`}
+                        />
+                        {isDeleteEdgeMode && (
+                          // Invisible but pointer-active strokeline to expand hit area for selection.
+                          // Keeps the visible line untouched while improving UX for small/close edges.
+                          <line
+                            x1={startX}
+                            y1={startY}
+                            x2={endX}
+                            y2={endY}
+                            stroke="transparent"
+                            strokeWidth="12"
+                            pointerEvents="stroke"
+                            onClick={handleEdgePick}
+                          />
+                        )}
+                      </>
                     )}
                     {edge.direction === 'both' && (
-                      <line
-                        x1={endX}
-                        y1={endY}
-                        x2={startX}
-                        y2={startY}
-                        stroke="#4a7c59"
-                        strokeWidth="2"
-                        markerEnd={`url(#${markerId})`}
-                      />
+                      <>
+                        {isDeleteEdgeMode && isSelected && (
+                          <line
+                            x1={endX}
+                            y1={endY}
+                            x2={startX}
+                            y2={startY}
+                            stroke="#2a4f9c"
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            opacity="0.22"
+                          />
+                        )}
+                        <line
+                          x1={endX}
+                          y1={endY}
+                          x2={startX}
+                          y2={startY}
+                          stroke={strokeColor}
+                          strokeWidth={strokeWidth}
+                          markerEnd={`url(#${markerId})`}
+                        />
+                        {isDeleteEdgeMode && (
+                          // Invisible hit area for the reverse-direction visual line.
+                          <line
+                            x1={endX}
+                            y1={endY}
+                            x2={startX}
+                            y2={startY}
+                            stroke="transparent"
+                            strokeWidth="12"
+                            pointerEvents="stroke"
+                            onClick={handleEdgePick}
+                          />
+                        )}
+                      </>
                     )}
                     {edge.direction === 'backward' && (
-                      <line
-                        x1={endX}
-                        y1={endY}
-                        x2={startX}
-                        y2={startY}
-                        stroke="#4a7c59"
-                        strokeWidth="2"
-                        markerEnd={`url(#${markerId})`}
-                      />
+                      <>
+                        {isDeleteEdgeMode && isSelected && (
+                          <line
+                            x1={endX}
+                            y1={endY}
+                            x2={startX}
+                            y2={startY}
+                            stroke="#2a4f9c"
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            opacity="0.22"
+                          />
+                        )}
+                        <line
+                          x1={endX}
+                          y1={endY}
+                          x2={startX}
+                          y2={startY}
+                          stroke={strokeColor}
+                          strokeWidth={strokeWidth}
+                          markerEnd={`url(#${markerId})`}
+                        />
+                        {isDeleteEdgeMode && (
+                          <line
+                            x1={endX}
+                            y1={endY}
+                            x2={startX}
+                            y2={startY}
+                            stroke="transparent"
+                            strokeWidth="12"
+                            pointerEvents="stroke"
+                            onClick={handleEdgePick}
+                          />
+                        )}
+                      </>
                     )}
                   </g>
                 )
@@ -740,8 +938,13 @@ function App() {
               if (!fromNode || !toNode) return null
 
               const geometry = getEdgeGeometry(fromNode, toNode)
+              const isSelected = selectedEdgeIds.includes(edge.id)
 
-              if (!geometry || geometry.edgeLength < MIN_TOGGLE_EDGE_LENGTH) {
+              // Show the midpoint control when the edge is long enough for normal toggles.
+              // However, when in delete-edge mode we want a midpoint badge even for short
+              // edges so they can be selected — that's why the conditional permits showing
+              // the control when `isDeleteEdgeMode` is active regardless of length.
+              if (!geometry || (!isDeleteEdgeMode && geometry.edgeLength < MIN_TOGGLE_EDGE_LENGTH)) {
                 return null
               }
 
@@ -758,14 +961,32 @@ function App() {
               return (
                 <button
                   key={`toggle-${edge.id}`}
-                  className="edge-toggle"
+                  className={`edge-toggle ${isSelected ? 'is-selected' : ''} ${isDeleteEdgeMode ? 'is-delete-edge-mode' : ''}`}
                   onClick={(e) => {
                     e.stopPropagation()
+
+                    if (isDeleteEdgeMode) {
+                      toggleEdgeSelection(edge.id)
+                      return
+                    }
+
                     toggleEdgeDirection(edge.id)
                   }}
                   type="button"
-                  title="Toggle edge direction"
-                  aria-label="Toggle edge direction"
+                  title={
+                    isDeleteEdgeMode
+                      ? isSelected
+                        ? 'Remove edge from delete selection'
+                        : 'Select edge for deletion'
+                      : 'Toggle edge direction'
+                  }
+                  aria-label={
+                    isDeleteEdgeMode
+                      ? isSelected
+                        ? 'Remove edge from delete selection'
+                        : 'Select edge for deletion'
+                      : 'Toggle edge direction'
+                  }
                   style={{
                     left: midX,
                     top: midY,
@@ -773,7 +994,7 @@ function App() {
                   }}
                 >
                   <span className="edge-toggle-icon">
-                    <DirectionIcon direction={edge.direction === 'both' ? 'both' : 'forward'} />
+                    {isDeleteEdgeMode ? <span className="edge-delete-badge">×</span> : <DirectionIcon direction={edge.direction === 'both' ? 'both' : 'forward'} />}
                   </span>
                 </button>
               )
@@ -813,10 +1034,17 @@ function App() {
                       return
                     }
 
+                    if (isDeleteEdgeMode) {
+                      event.stopPropagation()
+                      return
+                    }
+
                     startEditingNode(event, node)
                   }}
                   onContextMenu={
-                    isConnectMode || isDeleteMode ? undefined : (event) => handleNodeContextMenu(event, node)
+                    isConnectMode || isDeleteMode || isDeleteEdgeMode
+                      ? undefined
+                      : (event) => handleNodeContextMenu(event, node)
                   }
                   style={{ cursor: undefined }}
                 >
