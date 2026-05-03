@@ -22,7 +22,7 @@ An interactive web-based sandbox for Data Structures and Algorithms. Features a 
 - [ ] Animation polish (colors, visited/path states)
 - [ ] Final testing + documentation
 
-I'll manage the actual details of this as I go on with the project so they'll get changed around a bit, the exact fitting algorithms for each dataset, exact steps I'll need, etc.
+I'll manage the actual details of this as I go on with the project so they'll get changed around a bit, the exact suitable algorithms for each dataset, exact steps I'll need, etc.
 
 ---
 **Author:** Gega Ormotsadze
