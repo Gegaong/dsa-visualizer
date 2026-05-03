@@ -30,6 +30,11 @@ type GraphEdge = {
 
 const NODE_SIZE = 48
 const NODE_RADIUS = NODE_SIZE / 2
+const NODE_GAP = 18 // extra spacing between nodes (in px)
+const MIN_EDGE_STUB = 8
+const MIN_TOGGLE_EDGE_LENGTH = 36
+const TINY_EDGE_MARKER_EDGE_LENGTH = 16
+const SHORT_EDGE_MARKER_EDGE_LENGTH = 26
 
 const toDegrees = (radians: number) => (radians * 180) / Math.PI
 
@@ -78,7 +83,7 @@ const formatNodeValue = (value: number | null) => {
 const isOverlapping = (x: number, y: number, list: GraphNode[]) => {
   const newCenterX = x + NODE_RADIUS
   const newCenterY = y + NODE_RADIUS
-  const minDistance = NODE_SIZE // Minimum distance between centers (both radii)
+  const minDistance = NODE_SIZE + NODE_GAP // Minimum distance between centers (both radii + gap)
 
   return list.some((node) => {
     const existingCenterX = node.x + NODE_RADIUS
@@ -168,6 +173,44 @@ const DirectionIcon = ({ direction }: { direction: GraphEdge['direction'] }) => 
       )}
     </svg>
   )
+}
+
+const getEdgeGeometry = (fromNode: GraphNode, toNode: GraphNode) => {
+  const x1 = fromNode.x + NODE_RADIUS
+  const y1 = fromNode.y + NODE_RADIUS
+  const x2 = toNode.x + NODE_RADIUS
+  const y2 = toNode.y + NODE_RADIUS
+
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const dist = Math.hypot(dx, dy)
+
+  if (dist < 0.001) {
+    return null
+  }
+
+  const unitX = dx / dist
+  const unitY = dy / dist
+  // Clamp inset for short edges so start/end never cross and arrows still render.
+  const inset = Math.min(NODE_RADIUS, Math.max(0, dist / 2 - MIN_EDGE_STUB / 2))
+
+  const startX = x1 + unitX * inset
+  const startY = y1 + unitY * inset
+  const endX = x2 - unitX * inset
+  const endY = y2 - unitY * inset
+  const edgeLength = dist - 2 * inset
+
+  return {
+    x1,
+    y1,
+    x2,
+    y2,
+    startX,
+    startY,
+    endX,
+    endY,
+    edgeLength,
+  }
 }
 
 function App() {
@@ -611,6 +654,26 @@ function App() {
                 >
                   <polygon points="0 0, 7 2.1, 0 4.2" fill="#4a7c59" />
                 </marker>
+                <marker
+                  id="arrowhead-small"
+                  markerWidth="5"
+                  markerHeight="5"
+                  refX="4.4"
+                  refY="1.5"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 5 1.5, 0 3" fill="#4a7c59" />
+                </marker>
+                <marker
+                  id="arrowhead-tiny"
+                  markerWidth="3.8"
+                  markerHeight="3.8"
+                  refX="3.35"
+                  refY="1.14"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 3.8 1.14, 0 2.28" fill="#4a7c59" />
+                </marker>
               </defs>
               {edges.map((edge) => {
                 const fromNode = nodes.find((n) => n.id === edge.fromNodeId)
@@ -618,20 +681,17 @@ function App() {
 
                 if (!fromNode || !toNode) return null
 
-                const x1 = fromNode.x + NODE_RADIUS
-                const y1 = fromNode.y + NODE_RADIUS
-                const x2 = toNode.x + NODE_RADIUS
-                const y2 = toNode.y + NODE_RADIUS
+                const geometry = getEdgeGeometry(fromNode, toNode)
 
-                const dx = x2 - x1
-                const dy = y2 - y1
-                const dist = Math.sqrt(dx * dx + dy * dy)
+                if (!geometry) return null
 
-                const ratio = NODE_RADIUS / dist
-                const startX = x1 + dx * ratio
-                const startY = y1 + dy * ratio
-                const endX = x2 - dx * ratio
-                const endY = y2 - dy * ratio
+                const { startX, startY, endX, endY } = geometry
+                const markerId =
+                  geometry.edgeLength < TINY_EDGE_MARKER_EDGE_LENGTH
+                    ? 'arrowhead-tiny'
+                    : geometry.edgeLength < SHORT_EDGE_MARKER_EDGE_LENGTH
+                      ? 'arrowhead-small'
+                      : 'arrowhead'
 
                 return (
                   <g key={edge.id}>
@@ -643,7 +703,7 @@ function App() {
                         y2={endY}
                         stroke="#4a7c59"
                         strokeWidth="2"
-                        markerEnd="url(#arrowhead)"
+                        markerEnd={`url(#${markerId})`}
                       />
                     )}
                     {edge.direction === 'both' && (
@@ -654,7 +714,7 @@ function App() {
                         y2={startY}
                         stroke="#4a7c59"
                         strokeWidth="2"
-                        markerEnd="url(#arrowhead)"
+                        markerEnd={`url(#${markerId})`}
                       />
                     )}
                     {edge.direction === 'backward' && (
@@ -665,7 +725,7 @@ function App() {
                         y2={startY}
                         stroke="#4a7c59"
                         strokeWidth="2"
-                        markerEnd="url(#arrowhead)"
+                        markerEnd={`url(#${markerId})`}
                       />
                     )}
                   </g>
@@ -679,11 +739,13 @@ function App() {
 
               if (!fromNode || !toNode) return null
 
-              const x1 = fromNode.x + NODE_RADIUS
-              const y1 = fromNode.y + NODE_RADIUS
-              const x2 = toNode.x + NODE_RADIUS
-              const y2 = toNode.y + NODE_RADIUS
+              const geometry = getEdgeGeometry(fromNode, toNode)
 
+              if (!geometry || geometry.edgeLength < MIN_TOGGLE_EDGE_LENGTH) {
+                return null
+              }
+
+              const { x1, y1, x2, y2 } = geometry
               const midX = (x1 + x2) / 2
               const midY = (y1 + y2) / 2
 
