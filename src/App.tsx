@@ -154,6 +154,11 @@ function App() {
     })
   }
 
+  const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    closeContextMenu()
+  }
+
   const startEditingNode = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
     if (isDeleteMode) {
       return
@@ -317,6 +322,7 @@ function App() {
           <div
             className={`canvas ${isDeleteMode ? 'is-select' : 'is-place'}`}
             onClick={handleCanvasClick}
+            onContextMenu={handleCanvasContextMenu}
           >
             {nodes.map((node) => (
               (() => {
@@ -474,11 +480,19 @@ function App() {
       )}
 
       {contextMenu && contextNode && (
-        <div className="context-backdrop" onClick={closeContextMenu}>
+        <div
+          className="context-backdrop"
+          onClick={closeContextMenu}
+          onContextMenu={(event) => {
+            event.preventDefault()
+            closeContextMenu()
+          }}
+        >
           <div
             className="context-menu"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={(event) => event.stopPropagation()}
+            onContextMenu={(event) => event.preventDefault()}
           >
             <div className="context-header">
               <span className="context-title">Node {contextNode.label}</span>
