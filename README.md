@@ -7,7 +7,7 @@ An interactive web-based sandbox for Data Structures and Algorithms. Features a 
 - **Language:** TypeScript
 - **Build Tool:** Vite
 
-## How to Run the webapp
+## How to run the webapp
 ```bash
 npm install
 npm run dev

@@ -463,6 +463,29 @@
 	border-color: #8f2c22;
 }
 
+/* Connection Mode Styles */
+.canvas.is-connect {
+	cursor: crosshair;
+}
+
+.node-wrap.is-connect .node {
+	cursor: crosshair;
+	border-color: var(--accent);
+	border-width: 2px;
+	box-shadow: 0 10px 20px rgba(58, 111, 90, 0.2);
+}
+
+.node-wrap.is-source .node {
+	background: rgba(58, 111, 90, 0.15);
+	border-color: var(--accent);
+	border-width: 2px;
+	box-shadow: 0 0 0 3px rgba(58, 111, 90, 0.2);
+}
+
+.edges-layer {
+	pointer-events: auto;
+}
+
 @keyframes rise {
 	from {
 		opacity: 0;
