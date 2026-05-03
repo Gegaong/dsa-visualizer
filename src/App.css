@@ -84,11 +84,34 @@
 	color: var(--muted);
 }
 
+.canvas-hint {
+	margin-top: 6px;
+	font-size: 12px;
+	color: var(--muted);
+}
+
 .canvas-actions {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 16px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
 }
+
+.btn-clear {
+	border: 1px dashed var(--accent);
+	background: transparent;
+	color: var(--accent);
+	font-weight: 600;
+	padding: 6px 12px;
+	border-radius: 999px;
+}
+
+.btn-clear:hover {
+	border-style: solid;
+	background: rgba(58, 111, 90, 0.08);
+}
+
 
 .canvas {
 	position: relative;
@@ -98,6 +121,14 @@
 	border: 1px solid var(--border);
 	border-radius: 18px;
 	overflow: hidden;
+}
+
+.canvas.is-place {
+	cursor: crosshair;
+}
+
+.canvas.is-select {
+	cursor: default;
 }
 
 .sidebar {
@@ -220,21 +251,79 @@
 	align-items: center;
 }
 
+
+.node-wrap.is-select .node {
+	cursor: default;
+}
+
+.node-hover-value {
+	position: absolute;
+	left: 50%;
+	bottom: 60px;
+	transform: translateX(-50%);
+	padding: 4px 8px;
+	border-radius: 8px;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	font-size: 12px;
+	color: var(--ink);
+	box-shadow: 0 8px 18px rgba(24, 20, 16, 0.12);
+	white-space: nowrap;
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.node-wrap:hover .node-hover-value {
+	opacity: 1;
+}
+
+.node-wrap.is-select.is-selected .node {
+	border-color: var(--accent);
+}
+
 .node {
 	width: 48px;
 	height: 48px;
 	border-radius: 999px;
 	background: transparent;
 	border: 1px solid var(--border);
+	position: relative;
 	display: grid;
 	place-items: center;
 	font-weight: 600;
 	color: var(--ink);
 	box-shadow: 0 10px 20px rgba(46, 32, 23, 0.14);
+	cursor: text;
 }
 
 .node-value {
 	font-size: 14px;
+	min-height: 16px;
+	display: block;
+}
+
+.node-value--small {
+	font-size: 12px;
+}
+
+.node-value--tiny {
+	font-size: 11px;
+	letter-spacing: 0.04em;
+}
+
+.node-input {
+	width: 70%;
+	border: none;
+	background: transparent;
+	text-align: center;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ink);
+	outline: none;
 }
 
 .node-label {
@@ -242,6 +331,22 @@
 	font-size: 12px;
 	color: var(--accent);
 	letter-spacing: 0.08em;
+}
+
+.node-select-indicator {
+	width: 10px;
+	height: 10px;
+	position: absolute;
+	bottom: -8px;
+	right: -3px;
+	border-radius: 999px;
+	border: 1px solid var(--ink);
+	background: transparent;
+}
+
+.node-wrap.is-select.is-selected .node-select-indicator {
+	border-color: var(--accent);
+	background: var(--accent);
 }
 
 .hint {
@@ -252,6 +357,110 @@
 	border: 1px solid rgba(224, 122, 95, 0.2);
 	padding: 8px 10px;
 	border-radius: 10px;
+}
+
+.modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(16, 19, 16, 0.45);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	z-index: 1000;
+}
+
+.modal {
+	width: min(420px, 100%);
+	background: var(--panel);
+	border-radius: 18px;
+	border: 1px solid var(--border);
+	padding: 20px 22px;
+	box-shadow: 0 20px 40px rgba(24, 20, 16, 0.2);
+}
+
+.modal h3 {
+	margin: 0 0 8px;
+	font-size: 18px;
+}
+
+.modal p {
+	margin: 0 0 16px;
+	color: var(--muted);
+}
+
+.modal-actions {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.modal-actions .btn {
+	width: 100%;
+}
+
+.context-backdrop {
+	position: fixed;
+	inset: 0;
+	background: transparent;
+	z-index: 1100;
+}
+
+.context-menu {
+	position: absolute;
+	min-width: 200px;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	padding: 12px;
+	box-shadow: 0 18px 30px rgba(24, 20, 16, 0.18);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.context-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 13px;
+	color: var(--muted);
+	border-bottom: 1px solid var(--border);
+	padding-bottom: 8px;
+}
+
+.context-title {
+	font-weight: 600;
+	color: var(--ink);
+}
+
+.context-value {
+	font-size: 12px;
+	color: var(--muted);
+}
+
+.context-action {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 8px 10px;
+	background: #fff8f2;
+	text-align: left;
+	font-size: 13px;
+	font-family: inherit;
+	cursor: pointer;
+}
+
+.context-action:hover {
+	border-color: var(--accent);
+}
+
+.context-action--danger {
+	color: #8f2c22;
+	border-color: rgba(143, 44, 34, 0.3);
+}
+
+.context-action--danger:hover {
+	border-color: #8f2c22;
 }
 
 @keyframes rise {
