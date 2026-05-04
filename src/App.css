@@ -486,6 +486,7 @@
 	color: var(--ink);
 	box-shadow: 0 10px 20px rgba(46, 32, 23, 0.14);
 	cursor: text;
+	user-select: none;
 }
 
 .node-value {
@@ -512,6 +513,7 @@
 	font-weight: 600;
 	color: var(--ink);
 	outline: none;
+	user-select: text;
 }
 
 .node-label {
