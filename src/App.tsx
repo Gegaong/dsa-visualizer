@@ -28,6 +28,13 @@ type GraphEdge = {
   direction: 'both' | 'forward' | 'backward'
 }
 
+type GraphPreset = {
+  id: string
+  name: string
+  nodes: Array<{ x: number; y: number }>
+  edges: Array<[number, number, GraphEdge['direction']?]>
+}
+
 const NODE_SIZE = 48
 const NODE_RADIUS = NODE_SIZE / 2
 const NODE_GAP = 18 // extra spacing between nodes (in px)
@@ -35,6 +42,8 @@ const MIN_EDGE_STUB = 8
 const MIN_TOGGLE_EDGE_LENGTH = 36
 const TINY_EDGE_MARKER_EDGE_LENGTH = 16
 const SHORT_EDGE_MARKER_EDGE_LENGTH = 26
+const DEFAULT_CANVAS_WIDTH = 720
+const DEFAULT_CANVAS_HEIGHT = 560
 
 const toDegrees = (radians: number) => (radians * 180) / Math.PI
 
@@ -213,12 +222,115 @@ const getEdgeGeometry = (fromNode: GraphNode, toNode: GraphNode) => {
   }
 }
 
+const GRAPH_PRESETS: GraphPreset[] = [
+  {
+    id: 'basic',
+    name: 'Basic Graph',
+    nodes: [
+      { x: 120, y: 100 },
+      { x: 260, y: 70 },
+      { x: 420, y: 120 },
+      { x: 320, y: 210 },
+      { x: 160, y: 230 },
+      { x: 470, y: 240 },
+      { x: 560, y: 150 },
+      { x: 120, y: 320 },
+      { x: 300, y: 320 },
+    ],
+    edges: [
+      [0, 1],
+      [1, 2],
+      [1, 3],
+      [2, 3],
+      [3, 4],
+      [4, 0],
+      [3, 5],
+      [5, 6],
+      [2, 6],
+      [4, 7],
+      [7, 8],
+      [8, 3],
+    ],
+  },
+  {
+    id: 'cycle',
+    name: 'Cycle Graph',
+    nodes: [
+      { x: 260, y: 40 },
+      { x: 380, y: 90 },
+      { x: 420, y: 210 },
+      { x: 340, y: 320 },
+      { x: 200, y: 320 },
+      { x: 120, y: 210 },
+      { x: 160, y: 90 },
+    ],
+    edges: [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+      [5, 6],
+      [6, 0],
+    ],
+  },
+  {
+    id: 'disconnected',
+    name: 'Disconnected Graph',
+    nodes: [
+      { x: 140, y: 120 },
+      { x: 240, y: 90 },
+      { x: 260, y: 200 },
+      { x: 160, y: 230 },
+      { x: 420, y: 120 },
+      { x: 520, y: 120 },
+      { x: 540, y: 220 },
+      { x: 440, y: 220 },
+    ],
+    edges: [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [4, 5],
+      [5, 6],
+      [6, 7],
+      [7, 4],
+    ],
+  },
+  {
+    id: 'bipartite',
+    name: 'Bipartite Graph',
+    nodes: [
+      { x: 140, y: 80 },
+      { x: 140, y: 180 },
+      { x: 140, y: 280 },
+      { x: 140, y: 380 },
+      { x: 460, y: 100 },
+      { x: 460, y: 200 },
+      { x: 460, y: 300 },
+      { x: 460, y: 400 },
+    ],
+    edges: [
+      [0, 4],
+      [0, 5],
+      [1, 5],
+      [1, 6],
+      [2, 6],
+      [2, 7],
+      [3, 4],
+      [3, 7],
+    ],
+  },
+]
+
 function App() {
   const [nodes, setNodes] = useState<GraphNode[]>([])
   const [goalType, setGoalType] = useState<GoalType>('target-node')
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [draftValue, setDraftValue] = useState('') // Temporary input value during inline editing
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [showPresetConfirm, setShowPresetConfirm] = useState(false)
+  const [pendingPreset, setPendingPreset] = useState<GraphPreset | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [isDeleteMode, setIsDeleteMode] = useState(false)
   const [isDeleteEdgeMode, setIsDeleteEdgeMode] = useState(false)
@@ -230,9 +342,87 @@ function App() {
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
+  const canvasRef = useRef<HTMLDivElement | null>(null)
 
   const closeContextMenu = () => {
     setContextMenu(null)
+  }
+
+  const applyPreset = (preset: GraphPreset) => {
+    nextId.current = 1
+
+    const bounds = preset.nodes.reduce(
+      (acc, node) => {
+        const right = node.x + NODE_SIZE
+        const bottom = node.y + NODE_SIZE
+        return {
+          minX: Math.min(acc.minX, node.x),
+          minY: Math.min(acc.minY, node.y),
+          maxX: Math.max(acc.maxX, right),
+          maxY: Math.max(acc.maxY, bottom),
+        }
+      },
+      {
+        minX: Number.POSITIVE_INFINITY,
+        minY: Number.POSITIVE_INFINITY,
+        maxX: Number.NEGATIVE_INFINITY,
+        maxY: Number.NEGATIVE_INFINITY,
+      },
+    )
+
+    const canvasBounds = canvasRef.current?.getBoundingClientRect()
+    const canvasWidth = canvasBounds?.width ?? DEFAULT_CANVAS_WIDTH
+    const canvasHeight = canvasBounds?.height ?? DEFAULT_CANVAS_HEIGHT
+    const targetCenterX = canvasWidth / 2
+    const targetCenterY = canvasHeight / 2
+    const presetCenterX = (bounds.minX + bounds.maxX) / 2
+    const presetCenterY = (bounds.minY + bounds.maxY) / 2
+    const offsetX = targetCenterX - presetCenterX
+    const offsetY = targetCenterY - presetCenterY
+
+    const presetNodes = preset.nodes.map((position) => {
+      const clampedX = Math.min(
+        Math.max(0, position.x + offsetX),
+        canvasWidth - NODE_SIZE,
+      )
+      const clampedY = Math.min(
+        Math.max(0, position.y + offsetY),
+        canvasHeight - NODE_SIZE,
+      )
+      const node: GraphNode = {
+        id: `node-${nextId.current}`,
+        label: '',
+        value: null,
+        x: clampedX,
+        y: clampedY,
+      }
+
+      nextId.current += 1
+      return node
+    })
+
+    const presetEdges: GraphEdge[] = preset.edges.map(([fromIndex, toIndex, direction]) => {
+      const edge: GraphEdge = {
+        id: `edge-${nextId.current}`,
+        fromNodeId: presetNodes[fromIndex].id,
+        toNodeId: presetNodes[toIndex].id,
+        direction: direction ?? 'both',
+      }
+
+      nextId.current += 1
+      return edge
+    })
+
+    setNodes(reindexNodes(presetNodes))
+    setEdges(presetEdges)
+    cancelEditing()
+    setIsDeleteMode(false)
+    setIsDeleteEdgeMode(false)
+    setIsConnectMode(false)
+    setConnectionSource(null)
+    clearSelection()
+    clearEdgeSelection()
+    closeContextMenu()
   }
 
   // Delete a single node and all its connected edges, then recalculate node labels.
@@ -511,6 +701,32 @@ function App() {
     setShowClearConfirm(false)
   }
 
+  const handlePresetClick = (preset: GraphPreset) => {
+    if (nodes.length === 0) {
+      applyPreset(preset)
+      return
+    }
+
+    setPendingPreset(preset)
+    setShowPresetConfirm(true)
+  }
+
+  const confirmPresetReplace = () => {
+    if (!pendingPreset) {
+      setShowPresetConfirm(false)
+      return
+    }
+
+    applyPreset(pendingPreset)
+    setPendingPreset(null)
+    setShowPresetConfirm(false)
+  }
+
+  const cancelPresetReplace = () => {
+    setPendingPreset(null)
+    setShowPresetConfirm(false)
+  }
+
   // Create an edge between two nodes with validation to prevent duplicates and self-loops.
   const createEdge = (fromId: string, toId: string, direction: GraphEdge['direction']) => {
     // Prevent self-loops (a node cannot connect to itself)
@@ -742,6 +958,7 @@ function App() {
                   ? 'is-select'
                   : 'is-place'
             }`}
+            ref={canvasRef}
             onClick={(e) => {
               if (!isConnectMode) {
                 handleCanvasClick(e)
@@ -1143,15 +1360,16 @@ function App() {
 
           <div className="sidebar-section">
             <h3>Presets</h3>
-            <button className="btn btn-ghost" type="button">
-              Default graph
-            </button>
-            <button className="btn btn-ghost" type="button">
-              Random small
-            </button>
-            <button className="btn btn-ghost" type="button">
-              Random medium
-            </button>
+            {GRAPH_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => handlePresetClick(preset)}
+              >
+                {preset.name}
+              </button>
+            ))}
           </div>
         </aside>
       </div>
@@ -1166,6 +1384,25 @@ function App() {
                 Clear
               </button>
               <button className="btn" type="button" onClick={cancelClearCanvas}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPresetConfirm && pendingPreset && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal">
+            <h3>Replace canvas with preset?</h3>
+            <p>
+              This will clear the current canvas and load “{pendingPreset.name}”.
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-primary" type="button" onClick={confirmPresetReplace}>
+                Replace
+              </button>
+              <button className="btn" type="button" onClick={cancelPresetReplace}>
                 Cancel
               </button>
             </div>
