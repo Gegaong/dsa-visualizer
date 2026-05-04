@@ -440,9 +440,9 @@ function App() {
     setDraftValue(nextValue)
   }
 
-  // Finalize node value from the draft input: save to nodes array and close edit mode.
-  const commitNodeValue = (nodeId: string) => {
-    const trimmed = draftValue.trim()
+  // Finalize node value from the latest input value to avoid stale state during fast typing.
+  const commitNodeValue = (nodeId: string, rawValue: string) => {
+    const trimmed = rawValue.trim()
     const nextValue = trimmed === '' ? null : Number(trimmed) // Empty string becomes null
 
     setNodes((prev) =>
@@ -472,7 +472,8 @@ function App() {
     nodeId: string,
   ) => {
     if (event.key === 'Enter') {
-      commitNodeValue(nodeId)
+      event.preventDefault()
+      commitNodeValue(nodeId, event.currentTarget.value)
     }
 
     if (event.key === 'Escape') {
@@ -1055,7 +1056,7 @@ function App() {
                       value={draftValue}
                       onChange={handleValueChange}
                       onKeyDown={(event) => handleValueKeyDown(event, node.id)}
-                      onBlur={() => commitNodeValue(node.id)}
+                      onBlur={(event) => commitNodeValue(node.id, event.currentTarget.value)}
                       autoFocus
                     />
                   ) : (
