@@ -46,6 +46,25 @@ const DEFAULT_CANVAS_WIDTH = 720
 const DEFAULT_CANVAS_HEIGHT = 560
 
 const toDegrees = (radians: number) => (radians * 180) / Math.PI
+const sanitizeNumericInput = (value: string) =>
+  value.replace(/[^0-9-]/g, '').replace(/(?!^)-/g, '')
+const parseNumberInput = (value: string) => {
+  const trimmed = value.trim()
+
+  if (trimmed === '' || trimmed === '-') {
+    return null
+  }
+
+  const numberValue = Number(trimmed)
+  return Number.isNaN(numberValue) ? null : numberValue
+}
+
+// Inclusive integer RNG used when filling null node values.
+const getRandomIntInclusive = (min: number, max: number) => {
+  const low = Math.ceil(min)
+  const high = Math.floor(max)
+  return Math.floor(Math.random() * (high - low + 1)) + low
+}
 
 // Convert array index (0, 1, 2, ...) to Alphabetical style column labels (A, B, C, ..., Z, AA, AB, ...)
 const indexToLabel = (index: number) => {
@@ -222,6 +241,7 @@ const getEdgeGeometry = (fromNode: GraphNode, toNode: GraphNode) => {
   }
 }
 
+// Preset layouts use fixed coordinates (values are null); we center them in the canvas at apply time.
 const GRAPH_PRESETS: GraphPreset[] = [
   {
     id: 'basic',
@@ -328,6 +348,9 @@ function App() {
   const [goalType, setGoalType] = useState<GoalType>('target-node')
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [draftValue, setDraftValue] = useState('') // Temporary input value during inline editing
+  const [fillMin, setFillMin] = useState('')
+  const [fillMax, setFillMax] = useState('')
+  const [showNullifyConfirm, setShowNullifyConfirm] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showPresetConfirm, setShowPresetConfirm] = useState(false)
   const [pendingPreset, setPendingPreset] = useState<GraphPreset | null>(null)
@@ -351,6 +374,7 @@ function App() {
   const applyPreset = (preset: GraphPreset) => {
     nextId.current = 1
 
+    // Compute a bounding box so we can center the preset on the canvas.
     const bounds = preset.nodes.reduce(
       (acc, node) => {
         const right = node.x + NODE_SIZE
@@ -373,6 +397,7 @@ function App() {
     const canvasBounds = canvasRef.current?.getBoundingClientRect()
     const canvasWidth = canvasBounds?.width ?? DEFAULT_CANVAS_WIDTH
     const canvasHeight = canvasBounds?.height ?? DEFAULT_CANVAS_HEIGHT
+    // Offset the preset so its center lands on the canvas center.
     const targetCenterX = canvasWidth / 2
     const targetCenterY = canvasHeight / 2
     const presetCenterX = (bounds.minX + bounds.maxX) / 2
@@ -381,6 +406,7 @@ function App() {
     const offsetY = targetCenterY - presetCenterY
 
     const presetNodes = preset.nodes.map((position) => {
+      // Clamp to keep nodes inside the canvas bounds after centering.
       const clampedX = Math.min(
         Math.max(0, position.x + offsetX),
         canvasWidth - NODE_SIZE,
@@ -626,24 +652,50 @@ function App() {
 
   // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = event.target.value
-    const sanitized = raw
-      .replace(/[^0-9-]/g, '')
-      .replace(/(?!^)-/g, '')
-    setDraftValue(sanitized)
+    setDraftValue(sanitizeNumericInput(event.target.value))
+  }
+
+  const handleFillMinChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFillMin(sanitizeNumericInput(event.target.value))
+  }
+
+  const handleFillMaxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFillMax(sanitizeNumericInput(event.target.value))
+  }
+
+  // Enforce max >= min after the user finishes editing.
+  const syncFillRange = () => {
+    const minValue = parseNumberInput(fillMin)
+    const maxValue = parseNumberInput(fillMax)
+
+    if (minValue !== null && maxValue !== null && maxValue < minValue) {
+      setFillMax(String(minValue))
+    }
+  }
+
+  // Treat Enter as "done editing" for the fill range inputs.
+  const handleFillRangeKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      syncFillRange()
+      event.currentTarget.blur()
+    }
   }
 
   // Finalize node value from the latest input value to avoid stale state during fast typing.
   const commitNodeValue = (nodeId: string, rawValue: string) => {
     const trimmed = rawValue.trim()
     const nextValue = trimmed === '' ? null : Number(trimmed) // Empty string becomes null
+    // Treat invalid numeric input as null so nodes never store NaN.
+    const normalizedValue =
+      nextValue === null || Number.isNaN(nextValue) ? null : nextValue
 
     setNodes((prev) =>
       prev.map((node) =>
         node.id === nodeId
           ? {
               ...node,
-              value: nextValue,
+              value: normalizedValue,
             }
           : node,
       ),
@@ -657,6 +709,55 @@ function App() {
   const cancelEditing = () => {
     setEditingNodeId(null)
     setDraftValue('')
+  }
+
+  // Replace null node values with inclusive random integers in the provided range.
+  const fillNullValues = () => {
+    const minValue = parseNumberInput(fillMin)
+    const maxValue = parseNumberInput(fillMax)
+
+    if (minValue === null || maxValue === null) {
+      return
+    }
+
+    const low = Math.min(minValue, maxValue)
+    const high = Math.max(minValue, maxValue)
+
+    setNodes((prev) =>
+      prev.map((node) =>
+        node.value === null
+          ? {
+              ...node,
+              value: getRandomIntInclusive(low, high),
+            }
+          : node,
+      ),
+    )
+    cancelEditing()
+  }
+
+  // Nullify every node value after confirmation.
+  const handleNullifyAllClick = () => {
+    if (nodes.length === 0) {
+      return
+    }
+
+    setShowNullifyConfirm(true)
+  }
+
+  const confirmNullifyAll = () => {
+    setNodes((prev) =>
+      prev.map((node) => ({
+        ...node,
+        value: null,
+      })),
+    )
+    cancelEditing()
+    setShowNullifyConfirm(false)
+  }
+
+  const cancelNullifyAll = () => {
+    setShowNullifyConfirm(false)
   }
 
   // Keyboard shortcuts for inline editing: Enter to save, Escape to cancel.
@@ -702,6 +803,7 @@ function App() {
   }
 
   const handlePresetClick = (preset: GraphPreset) => {
+    // If there's already a graph, confirm before replacing it.
     if (nodes.length === 0) {
       applyPreset(preset)
       return
@@ -712,6 +814,7 @@ function App() {
   }
 
   const confirmPresetReplace = () => {
+    // Apply the pending preset and close the confirmation modal.
     if (!pendingPreset) {
       setShowPresetConfirm(false)
       return
@@ -723,6 +826,7 @@ function App() {
   }
 
   const cancelPresetReplace = () => {
+    // Dismiss the preset confirmation without changing the canvas.
     setPendingPreset(null)
     setShowPresetConfirm(false)
   }
@@ -849,6 +953,10 @@ function App() {
   const contextNode = contextMenu
     ? nodes.find((node) => node.id === contextMenu.nodeId) ?? null
     : null
+  const fillRangeReady =
+    parseNumberInput(fillMin) !== null &&
+    parseNumberInput(fillMax) !== null
+  const canFillNulls = nodes.length > 0 && fillRangeReady
 
   return (
     <div className="app">
@@ -1343,6 +1451,50 @@ function App() {
           </div>
 
           <div className="sidebar-section">
+            <h3>Fill values</h3>
+            <label className="field">
+              <span>Minimum</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={fillMin}
+                onChange={handleFillMinChange}
+                onBlur={syncFillRange}
+                onKeyDown={handleFillRangeKeyDown}
+              />
+            </label>
+            <label className="field">
+              <span>Maximum</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={fillMax}
+                onChange={handleFillMaxChange}
+                onBlur={syncFillRange}
+                onKeyDown={handleFillRangeKeyDown}
+              />
+            </label>
+            <div className="fill-actions">
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={fillNullValues}
+                disabled={!canFillNulls}
+              >
+                Fill null values
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={handleNullifyAllClick}
+                disabled={nodes.length === 0}
+              >
+                Nullify all values
+              </button>
+            </div>
+          </div>
+
+          <div className="sidebar-section">
             <h3>Playback</h3>
             <div className="playback">
               <button className="btn btn-ghost" type="button">
@@ -1403,6 +1555,23 @@ function App() {
                 Replace
               </button>
               <button className="btn" type="button" onClick={cancelPresetReplace}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNullifyConfirm && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal">
+            <h3>Nullify all values?</h3>
+            <p>This will reset every node value to null.</p>
+            <div className="modal-actions">
+              <button className="btn btn-primary" type="button" onClick={confirmNullifyAll}>
+                Nullify
+              </button>
+              <button className="btn" type="button" onClick={cancelNullifyAll}>
                 Cancel
               </button>
             </div>

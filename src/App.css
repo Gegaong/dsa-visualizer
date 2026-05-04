@@ -373,6 +373,15 @@
 	box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.22);
 }
 
+.fill-actions {
+	display: grid;
+	gap: 8px;
+}
+
+.fill-actions .btn {
+	width: 100%;
+}
+
 .playback {
 	display: flex;
 	gap: 8px;
