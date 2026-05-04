@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 type GraphNode = {
@@ -35,15 +35,26 @@ type GraphPreset = {
   edges: Array<[number, number, GraphEdge['direction']?]>
 }
 
+type DragState = {
+  nodeId: string
+  offsetX: number
+  offsetY: number
+  startPointerX: number
+  startPointerY: number
+  hasMoved: boolean
+}
+
 const NODE_SIZE = 48
 const NODE_RADIUS = NODE_SIZE / 2
-const NODE_GAP = 18 // extra spacing between nodes (in px)
+const NODE_GAP = 8 // extra spacing between nodes (in px)
 const MIN_EDGE_STUB = 8
+const MIN_EDGE_VISUAL_LENGTH = 20
 const MIN_TOGGLE_EDGE_LENGTH = 36
 const TINY_EDGE_MARKER_EDGE_LENGTH = 16
 const SHORT_EDGE_MARKER_EDGE_LENGTH = 26
 const DEFAULT_CANVAS_WIDTH = 720
 const DEFAULT_CANVAS_HEIGHT = 560
+const DRAG_THRESHOLD = 3
 
 const toDegrees = (radians: number) => (radians * 180) / Math.PI
 const sanitizeNumericInput = (value: string) =>
@@ -122,6 +133,56 @@ const isOverlapping = (x: number, y: number, list: GraphNode[]) => {
     // Use squared distance to avoid sqrt() overhead
     return dx * dx + dy * dy < minDistance * minDistance
   })
+}
+
+const clampToRange = (value: number, min: number, max: number) =>
+  Math.min(Math.max(min, value), max)
+
+// Push a dropped node away from neighbors to preserve the same minimum spacing.
+const resolveDragPosition = (
+  x: number,
+  y: number,
+  nodeId: string,
+  list: GraphNode[],
+  canvasWidth: number,
+  canvasHeight: number,
+) => {
+  const minDistance = NODE_SIZE + NODE_GAP
+  const maxX = canvasWidth - NODE_SIZE
+  const maxY = canvasHeight - NODE_SIZE
+  let resolvedX = clampToRange(x, 0, maxX)
+  let resolvedY = clampToRange(y, 0, maxY)
+
+  for (let pass = 0; pass < 4; pass += 1) {
+    let adjusted = false
+
+    for (const other of list) {
+      if (other.id === nodeId) continue
+
+      const centerX = resolvedX + NODE_RADIUS
+      const centerY = resolvedY + NODE_RADIUS
+      const otherCenterX = other.x + NODE_RADIUS
+      const otherCenterY = other.y + NODE_RADIUS
+      const dx = centerX - otherCenterX
+      const dy = centerY - otherCenterY
+      const distance = Math.hypot(dx, dy)
+
+      if (distance < minDistance) {
+        const push = minDistance - distance
+        const dirX = distance === 0 ? 1 : dx / distance
+        const dirY = distance === 0 ? 0 : dy / distance
+        resolvedX = clampToRange(resolvedX + dirX * push, 0, maxX)
+        resolvedY = clampToRange(resolvedY + dirY * push, 0, maxY)
+        adjusted = true
+      }
+    }
+
+    if (!adjusted) {
+      break
+    }
+  }
+
+  return { x: resolvedX, y: resolvedY }
 }
 
 const DirectionIcon = ({ direction }: { direction: GraphEdge['direction'] }) => {
@@ -219,8 +280,12 @@ const getEdgeGeometry = (fromNode: GraphNode, toNode: GraphNode) => {
 
   const unitX = dx / dist
   const unitY = dy / dist
-  // Clamp inset for short edges so start/end never cross and arrows still render.
-  const inset = Math.min(NODE_RADIUS, Math.max(0, dist / 2 - MIN_EDGE_STUB / 2))
+  // Keep a minimum visible edge length so arrowheads don't crowd on short edges.
+  const minVisibleLength = Math.max(MIN_EDGE_STUB, MIN_EDGE_VISUAL_LENGTH)
+  const inset = Math.min(
+    NODE_RADIUS,
+    Math.max(0, (dist - minVisibleLength) / 2),
+  )
 
   const startX = x1 + unitX * inset
   const startY = y1 + unitY * inset
@@ -363,9 +428,13 @@ function App() {
   const [isConnectMode, setIsConnectMode] = useState(false)
   const [connectionSource, setConnectionSource] = useState<string | null>(null)
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null)
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
   const canvasRef = useRef<HTMLDivElement | null>(null)
+  const dragStateRef = useRef<DragState | null>(null)
+  const suppressClickRef = useRef(false)
+  const suppressCanvasClickRef = useRef(false)
 
   const closeContextMenu = () => {
     setContextMenu(null)
@@ -584,6 +653,11 @@ function App() {
   }
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (suppressCanvasClickRef.current) {
+      suppressCanvasClickRef.current = false
+      return
+    }
+
     if (contextMenu) {
       closeContextMenu()
     }
@@ -628,8 +702,45 @@ function App() {
       return
     }
 
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false
+      return
+    }
+
     event.stopPropagation()
     beginEditingNode(node)
+  }
+
+  const handleNodeMouseDown = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
+    if (event.button !== 0) {
+      return
+    }
+
+    if (isConnectMode || isDeleteMode || isDeleteEdgeMode || editingNodeId === node.id) {
+      return
+    }
+
+    const canvasBounds = canvasRef.current?.getBoundingClientRect()
+
+    if (!canvasBounds) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    closeContextMenu()
+
+    const pointerX = event.clientX - canvasBounds.left
+    const pointerY = event.clientY - canvasBounds.top
+    dragStateRef.current = {
+      nodeId: node.id,
+      offsetX: pointerX - node.x,
+      offsetY: pointerY - node.y,
+      startPointerX: pointerX,
+      startPointerY: pointerY,
+      hasMoved: false,
+    }
+    setDraggingNodeId(node.id)
   }
 
   // Open a context menu for a node's right-click. Clamp menu position to stay on-screen.
@@ -649,6 +760,108 @@ function App() {
 
     setContextMenu({ nodeId: node.id, x, y })
   }
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const dragState = dragStateRef.current
+      if (!dragState) return
+
+      const canvasBounds = canvasRef.current?.getBoundingClientRect()
+      if (!canvasBounds) return
+
+      const pointerX = event.clientX - canvasBounds.left
+      const pointerY = event.clientY - canvasBounds.top
+      const deltaX = pointerX - dragState.startPointerX
+      const deltaY = pointerY - dragState.startPointerY
+      const distance = Math.hypot(deltaX, deltaY)
+
+      if (!dragState.hasMoved && distance < DRAG_THRESHOLD) {
+        return
+      }
+
+      if (!dragState.hasMoved) {
+        dragState.hasMoved = true
+      }
+
+      const nextX = clampToRange(
+        pointerX - dragState.offsetX,
+        0,
+        canvasBounds.width - NODE_SIZE,
+      )
+      const nextY = clampToRange(
+        pointerY - dragState.offsetY,
+        0,
+        canvasBounds.height - NODE_SIZE,
+      )
+
+      setNodes((prev) =>
+        prev.map((node) =>
+          node.id === dragState.nodeId
+            ? {
+                ...node,
+                x: nextX,
+                y: nextY,
+              }
+            : node,
+        ),
+      )
+    }
+
+    const handleMouseUp = (event: MouseEvent) => {
+      const dragState = dragStateRef.current
+      if (!dragState) return
+
+      dragStateRef.current = null
+      setDraggingNodeId(null)
+
+      if (!dragState.hasMoved) {
+        return
+      }
+
+      suppressClickRef.current = true
+      suppressCanvasClickRef.current = true
+
+      const canvasBounds = canvasRef.current?.getBoundingClientRect()
+      if (!canvasBounds) return
+
+      const pointerX = event.clientX - canvasBounds.left
+      const pointerY = event.clientY - canvasBounds.top
+      const targetX = pointerX - dragState.offsetX
+      const targetY = pointerY - dragState.offsetY
+
+      setNodes((prev) => {
+        const resolved = resolveDragPosition(
+          targetX,
+          targetY,
+          dragState.nodeId,
+          prev,
+          canvasBounds.width,
+          canvasBounds.height,
+        )
+
+        return prev.map((node) =>
+          node.id === dragState.nodeId
+            ? {
+                ...node,
+                x: resolved.x,
+                y: resolved.y,
+              }
+            : node,
+        )
+      })
+
+      setEditingNodeId(null)
+      setDraftValue('')
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1345,11 +1558,14 @@ function App() {
                 key={node.id}
                 className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${
                   isSelected ? 'is-selected' : ''
-                } ${isConnectionSource ? 'is-source' : ''}`}
+                } ${isConnectionSource ? 'is-source' : ''} ${
+                  draggingNodeId === node.id ? 'is-dragging' : ''
+                } ${editingNodeId === node.id ? 'is-editing' : ''}`}
                 style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
               >
                 <div
                   className="node"
+                  onMouseDown={(event) => handleNodeMouseDown(event, node)}
                   onClick={(event) => {
                     if (isConnectMode) {
                       event.stopPropagation()

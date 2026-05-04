@@ -442,6 +442,14 @@
 	align-items: center;
 }
 
+.node-wrap.is-dragging {
+	z-index: 2;
+}
+
+.node-wrap.is-dragging .node {
+	cursor: grabbing;
+}
+
 
 .node-wrap.is-select .node {
 	cursor: inherit;
@@ -469,6 +477,7 @@
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 120ms ease;
+	user-select: none;
 }
 
 .node-wrap:hover .node-hover-value {
@@ -494,14 +503,19 @@
 	font-weight: 600;
 	color: var(--ink);
 	box-shadow: 0 10px 20px rgba(46, 32, 23, 0.14);
-	cursor: text;
+	cursor: grab;
 	user-select: none;
+}
+
+.node-wrap.is-editing .node {
+	cursor: text;
 }
 
 .node-value {
 	font-size: 14px;
 	min-height: 16px;
 	display: block;
+	user-select: none;
 }
 
 .node-value--small {
@@ -530,6 +544,7 @@
 	font-size: 12px;
 	color: var(--accent);
 	letter-spacing: 0.08em;
+	user-select: none;
 }
 
 .hint {
