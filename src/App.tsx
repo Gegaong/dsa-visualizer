@@ -63,7 +63,7 @@ const reindexNodes = (list: GraphNode[]) =>
 // Format node values for display: fit large numbers into the small circle by shrinking font or truncating.
 const formatNodeValue = (value: number | null) => {
   if (value === null) {
-    return { text: '', sizeClass: '' }
+    return { text: 'null', sizeClass: 'node-value--small' }
   }
 
   const text = String(value)
@@ -434,10 +434,13 @@ function App() {
     setContextMenu({ nodeId: node.id, x, y })
   }
 
-  // Filter out non-numeric characters as the user types (numeric-only input).
+  // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const nextValue = event.target.value.replace(/[^0-9]/g, '') // Keep only 0-9
-    setDraftValue(nextValue)
+    const raw = event.target.value
+    const sanitized = raw
+      .replace(/[^0-9-]/g, '')
+      .replace(/(?!^)-/g, '')
+    setDraftValue(sanitized)
   }
 
   // Finalize node value from the latest input value to avoid stale state during fast typing.
@@ -1188,7 +1191,7 @@ function App() {
             <div className="context-header">
               <span className="context-title">Node {contextNode.label}</span>
               <span className="context-value">
-                {contextNode.value === null ? 'Empty' : contextNode.value}
+                {contextNode.value === null ? 'null' : contextNode.value}
               </span>
             </div>
             {!isDeleteMode && (
