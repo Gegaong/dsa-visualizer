@@ -1,7 +1,6 @@
 export const NODE_SIZE = 48
 export const NODE_RADIUS = NODE_SIZE / 2
 export const NODE_GAP = 8 // extra spacing between nodes (in px)
-export const MIN_EDGE_STUB = 8
 export const MIN_EDGE_VISUAL_LENGTH = 20
 export const MIN_TOGGLE_EDGE_LENGTH = 36
 export const TINY_EDGE_MARKER_EDGE_LENGTH = 16

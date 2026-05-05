@@ -17,7 +17,7 @@ npm run dev
 - [x] Project setup + tooling
 - [x] Base UI layout (top bar, canvas, sidebar)
 - [x] Node creation + basic canvas rendering
-- [ ] Graph canvas environment (drag, connect edges, edit nodes, preset templates)
+- [x] Graph canvas environment (drag, connect edges, edit nodes, preset templates)
 - [ ] Graph algorithms (BFS, DFS, ...)
 - [ ] Weighted graph canvas environment (weights, edit edges, preset templates)
 - [ ] Weighted graph algorithms (Dijkstra, Greedy Search, A*,  ...)

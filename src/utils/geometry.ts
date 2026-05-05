@@ -3,7 +3,6 @@ import {
   NODE_SIZE,
   NODE_RADIUS,
   NODE_GAP,
-  MIN_EDGE_STUB,
   MIN_EDGE_VISUAL_LENGTH,
 } from './constants'
 
@@ -93,10 +92,9 @@ export const getEdgeGeometry = (fromNode: GraphNode, toNode: GraphNode) => {
   const unitX = dx / dist
   const unitY = dy / dist
   // Keep a minimum visible edge length so arrowheads don't crowd on short edges.
-  const minVisibleLength = Math.max(MIN_EDGE_STUB, MIN_EDGE_VISUAL_LENGTH)
   const inset = Math.min(
     NODE_RADIUS,
-    Math.max(0, (dist - minVisibleLength) / 2),
+    Math.max(0, (dist - MIN_EDGE_VISUAL_LENGTH) / 2),
   )
 
   const startX = x1 + unitX * inset

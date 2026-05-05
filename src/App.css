@@ -393,11 +393,6 @@
 	width: 100%;
 }
 
-.meta {
-	font-size: 14px;
-	color: var(--muted);
-}
-
 .btn {
 	border: 1px solid var(--border);
 	border-radius: 12px;

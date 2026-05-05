@@ -1,14 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap');
 
 :root {
-	--bg: #f1f3f0;
 	--ink: #1e221f;
 	--muted: #6b726b;
 	--panel: #fafaf7;
 	--border: #d7ddd4;
 	--accent: #3a6f5a;
 	--accent-ink: #ffffff;
-	--node: #e7ece7;
 	--accent-soft: #e2efe8;
 }
 

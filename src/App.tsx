@@ -253,7 +253,6 @@ const GraphNodeLayer = ({
                 ? undefined
                 : (event) => onNodeContextMenu(event, node)
             }
-            style={{ cursor: undefined }}
           >
             {editingNodeId === node.id ? (
               <input
@@ -979,6 +978,8 @@ function App() {
     closeContextMenu()
     setIsDeleteMode(false)
     setIsDeleteEdgeMode(false)
+    setIsConnectMode(false)
+    setConnectionSource(null)
     clearSelection()
     clearEdgeSelection()
   }
