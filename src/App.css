@@ -543,9 +543,14 @@
 .node-label {
 	margin-top: 6px;
 	font-size: 12px;
-	color: var(--accent);
+	font-weight: 700;
+	color: var(--ink);
 	letter-spacing: 0.08em;
 	user-select: none;
+	text-shadow:
+		0 0 3px #fffdfb,
+		0 0 3px #fffdfb,
+		0 0 5px #fffdfb;
 }
 
 .hint {
