@@ -1,64 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
-type GraphNode = {
-  id: string
-  label: string
-  value: number | null
-  x: number
-  y: number
-}
+import type {
+  GraphNode,
+  GoalType,
+  ContextMenuState,
+  GraphEdge,
+  GraphPreset,
+  DragState,
+} from './types'
 
-type GoalType =
-  | 'target-node'
-  | 'target-value'
-  | 'max-value'
-  | 'min-value'
-
-type ContextMenuState = {
-  nodeId: string
-  x: number
-  y: number
-}
-
-type GraphEdge = {
-  id: string
-  fromNodeId: string
-  toNodeId: string
-  direction: 'both' | 'forward' | 'backward'
-}
-
-type GraphPreset = {
-  id: string
-  name: string
-  nodes: Array<{ x: number; y: number }>
-  edges: Array<[number, number, GraphEdge['direction']?]>
-}
-
-type DragState = {
-  nodeId: string
-  offsetX: number
-  offsetY: number
-  startPointerX: number
-  startPointerY: number
-  hasMoved: boolean
-}
-
-const NODE_SIZE = 48
-const NODE_RADIUS = NODE_SIZE / 2
-const NODE_GAP = 8 // extra spacing between nodes (in px)
-const MIN_EDGE_STUB = 8
-const MIN_EDGE_VISUAL_LENGTH = 20
-const MIN_TOGGLE_EDGE_LENGTH = 36
-const TINY_EDGE_MARKER_EDGE_LENGTH = 16
-const SHORT_EDGE_MARKER_EDGE_LENGTH = 26
-const DEFAULT_CANVAS_WIDTH = 720
-const DEFAULT_CANVAS_HEIGHT = 560
-const DRAG_THRESHOLD = 3
+import {
+  NODE_SIZE,
+  NODE_RADIUS,
+  NODE_GAP,
+  MIN_EDGE_STUB,
+  MIN_EDGE_VISUAL_LENGTH,
+  MIN_TOGGLE_EDGE_LENGTH,
+  TINY_EDGE_MARKER_EDGE_LENGTH,
+  SHORT_EDGE_MARKER_EDGE_LENGTH,
+  DEFAULT_CANVAS_WIDTH,
+  DEFAULT_CANVAS_HEIGHT,
+  DRAG_THRESHOLD,
+} from './utils/constants'
 
 const toDegrees = (radians: number) => (radians * 180) / Math.PI
+
 const sanitizeNumericInput = (value: string) =>
   value.replace(/[^0-9-]/g, '').replace(/(?!^)-/g, '')
+
 const parseNumberInput = (value: string) => {
   const trimmed = value.trim()
 
@@ -798,10 +768,10 @@ function App() {
         prev.map((node) =>
           node.id === dragState.nodeId
             ? {
-                ...node,
-                x: nextX,
-                y: nextY,
-              }
+              ...node,
+              x: nextX,
+              y: nextY,
+            }
             : node,
         ),
       )
@@ -842,10 +812,10 @@ function App() {
         return prev.map((node) =>
           node.id === dragState.nodeId
             ? {
-                ...node,
-                x: resolved.x,
-                y: resolved.y,
-              }
+              ...node,
+              x: resolved.x,
+              y: resolved.y,
+            }
             : node,
         )
       })
@@ -907,9 +877,9 @@ function App() {
       prev.map((node) =>
         node.id === nodeId
           ? {
-              ...node,
-              value: normalizedValue,
-            }
+            ...node,
+            value: normalizedValue,
+          }
           : node,
       ),
     )
@@ -940,9 +910,9 @@ function App() {
       prev.map((node) =>
         node.value === null
           ? {
-              ...node,
-              value: getRandomIntInclusive(low, high),
-            }
+            ...node,
+            value: getRandomIntInclusive(low, high),
+          }
           : node,
       ),
     )
@@ -1272,13 +1242,12 @@ function App() {
           </div>
 
           <div
-            className={`canvas ${
-              isConnectMode
-                ? 'is-connect'
-                : isDeleteMode || isDeleteEdgeMode
-                  ? 'is-select'
-                  : 'is-place'
-            }`}
+            className={`canvas ${isConnectMode
+              ? 'is-connect'
+              : isDeleteMode || isDeleteEdgeMode
+                ? 'is-select'
+                : 'is-place'
+              }`}
             ref={canvasRef}
             onClick={(e) => {
               if (!isConnectMode) {
@@ -1554,64 +1523,62 @@ function App() {
                   node.value !== null && String(node.value).length > 5
 
                 return (
-              <div
-                key={node.id}
-                className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${
-                  isSelected ? 'is-selected' : ''
-                } ${isConnectionSource ? 'is-source' : ''} ${
-                  draggingNodeId === node.id ? 'is-dragging' : ''
-                } ${editingNodeId === node.id ? 'is-editing' : ''}`}
-                style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
-              >
-                <div
-                  className="node"
-                  onMouseDown={(event) => handleNodeMouseDown(event, node)}
-                  onClick={(event) => {
-                    if (isConnectMode) {
-                      event.stopPropagation()
-                      handleConnectNodeClick(node.id)
-                      return
-                    }
+                  <div
+                    key={node.id}
+                    className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''
+                      } ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''
+                      } ${editingNodeId === node.id ? 'is-editing' : ''}`}
+                    style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
+                  >
+                    <div
+                      className="node"
+                      onMouseDown={(event) => handleNodeMouseDown(event, node)}
+                      onClick={(event) => {
+                        if (isConnectMode) {
+                          event.stopPropagation()
+                          handleConnectNodeClick(node.id)
+                          return
+                        }
 
-                    if (isDeleteMode) {
-                      event.stopPropagation()
-                      toggleNodeSelection(node.id)
-                      return
-                    }
+                        if (isDeleteMode) {
+                          event.stopPropagation()
+                          toggleNodeSelection(node.id)
+                          return
+                        }
 
-                    if (isDeleteEdgeMode) {
-                      event.stopPropagation()
-                      return
-                    }
+                        if (isDeleteEdgeMode) {
+                          event.stopPropagation()
+                          return
+                        }
 
-                    startEditingNode(event, node)
-                  }}
-                  onContextMenu={
-                    isConnectMode || isDeleteMode || isDeleteEdgeMode
-                      ? undefined
-                      : (event) => handleNodeContextMenu(event, node)
-                  }
-                  style={{ cursor: undefined }}
-                >
-                  {editingNodeId === node.id ? (
-                    <input
-                      className="node-input"
-                      inputMode="numeric"
-                      value={draftValue}
-                      onChange={handleValueChange}
-                      onKeyDown={(event) => handleValueKeyDown(event, node.id)}
-                      onBlur={(event) => commitNodeValue(node.id, event.currentTarget.value)}
-                      autoFocus
-                    />
-                  ) : (
-                    <span className={valueClass}>{display.text}</span>
-                  )}
-                </div>
-                <span className="node-label">{node.label}</span>
-                {showHoverValue && (
-                  <span className="node-hover-value">{node.value}</span>
-                )}
-              </div>
+                        startEditingNode(event, node)
+                      }}
+                      onContextMenu={
+                        isConnectMode || isDeleteMode || isDeleteEdgeMode
+                          ? undefined
+                          : (event) => handleNodeContextMenu(event, node)
+                      }
+                      style={{ cursor: undefined }}
+                    >
+                      {editingNodeId === node.id ? (
+                        <input
+                          className="node-input"
+                          inputMode="numeric"
+                          value={draftValue}
+                          onChange={handleValueChange}
+                          onKeyDown={(event) => handleValueKeyDown(event, node.id)}
+                          onBlur={(event) => commitNodeValue(node.id, event.currentTarget.value)}
+                          autoFocus
+                        />
+                      ) : (
+                        <span className={valueClass}>{display.text}</span>
+                      )}
+                    </div>
+                    <span className="node-label">{node.label}</span>
+                    {showHoverValue && (
+                      <span className="node-hover-value">{node.value}</span>
+                    )}
+                  </div>
                 )
               })()
             ))}
