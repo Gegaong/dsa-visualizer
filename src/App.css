@@ -246,6 +246,7 @@
 
 .edge-toggle {
 	position: absolute;
+	z-index: 1;
 	width: 30px;
 	height: 26px;
 	border-radius: 999px;
