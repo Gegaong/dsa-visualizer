@@ -40,6 +40,9 @@ type GraphNodeLayerProps = {
   onCommitNodeValue: (nodeId: string, rawValue: string) => void
 }
 
+// Renders every node circle on the canvas.
+// Click behavior depends on the active mode: connect-mode picks edge endpoints,
+// delete-mode toggles selection, otherwise a click starts inline value editing.
 export const GraphNodeLayer = ({
   nodes,
   isConnectMode,

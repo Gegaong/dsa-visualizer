@@ -87,6 +87,7 @@ const reindexNodes = (list: GraphNode[]) =>
     label: indexToLabel(index),
   }))
 
+// Root component for the DSA visualizer workspace.
 function App() {
   const [nodes, setNodes] = useState<GraphNode[]>([])
   const [goalType, setGoalType] = useState<GoalType>('target-node')
@@ -115,10 +116,14 @@ function App() {
   const suppressClickRef = useRef(false)
   const suppressCanvasClickRef = useRef(false)
 
+  // Hide the node right-click menu.
   const closeContextMenu = () => {
     setContextMenu(null)
   }
 
+  // Replace the current graph with a centered preset.
+  // Also resets every mode (connect/delete/edit) and clears all selections,
+  // since the old node/edge IDs no longer exist after the swap.
   const applyPreset = (preset: GraphPreset) => {
     const canvasBounds = canvasElement?.getBoundingClientRect()
     const canvasWidth = canvasBounds?.width ?? DEFAULT_CANVAS_WIDTH
@@ -181,6 +186,7 @@ function App() {
     )
   }
 
+  // Delete the given edges from the canvas.
   const deleteSelectedEdges = (edgeIds: string[]) => {
     if (edgeIds.length === 0) {
       return
@@ -203,16 +209,19 @@ function App() {
     )
   }
 
+  // Clear the node-selection list (used in delete-node mode).
   const clearSelection = () => {
     setSelectedNodeIds([])
   }
 
+  // Toggle an edge in the delete-edge selection.
   const toggleEdgeSelection = (edgeId: string) => {
     setSelectedEdgeIds((prev) =>
       prev.includes(edgeId) ? prev.filter((id) => id !== edgeId) : [...prev, edgeId],
     )
   }
 
+  // Clear the edge-selection list (used in delete-edge mode).
   const clearEdgeSelection = () => {
     setSelectedEdgeIds([])
   }
@@ -229,6 +238,7 @@ function App() {
     closeContextMenu()
   }
 
+  // Switch into delete-edge mode (turns off other modes first).
   const enterDeleteEdgeMode = () => {
     setIsConnectMode(false)
     setConnectionSource(null)
@@ -239,6 +249,7 @@ function App() {
     closeContextMenu()
   }
 
+  // Switch into connect mode (turns off other modes first).
   const enterConnectMode = () => {
     setIsDeleteMode(false) // Exit delete mode first
     setIsDeleteEdgeMode(false)
@@ -250,11 +261,13 @@ function App() {
     closeContextMenu()
   }
 
+  // Leave delete-node mode and clear its selection.
   const exitDeleteMode = () => {
     setIsDeleteMode(false)
     clearSelection()
   }
 
+  // Leave delete-edge mode and clear its selection.
   const exitDeleteEdgeMode = () => {
     setIsDeleteEdgeMode(false)
     clearEdgeSelection()
@@ -272,6 +285,9 @@ function App() {
     setDraftValue(node.value === null ? '' : String(node.value))
   }
 
+  // Add a new node at the click position.
+  // Skipped if any mode is active (connect/delete) or if this click came
+  // immediately after a drag (the suppress flag is set in handleMouseUp).
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (suppressCanvasClickRef.current) {
       suppressCanvasClickRef.current = false
@@ -331,6 +347,10 @@ function App() {
     beginEditingNode(node)
   }
 
+  // Begin a *potential* drag on a node.
+  // We don't commit to "this is a drag" yet — we just stash the pointer offset.
+  // The window-level mousemove listener decides if the pointer moves far enough
+  // (DRAG_THRESHOLD pixels) to count as a drag instead of a click.
   const handleNodeMouseDown = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
     if (event.button !== 0) {
       return
@@ -382,7 +402,11 @@ function App() {
     setContextMenu({ nodeId: node.id, x, y })
   }
 
+  // Window-level mouse listeners that drive the node-dragging system.
+  // We attach to window (not the canvas) so a drag survives even when the
+  // cursor leaves the canvas area mid-drag.
   useEffect(() => {
+    // Move the dragged node once the pointer has crossed the drag threshold.
     const handleMouseMove = (event: MouseEvent) => {
       const dragState = dragStateRef.current
       if (!dragState) return
@@ -428,6 +452,10 @@ function App() {
       )
     }
 
+    // Finish the drag.
+    // resolveDragPosition pushes the node away from neighbors so the minimum
+    // spacing is preserved. The suppress flags prevent the trailing click
+    // from being interpreted as "place a new node" or "start editing".
     const handleMouseUp = (event: MouseEvent) => {
       const dragState = dragStateRef.current
       if (!dragState) return
@@ -489,10 +517,12 @@ function App() {
     setDraftValue(sanitizeNumericInput(event.target.value))
   }
 
+  // Sanitize the minimum-fill input as the user types.
   const handleFillMinChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFillMin(sanitizeNumericInput(event.target.value))
   }
 
+  // Sanitize the maximum-fill input as the user types.
   const handleFillMaxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFillMax(sanitizeNumericInput(event.target.value))
   }
@@ -579,6 +609,7 @@ function App() {
     setShowNullifyConfirm(true)
   }
 
+  // Replace every node value with null.
   const confirmNullifyAll = () => {
     setNodes((prev) =>
       prev.map((node) => ({
@@ -590,6 +621,7 @@ function App() {
     setShowNullifyConfirm(false)
   }
 
+  // Close the nullify confirmation without nullifying.
   const cancelNullifyAll = () => {
     setShowNullifyConfirm(false)
   }
@@ -634,10 +666,12 @@ function App() {
     clearEdgeSelection()
   }
 
+  // Close the clear-canvas confirmation without clearing.
   const cancelClearCanvas = () => {
     setShowClearConfirm(false)
   }
 
+  // Load a preset, but ask first if there's already a graph on the canvas.
   const handlePresetClick = (preset: GraphPreset) => {
     // If there's already a graph, confirm before replacing it.
     if (nodes.length === 0) {
@@ -649,6 +683,7 @@ function App() {
     setShowPresetConfirm(true)
   }
 
+  // Apply the pending preset and close the confirmation.
   const confirmPresetReplace = () => {
     // Apply the pending preset and close the confirmation modal.
     if (!pendingPreset) {
@@ -661,6 +696,7 @@ function App() {
     setShowPresetConfirm(false)
   }
 
+  // Close the preset-replace confirmation without replacing.
   const cancelPresetReplace = () => {
     // Dismiss the preset confirmation without changing the canvas.
     setPendingPreset(null)
@@ -729,6 +765,7 @@ function App() {
     }
   }
 
+  // Leave connect mode and forget the chosen source node.
   const cancelConnection = () => {
     setIsConnectMode(false)
     setConnectionSource(null)
@@ -754,6 +791,7 @@ function App() {
     enterDeleteMode()
   }
 
+  // Edge-delete button: delete the selection if any, otherwise toggle the mode.
   const handleDeleteEdgeModeToggle = () => {
     if (isDeleteEdgeMode) {
       if (selectedEdgeIds.length > 0) {
@@ -782,6 +820,7 @@ function App() {
     enterConnectMode()
   }
 
+  // Set the direction used for new edges created in connect mode.
   const handleNewEdgeDirectionChange = (direction: GraphEdge['direction']) => {
     setNewEdgeDirection(direction)
   }

@@ -6,8 +6,10 @@ import {
   MIN_EDGE_VISUAL_LENGTH,
 } from './constants'
 
+// Convert radians to degrees.
 export const toDegrees = (radians: number) => (radians * 180) / Math.PI
 
+// Clamp a value to the [min, max] range.
 export const clampToRange = (value: number, min: number, max: number) =>
   Math.min(Math.max(min, value), max)
 
@@ -75,6 +77,10 @@ export const resolveDragPosition = (
   return { x: resolvedX, y: resolvedY }
 }
 
+// Compute draw coordinates and length for an edge between two nodes.
+// Returns null for zero-length edges (nodes at the same position).
+// Insets the line endpoints from each node center so arrowheads don't
+// crowd against the node circles on short edges.
 export const getEdgeGeometry = (fromNode: GraphNode, toNode: GraphNode) => {
   const x1 = fromNode.x + NODE_RADIUS
   const y1 = fromNode.y + NODE_RADIUS
