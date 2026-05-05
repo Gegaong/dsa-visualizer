@@ -1,0 +1,130 @@
+import type { GraphNode } from '../types'
+
+// Fit large numbers into the small node circle: shrink the font, then fall back to ellipsis.
+// Returned as text + class so the JSX stays clean.
+const formatNodeValue = (value: number | null) => {
+  if (value === null) {
+    return { text: 'null', sizeClass: 'node-value--small' }
+  }
+
+  const text = String(value)
+
+  if (text.length <= 3) {
+    return { text, sizeClass: '' }
+  }
+
+  if (text.length <= 5) {
+    return { text, sizeClass: 'node-value--small' }
+  }
+
+  return { text: '...', sizeClass: 'node-value--tiny' }
+}
+
+type GraphNodeLayerProps = {
+  nodes: GraphNode[]
+  isConnectMode: boolean
+  isDeleteMode: boolean
+  isDeleteEdgeMode: boolean
+  selectedNodeIds: string[]
+  connectionSource: string | null
+  draggingNodeId: string | null
+  editingNodeId: string | null
+  draftValue: string
+  onNodeMouseDown: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  onConnectNodeClick: (nodeId: string) => void
+  onToggleNodeSelection: (nodeId: string) => void
+  onStartEditingNode: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  onNodeContextMenu: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  onValueChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onValueKeyDown: (event: React.KeyboardEvent<HTMLInputElement>, nodeId: string) => void
+  onCommitNodeValue: (nodeId: string, rawValue: string) => void
+}
+
+export const GraphNodeLayer = ({
+  nodes,
+  isConnectMode,
+  isDeleteMode,
+  isDeleteEdgeMode,
+  selectedNodeIds,
+  connectionSource,
+  draggingNodeId,
+  editingNodeId,
+  draftValue,
+  onNodeMouseDown,
+  onConnectNodeClick,
+  onToggleNodeSelection,
+  onStartEditingNode,
+  onNodeContextMenu,
+  onValueChange,
+  onValueKeyDown,
+  onCommitNodeValue,
+}: GraphNodeLayerProps) => (
+  <>
+    {nodes.map((node) => {
+      const display = formatNodeValue(node.value)
+      const valueClass = display.sizeClass
+        ? `node-value ${display.sizeClass}`
+        : 'node-value'
+      const isSelected = selectedNodeIds.includes(node.id)
+      const isConnectionSource = connectionSource === node.id
+      // Long values are truncated inside the circle; reveal the full value on hover.
+      const showHoverValue = node.value !== null && String(node.value).length > 5
+
+      return (
+        <div
+          key={node.id}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''}`}
+          style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
+        >
+          <div
+            className="node"
+            onMouseDown={(event) => onNodeMouseDown(event, node)}
+            onClick={(event) => {
+              if (isConnectMode) {
+                event.stopPropagation()
+                onConnectNodeClick(node.id)
+                return
+              }
+
+              if (isDeleteMode) {
+                event.stopPropagation()
+                onToggleNodeSelection(node.id)
+                return
+              }
+
+              // Edge-delete mode owns its own clicks; swallow node clicks so they
+              // don't fall through and accidentally add a node to the canvas.
+              if (isDeleteEdgeMode) {
+                event.stopPropagation()
+                return
+              }
+
+              onStartEditingNode(event, node)
+            }}
+            onContextMenu={
+              isConnectMode || isDeleteMode || isDeleteEdgeMode
+                ? undefined
+                : (event) => onNodeContextMenu(event, node)
+            }
+          >
+            {editingNodeId === node.id ? (
+              <input
+                className="node-input"
+                inputMode="numeric"
+                value={draftValue}
+                onChange={onValueChange}
+                onKeyDown={(event) => onValueKeyDown(event, node.id)}
+                onBlur={(event) => onCommitNodeValue(node.id, event.currentTarget.value)}
+                autoFocus
+              />
+            ) : (
+              <span className={valueClass}>{display.text}</span>
+            )}
+          </div>
+          <span className="node-label">{node.label}</span>
+          {showHoverValue && <span className="node-hover-value">{node.value}</span>}
+        </div>
+      )
+    })}
+  </>
+)

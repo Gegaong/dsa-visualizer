@@ -29,9 +29,24 @@ import {
   getEdgeGeometry,
 } from './utils/geometry'
 
+import {
+  GRAPH_PRESETS,
+  buildPresetGraph,
+} from './utils/presets'
+
+import {
+  DirectionIcon,
+} from './components/DirectionIcon'
+
+import {
+  GraphNodeLayer,
+} from './components/NodesLayer'
+
+// Keep only digits and an optional leading '-'.
 const sanitizeNumericInput = (value: string) =>
   value.replace(/[^0-9-]/g, '').replace(/(?!^)-/g, '')
 
+// Returns null for in-progress typing (empty, lone '-') or invalid input.
 const parseNumberInput = (value: string) => {
   const trimmed = value.trim()
 
@@ -72,312 +87,6 @@ const reindexNodes = (list: GraphNode[]) =>
     label: indexToLabel(index),
   }))
 
-// Format node values for display: fit large numbers into the small circle by shrinking font or truncating.
-const formatNodeValue = (value: number | null) => {
-  if (value === null) {
-    return { text: 'null', sizeClass: 'node-value--small' }
-  }
-
-  const text = String(value)
-
-  if (text.length <= 3) {
-    return { text, sizeClass: '' } // Normal size
-  }
-
-  if (text.length <= 5) {
-    return { text, sizeClass: 'node-value--small' } // Shrink font slightly
-  }
-
-  return { text: '...', sizeClass: 'node-value--tiny' } // Shrink more or show ellipsis
-}
-
-const DirectionIcon = ({ direction }: { direction: GraphEdge['direction'] }) => {
-  // Node-reference style:
-  // - forward: dot then arrow away (outbound)
-  // - backward: arrow toward dot (inbound)
-  // - both: arrows both ways with dot in center (bidirectional)
-  return (
-    <svg className="direction-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {direction === 'forward' && (
-        <>
-          <circle cx="7" cy="12" r="2.7" />
-          <path
-            d="M10 12h8"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-          />
-          <path
-            d="M16 9l3 3-3 3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </>
-      )}
-      {direction === 'backward' && (
-        <>
-          <path
-            d="M14 12H6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-          />
-          <path
-            d="M8 9l-3 3 3 3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="17" cy="12" r="2.7" />
-        </>
-      )}
-      {direction === 'both' && (
-        <>
-          <path
-            d="M6 12h12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-          />
-          <path
-            d="M8 9l-3 3 3 3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M16 9l3 3-3 3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="12" cy="12" r="2.9" />
-        </>
-      )}
-    </svg>
-  )
-}
-
-type GraphNodeLayerProps = {
-  nodes: GraphNode[]
-  isConnectMode: boolean
-  isDeleteMode: boolean
-  isDeleteEdgeMode: boolean
-  selectedNodeIds: string[]
-  connectionSource: string | null
-  draggingNodeId: string | null
-  editingNodeId: string | null
-  draftValue: string
-  onNodeMouseDown: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
-  onConnectNodeClick: (nodeId: string) => void
-  onToggleNodeSelection: (nodeId: string) => void
-  onStartEditingNode: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
-  onNodeContextMenu: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
-  onValueChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onValueKeyDown: (event: React.KeyboardEvent<HTMLInputElement>, nodeId: string) => void
-  onCommitNodeValue: (nodeId: string, rawValue: string) => void
-}
-
-const GraphNodeLayer = ({
-  nodes,
-  isConnectMode,
-  isDeleteMode,
-  isDeleteEdgeMode,
-  selectedNodeIds,
-  connectionSource,
-  draggingNodeId,
-  editingNodeId,
-  draftValue,
-  onNodeMouseDown,
-  onConnectNodeClick,
-  onToggleNodeSelection,
-  onStartEditingNode,
-  onNodeContextMenu,
-  onValueChange,
-  onValueKeyDown,
-  onCommitNodeValue,
-}: GraphNodeLayerProps) => (
-  <>
-    {nodes.map((node) => {
-      const display = formatNodeValue(node.value)
-      const valueClass = display.sizeClass
-        ? `node-value ${display.sizeClass}`
-        : 'node-value'
-      const isSelected = selectedNodeIds.includes(node.id)
-      const isConnectionSource = connectionSource === node.id
-      const showHoverValue = node.value !== null && String(node.value).length > 5
-
-      return (
-        <div
-          key={node.id}
-          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''}`}
-          style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
-        >
-          <div
-            className="node"
-            onMouseDown={(event) => onNodeMouseDown(event, node)}
-            onClick={(event) => {
-              if (isConnectMode) {
-                event.stopPropagation()
-                onConnectNodeClick(node.id)
-                return
-              }
-
-              if (isDeleteMode) {
-                event.stopPropagation()
-                onToggleNodeSelection(node.id)
-                return
-              }
-
-              if (isDeleteEdgeMode) {
-                event.stopPropagation()
-                return
-              }
-
-              onStartEditingNode(event, node)
-            }}
-            onContextMenu={
-              isConnectMode || isDeleteMode || isDeleteEdgeMode
-                ? undefined
-                : (event) => onNodeContextMenu(event, node)
-            }
-          >
-            {editingNodeId === node.id ? (
-              <input
-                className="node-input"
-                inputMode="numeric"
-                value={draftValue}
-                onChange={onValueChange}
-                onKeyDown={(event) => onValueKeyDown(event, node.id)}
-                onBlur={(event) => onCommitNodeValue(node.id, event.currentTarget.value)}
-                autoFocus
-              />
-            ) : (
-              <span className={valueClass}>{display.text}</span>
-            )}
-          </div>
-          <span className="node-label">{node.label}</span>
-          {showHoverValue && <span className="node-hover-value">{node.value}</span>}
-        </div>
-      )
-    })}
-  </>
-)
-
-// Preset layouts use fixed coordinates (values are null); we center them in the canvas at apply time.
-const GRAPH_PRESETS: GraphPreset[] = [
-  {
-    id: 'basic',
-    name: 'Basic Graph',
-    nodes: [
-      { x: 120, y: 100 },
-      { x: 260, y: 70 },
-      { x: 420, y: 120 },
-      { x: 320, y: 210 },
-      { x: 160, y: 230 },
-      { x: 470, y: 240 },
-      { x: 560, y: 150 },
-      { x: 120, y: 320 },
-      { x: 300, y: 320 },
-    ],
-    edges: [
-      [0, 1],
-      [1, 2],
-      [1, 3],
-      [2, 3],
-      [3, 4],
-      [4, 0],
-      [3, 5],
-      [5, 6],
-      [2, 6],
-      [4, 7],
-      [7, 8],
-      [8, 3],
-    ],
-  },
-  {
-    id: 'cycle',
-    name: 'Cycle Graph',
-    nodes: [
-      { x: 260, y: 40 },
-      { x: 380, y: 90 },
-      { x: 420, y: 210 },
-      { x: 340, y: 320 },
-      { x: 200, y: 320 },
-      { x: 120, y: 210 },
-      { x: 160, y: 90 },
-    ],
-    edges: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 6],
-      [6, 0],
-    ],
-  },
-  {
-    id: 'disconnected',
-    name: 'Disconnected Graph',
-    nodes: [
-      { x: 140, y: 120 },
-      { x: 240, y: 90 },
-      { x: 260, y: 200 },
-      { x: 160, y: 230 },
-      { x: 420, y: 120 },
-      { x: 520, y: 120 },
-      { x: 540, y: 220 },
-      { x: 440, y: 220 },
-    ],
-    edges: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [4, 5],
-      [5, 6],
-      [6, 7],
-      [7, 4],
-    ],
-  },
-  {
-    id: 'bipartite',
-    name: 'Bipartite Graph',
-    nodes: [
-      { x: 140, y: 80 },
-      { x: 140, y: 180 },
-      { x: 140, y: 280 },
-      { x: 140, y: 380 },
-      { x: 460, y: 100 },
-      { x: 460, y: 200 },
-      { x: 460, y: 300 },
-      { x: 460, y: 400 },
-    ],
-    edges: [
-      [0, 4],
-      [0, 5],
-      [1, 5],
-      [1, 6],
-      [2, 6],
-      [2, 7],
-      [3, 4],
-      [3, 7],
-    ],
-  },
-]
-
 function App() {
   const [nodes, setNodes] = useState<GraphNode[]>([])
   const [goalType, setGoalType] = useState<GoalType>('target-node')
@@ -411,73 +120,14 @@ function App() {
   }
 
   const applyPreset = (preset: GraphPreset) => {
-    nextId.current = 1
-
-    // Compute a bounding box so we can center the preset on the canvas.
-    const bounds = preset.nodes.reduce(
-      (acc, node) => {
-        const right = node.x + NODE_SIZE
-        const bottom = node.y + NODE_SIZE
-        return {
-          minX: Math.min(acc.minX, node.x),
-          minY: Math.min(acc.minY, node.y),
-          maxX: Math.max(acc.maxX, right),
-          maxY: Math.max(acc.maxY, bottom),
-        }
-      },
-      {
-        minX: Number.POSITIVE_INFINITY,
-        minY: Number.POSITIVE_INFINITY,
-        maxX: Number.NEGATIVE_INFINITY,
-        maxY: Number.NEGATIVE_INFINITY,
-      },
-    )
-
     const canvasBounds = canvasElement?.getBoundingClientRect()
     const canvasWidth = canvasBounds?.width ?? DEFAULT_CANVAS_WIDTH
     const canvasHeight = canvasBounds?.height ?? DEFAULT_CANVAS_HEIGHT
-    // Offset the preset so its center lands on the canvas center.
-    const targetCenterX = canvasWidth / 2
-    const targetCenterY = canvasHeight / 2
-    const presetCenterX = (bounds.minX + bounds.maxX) / 2
-    const presetCenterY = (bounds.minY + bounds.maxY) / 2
-    const offsetX = targetCenterX - presetCenterX
-    const offsetY = targetCenterY - presetCenterY
 
-    const presetNodes = preset.nodes.map((position) => {
-      // Clamp to keep nodes inside the canvas bounds after centering.
-      const clampedX = Math.min(
-        Math.max(0, position.x + offsetX),
-        canvasWidth - NODE_SIZE,
-      )
-      const clampedY = Math.min(
-        Math.max(0, position.y + offsetY),
-        canvasHeight - NODE_SIZE,
-      )
-      const node: GraphNode = {
-        id: `node-${nextId.current}`,
-        label: '',
-        value: null,
-        x: clampedX,
-        y: clampedY,
-      }
+    const { nodes: presetNodes, edges: presetEdges, nextId: nextCounter } =
+      buildPresetGraph(preset, canvasWidth, canvasHeight)
 
-      nextId.current += 1
-      return node
-    })
-
-    const presetEdges: GraphEdge[] = preset.edges.map(([fromIndex, toIndex, direction]) => {
-      const edge: GraphEdge = {
-        id: `edge-${nextId.current}`,
-        fromNodeId: presetNodes[fromIndex].id,
-        toNodeId: presetNodes[toIndex].id,
-        direction: direction ?? 'both',
-      }
-
-      nextId.current += 1
-      return edge
-    })
-
+    nextId.current = nextCounter
     setNodes(reindexNodes(presetNodes))
     setEdges(presetEdges)
     cancelEditing()
