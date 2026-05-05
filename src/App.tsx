@@ -13,9 +13,6 @@ import type {
 import {
   NODE_SIZE,
   NODE_RADIUS,
-  NODE_GAP,
-  MIN_EDGE_STUB,
-  MIN_EDGE_VISUAL_LENGTH,
   MIN_TOGGLE_EDGE_LENGTH,
   TINY_EDGE_MARKER_EDGE_LENGTH,
   SHORT_EDGE_MARKER_EDGE_LENGTH,
@@ -24,7 +21,13 @@ import {
   DRAG_THRESHOLD,
 } from './utils/constants'
 
-const toDegrees = (radians: number) => (radians * 180) / Math.PI
+import {
+  toDegrees,
+  isOverlapping,
+  clampToRange,
+  resolveDragPosition,
+  getEdgeGeometry,
+} from './utils/geometry'
 
 const sanitizeNumericInput = (value: string) =>
   value.replace(/[^0-9-]/g, '').replace(/(?!^)-/g, '')
@@ -86,73 +89,6 @@ const formatNodeValue = (value: number | null) => {
   }
 
   return { text: '...', sizeClass: 'node-value--tiny' } // Shrink more or show ellipsis
-}
-
-// Check if a new node at (x, y) overlaps with any existing nodes using distance-based collision detection.
-const isOverlapping = (x: number, y: number, list: GraphNode[]) => {
-  const newCenterX = x + NODE_RADIUS
-  const newCenterY = y + NODE_RADIUS
-  const minDistance = NODE_SIZE + NODE_GAP // Minimum distance between centers (both radii + gap)
-
-  return list.some((node) => {
-    const existingCenterX = node.x + NODE_RADIUS
-    const existingCenterY = node.y + NODE_RADIUS
-    const dx = existingCenterX - newCenterX
-    const dy = existingCenterY - newCenterY
-
-    // Use squared distance to avoid sqrt() overhead
-    return dx * dx + dy * dy < minDistance * minDistance
-  })
-}
-
-const clampToRange = (value: number, min: number, max: number) =>
-  Math.min(Math.max(min, value), max)
-
-// Push a dropped node away from neighbors to preserve the same minimum spacing.
-const resolveDragPosition = (
-  x: number,
-  y: number,
-  nodeId: string,
-  list: GraphNode[],
-  canvasWidth: number,
-  canvasHeight: number,
-) => {
-  const minDistance = NODE_SIZE + NODE_GAP
-  const maxX = canvasWidth - NODE_SIZE
-  const maxY = canvasHeight - NODE_SIZE
-  let resolvedX = clampToRange(x, 0, maxX)
-  let resolvedY = clampToRange(y, 0, maxY)
-
-  for (let pass = 0; pass < 4; pass += 1) {
-    let adjusted = false
-
-    for (const other of list) {
-      if (other.id === nodeId) continue
-
-      const centerX = resolvedX + NODE_RADIUS
-      const centerY = resolvedY + NODE_RADIUS
-      const otherCenterX = other.x + NODE_RADIUS
-      const otherCenterY = other.y + NODE_RADIUS
-      const dx = centerX - otherCenterX
-      const dy = centerY - otherCenterY
-      const distance = Math.hypot(dx, dy)
-
-      if (distance < minDistance) {
-        const push = minDistance - distance
-        const dirX = distance === 0 ? 1 : dx / distance
-        const dirY = distance === 0 ? 0 : dy / distance
-        resolvedX = clampToRange(resolvedX + dirX * push, 0, maxX)
-        resolvedY = clampToRange(resolvedY + dirY * push, 0, maxY)
-        adjusted = true
-      }
-    }
-
-    if (!adjusted) {
-      break
-    }
-  }
-
-  return { x: resolvedX, y: resolvedY }
 }
 
 const DirectionIcon = ({ direction }: { direction: GraphEdge['direction'] }) => {
@@ -234,47 +170,112 @@ const DirectionIcon = ({ direction }: { direction: GraphEdge['direction'] }) => 
   )
 }
 
-const getEdgeGeometry = (fromNode: GraphNode, toNode: GraphNode) => {
-  const x1 = fromNode.x + NODE_RADIUS
-  const y1 = fromNode.y + NODE_RADIUS
-  const x2 = toNode.x + NODE_RADIUS
-  const y2 = toNode.y + NODE_RADIUS
-
-  const dx = x2 - x1
-  const dy = y2 - y1
-  const dist = Math.hypot(dx, dy)
-
-  if (dist < 0.001) {
-    return null
-  }
-
-  const unitX = dx / dist
-  const unitY = dy / dist
-  // Keep a minimum visible edge length so arrowheads don't crowd on short edges.
-  const minVisibleLength = Math.max(MIN_EDGE_STUB, MIN_EDGE_VISUAL_LENGTH)
-  const inset = Math.min(
-    NODE_RADIUS,
-    Math.max(0, (dist - minVisibleLength) / 2),
-  )
-
-  const startX = x1 + unitX * inset
-  const startY = y1 + unitY * inset
-  const endX = x2 - unitX * inset
-  const endY = y2 - unitY * inset
-  const edgeLength = dist - 2 * inset
-
-  return {
-    x1,
-    y1,
-    x2,
-    y2,
-    startX,
-    startY,
-    endX,
-    endY,
-    edgeLength,
-  }
+type GraphNodeLayerProps = {
+  nodes: GraphNode[]
+  isConnectMode: boolean
+  isDeleteMode: boolean
+  isDeleteEdgeMode: boolean
+  selectedNodeIds: string[]
+  connectionSource: string | null
+  draggingNodeId: string | null
+  editingNodeId: string | null
+  draftValue: string
+  onNodeMouseDown: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  onConnectNodeClick: (nodeId: string) => void
+  onToggleNodeSelection: (nodeId: string) => void
+  onStartEditingNode: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  onNodeContextMenu: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  onValueChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onValueKeyDown: (event: React.KeyboardEvent<HTMLInputElement>, nodeId: string) => void
+  onCommitNodeValue: (nodeId: string, rawValue: string) => void
 }
+
+const GraphNodeLayer = ({
+  nodes,
+  isConnectMode,
+  isDeleteMode,
+  isDeleteEdgeMode,
+  selectedNodeIds,
+  connectionSource,
+  draggingNodeId,
+  editingNodeId,
+  draftValue,
+  onNodeMouseDown,
+  onConnectNodeClick,
+  onToggleNodeSelection,
+  onStartEditingNode,
+  onNodeContextMenu,
+  onValueChange,
+  onValueKeyDown,
+  onCommitNodeValue,
+}: GraphNodeLayerProps) => (
+  <>
+    {nodes.map((node) => {
+      const display = formatNodeValue(node.value)
+      const valueClass = display.sizeClass
+        ? `node-value ${display.sizeClass}`
+        : 'node-value'
+      const isSelected = selectedNodeIds.includes(node.id)
+      const isConnectionSource = connectionSource === node.id
+      const showHoverValue = node.value !== null && String(node.value).length > 5
+
+      return (
+        <div
+          key={node.id}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''}`}
+          style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
+        >
+          <div
+            className="node"
+            onMouseDown={(event) => onNodeMouseDown(event, node)}
+            onClick={(event) => {
+              if (isConnectMode) {
+                event.stopPropagation()
+                onConnectNodeClick(node.id)
+                return
+              }
+
+              if (isDeleteMode) {
+                event.stopPropagation()
+                onToggleNodeSelection(node.id)
+                return
+              }
+
+              if (isDeleteEdgeMode) {
+                event.stopPropagation()
+                return
+              }
+
+              onStartEditingNode(event, node)
+            }}
+            onContextMenu={
+              isConnectMode || isDeleteMode || isDeleteEdgeMode
+                ? undefined
+                : (event) => onNodeContextMenu(event, node)
+            }
+            style={{ cursor: undefined }}
+          >
+            {editingNodeId === node.id ? (
+              <input
+                className="node-input"
+                inputMode="numeric"
+                value={draftValue}
+                onChange={onValueChange}
+                onKeyDown={(event) => onValueKeyDown(event, node.id)}
+                onBlur={(event) => onCommitNodeValue(node.id, event.currentTarget.value)}
+                autoFocus
+              />
+            ) : (
+              <span className={valueClass}>{display.text}</span>
+            )}
+          </div>
+          <span className="node-label">{node.label}</span>
+          {showHoverValue && <span className="node-hover-value">{node.value}</span>}
+        </div>
+      )
+    })}
+  </>
+)
 
 // Preset layouts use fixed coordinates (values are null); we center them in the canvas at apply time.
 const GRAPH_PRESETS: GraphPreset[] = [
@@ -401,7 +402,7 @@ function App() {
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null)
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
-  const canvasRef = useRef<HTMLDivElement | null>(null)
+  const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
   const suppressClickRef = useRef(false)
   const suppressCanvasClickRef = useRef(false)
@@ -433,7 +434,7 @@ function App() {
       },
     )
 
-    const canvasBounds = canvasRef.current?.getBoundingClientRect()
+    const canvasBounds = canvasElement?.getBoundingClientRect()
     const canvasWidth = canvasBounds?.width ?? DEFAULT_CANVAS_WIDTH
     const canvasHeight = canvasBounds?.height ?? DEFAULT_CANVAS_HEIGHT
     // Offset the preset so its center lands on the canvas center.
@@ -690,7 +691,8 @@ function App() {
       return
     }
 
-    const canvasBounds = canvasRef.current?.getBoundingClientRect()
+    const canvasElement = event.currentTarget.closest('.canvas') as HTMLDivElement | null
+    const canvasBounds = canvasElement?.getBoundingClientRect()
 
     if (!canvasBounds) {
       return
@@ -736,7 +738,7 @@ function App() {
       const dragState = dragStateRef.current
       if (!dragState) return
 
-      const canvasBounds = canvasRef.current?.getBoundingClientRect()
+      const canvasBounds = canvasElement?.getBoundingClientRect()
       if (!canvasBounds) return
 
       const pointerX = event.clientX - canvasBounds.left
@@ -791,7 +793,7 @@ function App() {
       suppressClickRef.current = true
       suppressCanvasClickRef.current = true
 
-      const canvasBounds = canvasRef.current?.getBoundingClientRect()
+      const canvasBounds = canvasElement?.getBoundingClientRect()
       if (!canvasBounds) return
 
       const pointerX = event.clientX - canvasBounds.left
@@ -831,7 +833,7 @@ function App() {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [])
+  }, [canvasElement])
 
   // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1248,7 +1250,7 @@ function App() {
                 ? 'is-select'
                 : 'is-place'
               }`}
-            ref={canvasRef}
+            ref={setCanvasElement}
             onClick={(e) => {
               if (!isConnectMode) {
                 handleCanvasClick(e)
@@ -1511,77 +1513,25 @@ function App() {
               )
             })}
 
-            {nodes.map((node) => (
-              (() => {
-                const display = formatNodeValue(node.value)
-                const valueClass = display.sizeClass
-                  ? `node-value ${display.sizeClass}`
-                  : 'node-value'
-                const isSelected = selectedNodeIds.includes(node.id)
-                const isConnectionSource = connectionSource === node.id
-                const showHoverValue =
-                  node.value !== null && String(node.value).length > 5
-
-                return (
-                  <div
-                    key={node.id}
-                    className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''
-                      } ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''
-                      } ${editingNodeId === node.id ? 'is-editing' : ''}`}
-                    style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
-                  >
-                    <div
-                      className="node"
-                      onMouseDown={(event) => handleNodeMouseDown(event, node)}
-                      onClick={(event) => {
-                        if (isConnectMode) {
-                          event.stopPropagation()
-                          handleConnectNodeClick(node.id)
-                          return
-                        }
-
-                        if (isDeleteMode) {
-                          event.stopPropagation()
-                          toggleNodeSelection(node.id)
-                          return
-                        }
-
-                        if (isDeleteEdgeMode) {
-                          event.stopPropagation()
-                          return
-                        }
-
-                        startEditingNode(event, node)
-                      }}
-                      onContextMenu={
-                        isConnectMode || isDeleteMode || isDeleteEdgeMode
-                          ? undefined
-                          : (event) => handleNodeContextMenu(event, node)
-                      }
-                      style={{ cursor: undefined }}
-                    >
-                      {editingNodeId === node.id ? (
-                        <input
-                          className="node-input"
-                          inputMode="numeric"
-                          value={draftValue}
-                          onChange={handleValueChange}
-                          onKeyDown={(event) => handleValueKeyDown(event, node.id)}
-                          onBlur={(event) => commitNodeValue(node.id, event.currentTarget.value)}
-                          autoFocus
-                        />
-                      ) : (
-                        <span className={valueClass}>{display.text}</span>
-                      )}
-                    </div>
-                    <span className="node-label">{node.label}</span>
-                    {showHoverValue && (
-                      <span className="node-hover-value">{node.value}</span>
-                    )}
-                  </div>
-                )
-              })()
-            ))}
+            <GraphNodeLayer
+              nodes={nodes}
+              isConnectMode={isConnectMode}
+              isDeleteMode={isDeleteMode}
+              isDeleteEdgeMode={isDeleteEdgeMode}
+              selectedNodeIds={selectedNodeIds}
+              connectionSource={connectionSource}
+              draggingNodeId={draggingNodeId}
+              editingNodeId={editingNodeId}
+              draftValue={draftValue}
+              onNodeMouseDown={handleNodeMouseDown}
+              onConnectNodeClick={handleConnectNodeClick}
+              onToggleNodeSelection={toggleNodeSelection}
+              onStartEditingNode={startEditingNode}
+              onNodeContextMenu={handleNodeContextMenu}
+              onValueChange={handleValueChange}
+              onValueKeyDown={handleValueKeyDown}
+              onCommitNodeValue={commitNodeValue}
+            />
           </div>
         </section>
 
