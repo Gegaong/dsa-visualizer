@@ -95,7 +95,7 @@
 .canvas-actions {
 	--action-height: 44px;
 	display: flex;
-	align-items: stretch;
+	align-items: center;
 	gap: 8px;
 	flex-wrap: nowrap;
 	justify-content: flex-end;
@@ -103,8 +103,7 @@
 }
 
 .canvas-actions > .btn,
-.canvas-actions > .edge-direction-picker,
-.canvas-actions > .delete-stack {
+.canvas-actions > .edge-direction-picker {
 	height: var(--action-height);
 }
 
@@ -177,9 +176,11 @@
 }
 
 .delete-stack {
+	--delete-stack-height: calc(var(--action-height) + 14px);
 	display: grid;
 	grid-template-rows: repeat(2, minmax(0, 1fr));
 	width: 172px;
+	height: var(--delete-stack-height);
 	border: 1px solid var(--border);
 	border-radius: 12px;
 	overflow: hidden;
