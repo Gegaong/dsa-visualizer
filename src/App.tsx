@@ -13,18 +13,15 @@ import type {
 import {
   NODE_SIZE,
   NODE_RADIUS,
-  MIN_TOGGLE_EDGE_LENGTH,
   DEFAULT_CANVAS_WIDTH,
   DEFAULT_CANVAS_HEIGHT,
   DRAG_THRESHOLD,
 } from './utils/constants'
 
 import {
-  toDegrees,
   isOverlapping,
   clampToRange,
   resolveDragPosition,
-  getEdgeGeometry,
 } from './utils/geometry'
 
 import {
@@ -46,6 +43,22 @@ import {
 import {
   EdgesLayer,
 } from './components/EdgesLayer'
+
+import {
+  Header,
+} from './components/Header'
+
+import {
+  EdgeToggles,
+} from './components/EdgeToggles'
+
+import {
+  ConfirmModal,
+} from './components/Modals'
+
+import {
+  NodeContextMenu,
+} from './components/NodeContextMenu'
 
 import {
   sanitizeNumericInput,
@@ -792,9 +805,6 @@ function App() {
     setNewEdgeDirection(direction)
   }
 
-  const contextNode = contextMenu
-    ? nodes.find((node) => node.id === contextMenu.nodeId) ?? null
-    : null
   const fillRangeReady =
     parseNumberInput(fillMin) !== null &&
     parseNumberInput(fillMax) !== null
@@ -802,26 +812,7 @@ function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-title">DSA Visualizer</span>
-          <span className="brand-subtitle">Build structures, then run algorithms.</span>
-        </div>
-        <nav className="structure-nav">
-          <button className="btn btn-pill btn-active" type="button">
-            Graph
-          </button>
-          <button className="btn btn-pill" type="button">
-            Weighted Graph
-          </button>
-          <button className="btn btn-pill" type="button">
-            Grid
-          </button>
-          <button className="btn btn-pill" type="button">
-            Maze
-          </button>
-        </nav>
-      </header>
+      <Header />
 
       <div className="workspace">
         <section className="canvas-panel">
@@ -923,74 +914,14 @@ function App() {
               onToggleEdgeSelection={toggleEdgeSelection}
             />
 
-            {edges.map((edge) => {
-              const fromNode = nodes.find((n) => n.id === edge.fromNodeId)
-              const toNode = nodes.find((n) => n.id === edge.toNodeId)
-
-              if (!fromNode || !toNode) return null
-
-              const geometry = getEdgeGeometry(fromNode, toNode)
-              const isSelected = selectedEdgeIds.includes(edge.id)
-
-              // Show the midpoint control when the edge is long enough for normal toggles.
-              // However, when in delete-edge mode we want a midpoint badge even for short
-              // edges so they can be selected — that's why the conditional permits showing
-              // the control when `isDeleteEdgeMode` is active regardless of length.
-              if (!geometry || (!isDeleteEdgeMode && geometry.edgeLength < MIN_TOGGLE_EDGE_LENGTH)) {
-                return null
-              }
-
-              const { x1, y1, x2, y2 } = geometry
-              const midX = (x1 + x2) / 2
-              const midY = (y1 + y2) / 2
-
-              const baseAngle = toDegrees(Math.atan2(y2 - y1, x2 - x1))
-              const angle =
-                edge.direction === 'backward'
-                  ? baseAngle + 180
-                  : baseAngle
-
-              return (
-                <button
-                  key={`toggle-${edge.id}`}
-                  className={`edge-toggle ${isSelected ? 'is-selected' : ''} ${isDeleteEdgeMode ? 'is-delete-edge-mode' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-
-                    if (isDeleteEdgeMode) {
-                      toggleEdgeSelection(edge.id)
-                      return
-                    }
-
-                    toggleEdgeDirection(edge.id)
-                  }}
-                  type="button"
-                  title={
-                    isDeleteEdgeMode
-                      ? isSelected
-                        ? 'Remove edge from delete selection'
-                        : 'Select edge for deletion'
-                      : 'Toggle edge direction'
-                  }
-                  aria-label={
-                    isDeleteEdgeMode
-                      ? isSelected
-                        ? 'Remove edge from delete selection'
-                        : 'Select edge for deletion'
-                      : 'Toggle edge direction'
-                  }
-                  style={{
-                    left: midX,
-                    top: midY,
-                    ['--edge-angle' as never]: `${angle}deg`,
-                  }}
-                >
-                  <span className="edge-toggle-icon">
-                    {isDeleteEdgeMode ? <span className="edge-delete-badge">×</span> : <DirectionIcon direction={edge.direction === 'both' ? 'both' : 'forward'} />}
-                  </span>
-                </button>
-              )
-            })}
+            <EdgeToggles
+              nodes={nodes}
+              edges={edges}
+              isDeleteEdgeMode={isDeleteEdgeMode}
+              selectedEdgeIds={selectedEdgeIds}
+              onToggleEdgeDirection={toggleEdgeDirection}
+              onToggleEdgeSelection={toggleEdgeSelection}
+            />
 
             <GraphNodeLayer
               nodes={nodes}
@@ -1031,107 +962,43 @@ function App() {
         />
       </div>
 
-      {showClearConfirm && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal">
-            <h3>Clear canvas?</h3>
-            <p>This will remove all nodes from the canvas.</p>
-            <div className="modal-actions">
-              <button className="btn btn-primary" type="button" onClick={confirmClearCanvas}>
-                Clear
-              </button>
-              <button className="btn" type="button" onClick={cancelClearCanvas}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+      <ConfirmModal
+        open={showClearConfirm}
+        title="Clear canvas?"
+        body="This will remove all nodes from the canvas."
+        confirmLabel="Clear"
+        onConfirm={confirmClearCanvas}
+        onCancel={cancelClearCanvas}
+      />
+
+      {pendingPreset && (
+        <ConfirmModal
+          open={showPresetConfirm}
+          title="Replace canvas with preset?"
+          body={`This will clear the current canvas and load “${pendingPreset.name}”.`}
+          confirmLabel="Replace"
+          onConfirm={confirmPresetReplace}
+          onCancel={cancelPresetReplace}
+        />
       )}
 
-      {showPresetConfirm && pendingPreset && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal">
-            <h3>Replace canvas with preset?</h3>
-            <p>
-              This will clear the current canvas and load “{pendingPreset.name}”.
-            </p>
-            <div className="modal-actions">
-              <button className="btn btn-primary" type="button" onClick={confirmPresetReplace}>
-                Replace
-              </button>
-              <button className="btn" type="button" onClick={cancelPresetReplace}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={showNullifyConfirm}
+        title="Nullify all values?"
+        body="This will reset every node value to null."
+        confirmLabel="Nullify"
+        onConfirm={confirmNullifyAll}
+        onCancel={cancelNullifyAll}
+      />
 
-      {showNullifyConfirm && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal">
-            <h3>Nullify all values?</h3>
-            <p>This will reset every node value to null.</p>
-            <div className="modal-actions">
-              <button className="btn btn-primary" type="button" onClick={confirmNullifyAll}>
-                Nullify
-              </button>
-              <button className="btn" type="button" onClick={cancelNullifyAll}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {contextMenu && contextNode && (
-        <div
-          className="context-backdrop"
-          onClick={closeContextMenu}
-          onContextMenu={(event) => {
-            event.preventDefault()
-            closeContextMenu()
-          }}
-        >
-          <div
-            className="context-menu"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-            onClick={(event) => event.stopPropagation()}
-            onContextMenu={(event) => event.preventDefault()}
-          >
-            <div className="context-header">
-              <span className="context-title">Node {contextNode.label}</span>
-              <span className="context-value">
-                {contextNode.value === null ? 'null' : contextNode.value}
-              </span>
-            </div>
-            {!isDeleteMode && (
-              <>
-                <button
-                  className="context-action"
-                  type="button"
-                  onClick={() => {
-                    beginEditingNode(contextNode)
-                    closeContextMenu()
-                  }}
-                >
-                  Edit value
-                </button>
-                <button
-                  className="context-action context-action--danger"
-                  type="button"
-                  onClick={() => {
-                    deleteNode(contextNode.id)
-                    closeContextMenu()
-                  }}
-                >
-                  Delete node
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <NodeContextMenu
+        contextMenu={contextMenu}
+        nodes={nodes}
+        isDeleteMode={isDeleteMode}
+        onClose={closeContextMenu}
+        onEditValue={beginEditingNode}
+        onDelete={deleteNode}
+      />
     </div>
   )
 }
