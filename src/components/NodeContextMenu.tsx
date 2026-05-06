@@ -43,7 +43,7 @@ export const NodeContextMenu = ({
         <div className="context-header">
           <span className="context-title">Node {node.label}</span>
           <span className="context-value">
-            {node.value === null ? 'null' : node.value}
+            {node.value === 'empty' ? 'empty' : node.value === null ? 'null' : node.value}
           </span>
         </div>
         {!isDeleteMode && (

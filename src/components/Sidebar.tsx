@@ -10,10 +10,12 @@ type SidebarProps = {
   onFillMaxChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onFillRangeBlur: () => void
   onFillRangeKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void
-  onFillNullValues: () => void
-  canFillNulls: boolean
-  onNullifyAll: () => void
-  canNullify: boolean
+  onFillEmptyValues: () => void
+  canFillEmpty: boolean
+  onNullifyEmptyValues: () => void
+  canNullifyEmpty: boolean
+  onEmptyAllValues: () => void
+  canEmptyAll: boolean
   onPresetClick: (preset: GraphPreset) => void
 }
 
@@ -27,10 +29,12 @@ export const Sidebar = ({
   onFillMaxChange,
   onFillRangeBlur,
   onFillRangeKeyDown,
-  onFillNullValues,
-  canFillNulls,
-  onNullifyAll,
-  canNullify,
+  onFillEmptyValues,
+  canFillEmpty,
+  onNullifyEmptyValues,
+  canNullifyEmpty,
+  onEmptyAllValues,
+  canEmptyAll,
   onPresetClick,
 }: SidebarProps) => (
   <aside className="sidebar">
@@ -109,18 +113,26 @@ export const Sidebar = ({
         <button
           className="btn btn-primary"
           type="button"
-          onClick={onFillNullValues}
-          disabled={!canFillNulls}
+          onClick={onFillEmptyValues}
+          disabled={!canFillEmpty}
         >
-          Fill null values
+          Fill empty values
         </button>
         <button
           className="btn"
           type="button"
-          onClick={onNullifyAll}
-          disabled={!canNullify}
+          onClick={onNullifyEmptyValues}
+          disabled={!canNullifyEmpty}
         >
-          Nullify all values
+          Nullify all empty values
+        </button>
+        <button
+          className="btn"
+          type="button"
+          onClick={onEmptyAllValues}
+          disabled={!canEmptyAll}
+        >
+          Empty all values
         </button>
       </div>
     </div>

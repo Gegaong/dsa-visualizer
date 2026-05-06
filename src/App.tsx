@@ -75,7 +75,7 @@ function App() {
   const [draftValue, setDraftValue] = useState('') // Temporary input value during inline editing
   const [fillMin, setFillMin] = useState('')
   const [fillMax, setFillMax] = useState('')
-  const [showNullifyConfirm, setShowNullifyConfirm] = useState(false)
+  const [showEmptyAllConfirm, setShowEmptyAllConfirm] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showPresetConfirm, setShowPresetConfirm] = useState(false)
   const [pendingPreset, setPendingPreset] = useState<GraphPreset | null>(null)
@@ -254,7 +254,18 @@ function App() {
   }
 
   // Enter inline-editing mode for a node's value. Cancel any active modes and prep the input field.
+  // If a different node is already being edited, commit its draft first — clicking
+  // straight from one node into another would otherwise silently drop the typed value
+  // (the input unmounts before React fires onBlur).
   const beginEditingNode = (node: GraphNode) => {
+    if (editingNodeId === node.id) {
+      return
+    }
+
+    if (editingNodeId && editingNodeId !== node.id) {
+      commitNodeValue(editingNodeId, draftValue)
+    }
+
     setIsDeleteMode(false)
     setIsDeleteEdgeMode(false)
     setIsConnectMode(false)
@@ -262,7 +273,7 @@ function App() {
     clearSelection()
     clearEdgeSelection()
     setEditingNodeId(node.id)
-    setDraftValue(node.value === null ? '' : String(node.value))
+    setDraftValue(typeof node.value === 'number' ? String(node.value) : '')
   }
 
   // Add a new node at the click position.
@@ -296,7 +307,7 @@ function App() {
       const newNode: GraphNode = {
         id: `node-${nextId.current}`,
         label: '',
-        value: null,
+        value: 'empty',
         x: clampedX,
         y: clampedY,
       }
@@ -336,7 +347,15 @@ function App() {
       return
     }
 
-    if (isConnectMode || isDeleteMode || isDeleteEdgeMode || editingNodeId === node.id) {
+    // While editing this node, swallow shell clicks so the input doesn't blur
+    // when the user clicks near the edge of the circle.
+    if (editingNodeId === node.id) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
+    if (isConnectMode || isDeleteMode || isDeleteEdgeMode) {
       return
     }
 
@@ -350,6 +369,19 @@ function App() {
     event.preventDefault()
     event.stopPropagation()
     closeContextMenu()
+
+    // If another node is being edited, commit it immediately when dragging starts.
+    if (editingNodeId !== null && editingNodeId !== node.id) {
+      const nodeId = editingNodeId
+      const normalizedValue = parseNumberInput(draftValue)
+      setNodes((prev) =>
+        prev.map((currentNode) =>
+          currentNode.id === nodeId ? { ...currentNode, value: normalizedValue } : currentNode,
+        ),
+      )
+      setEditingNodeId(null)
+      setDraftValue('')
+    }
 
     const pointerX = event.clientX - canvasBounds.left
     const pointerY = event.clientY - canvasBounds.top
@@ -528,11 +560,7 @@ function App() {
 
   // Finalize node value from the latest input value to avoid stale state during fast typing.
   const commitNodeValue = (nodeId: string, rawValue: string) => {
-    const trimmed = rawValue.trim()
-    const nextValue = trimmed === '' ? null : Number(trimmed) // Empty string becomes null
-    // Treat invalid numeric input as null so nodes never store NaN.
-    const normalizedValue =
-      nextValue === null || Number.isNaN(nextValue) ? null : nextValue
+    const normalizedValue = parseNumberInput(rawValue)
 
     setNodes((prev) =>
       prev.map((node) =>
@@ -555,8 +583,8 @@ function App() {
     setDraftValue('')
   }
 
-  // Replace null node values with inclusive random integers in the provided range.
-  const fillNullValues = () => {
+  // Replace empty node values with inclusive random integers in the provided range.
+  const fillEmptyValues = () => {
     const minValue = parseNumberInput(fillMin)
     const maxValue = parseNumberInput(fillMax)
 
@@ -569,7 +597,7 @@ function App() {
 
     setNodes((prev) =>
       prev.map((node) =>
-        node.value === null
+        node.value === 'empty'
           ? {
             ...node,
             value: getRandomIntInclusive(low, high),
@@ -580,30 +608,42 @@ function App() {
     cancelEditing()
   }
 
-  // Nullify every node value after confirmation.
-  const handleNullifyAllClick = () => {
-    if (nodes.length === 0) {
+  // Convert every empty node to null. No confirmation — this leaves user-entered
+  // numbers untouched, so it's non-destructive.
+  const nullifyEmptyValues = () => {
+    setNodes((prev) =>
+      prev.map((node) =>
+        node.value === 'empty'
+          ? { ...node, value: null }
+          : node,
+      ),
+    )
+  }
+
+  // Ask before resetting every node back to empty — this *can* wipe user-entered numbers.
+  const handleEmptyAllClick = () => {
+    if (nodes.every((node) => node.value === 'empty')) {
       return
     }
 
-    setShowNullifyConfirm(true)
+    setShowEmptyAllConfirm(true)
   }
 
-  // Replace every node value with null.
-  const confirmNullifyAll = () => {
+  // Reset every node to the 'empty' state.
+  const confirmEmptyAll = () => {
     setNodes((prev) =>
-      prev.map((node) => ({
+      prev.map((node): GraphNode => ({
         ...node,
-        value: null,
+        value: 'empty',
       })),
     )
     cancelEditing()
-    setShowNullifyConfirm(false)
+    setShowEmptyAllConfirm(false)
   }
 
-  // Close the nullify confirmation without nullifying.
-  const cancelNullifyAll = () => {
-    setShowNullifyConfirm(false)
+  // Close the empty-all confirmation without resetting.
+  const cancelEmptyAll = () => {
+    setShowEmptyAllConfirm(false)
   }
 
   // Keyboard shortcuts for inline editing: Enter to save, Escape to cancel.
@@ -805,10 +845,14 @@ function App() {
     setNewEdgeDirection(direction)
   }
 
+  const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
+  const hasNonEmptyNodes = nodes.some((node) => node.value !== 'empty')
   const fillRangeReady =
     parseNumberInput(fillMin) !== null &&
     parseNumberInput(fillMax) !== null
-  const canFillNulls = nodes.length > 0 && fillRangeReady
+  const canFillEmpty = hasEmptyNodes && fillRangeReady
+  const canNullifyEmpty = hasEmptyNodes
+  const canEmptyAll = hasNonEmptyNodes
 
   return (
     <div className="app">
@@ -954,10 +998,12 @@ function App() {
           onFillMaxChange={handleFillMaxChange}
           onFillRangeBlur={syncFillRange}
           onFillRangeKeyDown={handleFillRangeKeyDown}
-          onFillNullValues={fillNullValues}
-          canFillNulls={canFillNulls}
-          onNullifyAll={handleNullifyAllClick}
-          canNullify={nodes.length > 0}
+          onFillEmptyValues={fillEmptyValues}
+          canFillEmpty={canFillEmpty}
+          onNullifyEmptyValues={nullifyEmptyValues}
+          canNullifyEmpty={canNullifyEmpty}
+          onEmptyAllValues={handleEmptyAllClick}
+          canEmptyAll={canEmptyAll}
           onPresetClick={handlePresetClick}
         />
       </div>
@@ -983,12 +1029,12 @@ function App() {
       )}
 
       <ConfirmModal
-        open={showNullifyConfirm}
-        title="Nullify all values?"
-        body="This will reset every node value to null."
-        confirmLabel="Nullify"
-        onConfirm={confirmNullifyAll}
-        onCancel={cancelNullifyAll}
+        open={showEmptyAllConfirm}
+        title="Empty all values?"
+        body="This resets every node back to empty, wiping any numbers and nulls."
+        confirmLabel="Empty all"
+        onConfirm={confirmEmptyAll}
+        onCancel={cancelEmptyAll}
       />
 
       <NodeContextMenu

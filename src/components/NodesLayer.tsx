@@ -1,8 +1,13 @@
 import type { GraphNode } from '../types'
 
-// Fit large numbers into the small node circle: shrink the font, then fall back to ellipsis.
-// Returned as text + class so the JSX stays clean.
-const formatNodeValue = (value: number | null) => {
+// Pick the right text + size class for a node's value.
+// 'empty' renders as a blank circle, null renders as the word "null",
+// and numbers shrink (or get truncated to "...") so they fit inside the circle.
+const formatNodeValue = (value: number | null | 'empty') => {
+  if (value === 'empty') {
+    return { text: '', sizeClass: '' }
+  }
+
   if (value === null) {
     return { text: 'null', sizeClass: 'node-value--small' }
   }
@@ -71,7 +76,7 @@ export const GraphNodeLayer = ({
       const isSelected = selectedNodeIds.includes(node.id)
       const isConnectionSource = connectionSource === node.id
       // Long values are truncated inside the circle; reveal the full value on hover.
-      const showHoverValue = node.value !== null && String(node.value).length > 5
+      const showHoverValue = typeof node.value === 'number' && String(node.value).length > 5
 
       return (
         <div

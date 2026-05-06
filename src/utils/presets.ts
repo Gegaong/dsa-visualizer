@@ -159,7 +159,7 @@ export const buildPresetGraph = (
     const node: GraphNode = {
       id: `node-${counter}`,
       label: '',
-      value: null,
+      value: 'empty',
       x: clampedX,
       y: clampedY,
     }
