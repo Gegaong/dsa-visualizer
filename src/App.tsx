@@ -14,8 +14,6 @@ import {
   NODE_SIZE,
   NODE_RADIUS,
   MIN_TOGGLE_EDGE_LENGTH,
-  TINY_EDGE_MARKER_EDGE_LENGTH,
-  SHORT_EDGE_MARKER_EDGE_LENGTH,
   DEFAULT_CANVAS_WIDTH,
   DEFAULT_CANVAS_HEIGHT,
   DRAG_THRESHOLD,
@@ -30,7 +28,6 @@ import {
 } from './utils/geometry'
 
 import {
-  GRAPH_PRESETS,
   buildPresetGraph,
 } from './utils/presets'
 
@@ -42,50 +39,20 @@ import {
   GraphNodeLayer,
 } from './components/NodesLayer'
 
-// Keep only digits and an optional leading '-'.
-const sanitizeNumericInput = (value: string) =>
-  value.replace(/[^0-9-]/g, '').replace(/(?!^)-/g, '')
+import {
+  Sidebar,
+} from './components/Sidebar'
 
-// Returns null for in-progress typing (empty, lone '-') or invalid input.
-const parseNumberInput = (value: string) => {
-  const trimmed = value.trim()
+import {
+  EdgesLayer,
+} from './components/EdgesLayer'
 
-  if (trimmed === '' || trimmed === '-') {
-    return null
-  }
-
-  const numberValue = Number(trimmed)
-  return Number.isNaN(numberValue) ? null : numberValue
-}
-
-// Inclusive integer RNG used when filling null node values.
-const getRandomIntInclusive = (min: number, max: number) => {
-  const low = Math.ceil(min)
-  const high = Math.floor(max)
-  return Math.floor(Math.random() * (high - low + 1)) + low
-}
-
-// Convert array index (0, 1, 2, ...) to Alphabetical style column labels (A, B, C, ..., Z, AA, AB, ...)
-const indexToLabel = (index: number) => {
-  let label = ''
-  let remaining = index + 1
-
-  while (remaining > 0) {
-    const remainder = (remaining - 1) % 26
-    label = String.fromCharCode(65 + remainder) + label
-    remaining = Math.floor((remaining - 1) / 26)
-  }
-
-  return label
-}
-
-// Recalculate labels for all nodes based on their position in the array.
-// Used after deletion to maintain consistent A, B, C... labeling.
-const reindexNodes = (list: GraphNode[]) =>
-  list.map((node, index) => ({
-    ...node,
-    label: indexToLabel(index),
-  }))
+import {
+  sanitizeNumericInput,
+  parseNumberInput,
+  getRandomIntInclusive,
+  reindexNodes,
+} from './utils/format'
 
 // Root component for the DSA visualizer workspace.
 function App() {
@@ -948,191 +915,13 @@ function App() {
             }}
             onContextMenu={handleCanvasContextMenu}
           >
-            <svg className="edges-layer" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: isDeleteEdgeMode ? 'auto' : 'none' }}>
-              <defs>
-                <marker
-                  id="arrowhead"
-                  markerWidth="7"
-                  markerHeight="7"
-                  refX="6.2"
-                  refY="2.1"
-                  orient="auto"
-                >
-                  <polygon points="0 0, 7 2.1, 0 4.2" fill="#4a7c59" />
-                </marker>
-                <marker
-                  id="arrowhead-small"
-                  markerWidth="5"
-                  markerHeight="5"
-                  refX="4.4"
-                  refY="1.5"
-                  orient="auto"
-                >
-                  <polygon points="0 0, 5 1.5, 0 3" fill="#4a7c59" />
-                </marker>
-                <marker
-                  id="arrowhead-tiny"
-                  markerWidth="3.8"
-                  markerHeight="3.8"
-                  refX="3.35"
-                  refY="1.14"
-                  orient="auto"
-                >
-                  <polygon points="0 0, 3.8 1.14, 0 2.28" fill="#4a7c59" />
-                </marker>
-              </defs>
-              {edges.map((edge) => {
-                const fromNode = nodes.find((n) => n.id === edge.fromNodeId)
-                const toNode = nodes.find((n) => n.id === edge.toNodeId)
-
-                if (!fromNode || !toNode) return null
-
-                const geometry = getEdgeGeometry(fromNode, toNode)
-
-                if (!geometry) return null
-
-                const { startX, startY, endX, endY } = geometry
-                const isSelected = selectedEdgeIds.includes(edge.id)
-                const strokeColor = '#4a7c59'
-                const strokeWidth = 2
-                // Click handler for the invisible hit-line placed over the visual line.
-                // This lets users reliably pick short/stationary edges without changing
-                // the visual appearance of the edge itself.
-                const handleEdgePick = (event: React.MouseEvent<SVGLineElement>) => {
-                  if (!isDeleteEdgeMode) {
-                    return
-                  }
-
-                  event.stopPropagation()
-                  toggleEdgeSelection(edge.id)
-                }
-                const markerId =
-                  geometry.edgeLength < TINY_EDGE_MARKER_EDGE_LENGTH
-                    ? 'arrowhead-tiny'
-                    : geometry.edgeLength < SHORT_EDGE_MARKER_EDGE_LENGTH
-                      ? 'arrowhead-small'
-                      : 'arrowhead'
-
-                return (
-                  <g key={edge.id}>
-                    {(edge.direction === 'both' || edge.direction === 'forward') && (
-                      <>
-                        {isDeleteEdgeMode && isSelected && (
-                          <line
-                            x1={startX}
-                            y1={startY}
-                            x2={endX}
-                            y2={endY}
-                            stroke="#2a4f9c"
-                            strokeWidth="12"
-                            strokeLinecap="round"
-                            opacity="0.22"
-                          />
-                        )}
-                        <line
-                          x1={startX}
-                          y1={startY}
-                          x2={endX}
-                          y2={endY}
-                          stroke={strokeColor}
-                          strokeWidth={strokeWidth}
-                          markerEnd={`url(#${markerId})`}
-                        />
-                        {isDeleteEdgeMode && (
-                          // Invisible but pointer-active strokeline to expand hit area for selection.
-                          // Keeps the visible line untouched while improving UX for small/close edges.
-                          <line
-                            x1={startX}
-                            y1={startY}
-                            x2={endX}
-                            y2={endY}
-                            stroke="transparent"
-                            strokeWidth="12"
-                            pointerEvents="stroke"
-                            onClick={handleEdgePick}
-                          />
-                        )}
-                      </>
-                    )}
-                    {edge.direction === 'both' && (
-                      <>
-                        {isDeleteEdgeMode && isSelected && (
-                          <line
-                            x1={endX}
-                            y1={endY}
-                            x2={startX}
-                            y2={startY}
-                            stroke="#2a4f9c"
-                            strokeWidth="12"
-                            strokeLinecap="round"
-                            opacity="0.22"
-                          />
-                        )}
-                        <line
-                          x1={endX}
-                          y1={endY}
-                          x2={startX}
-                          y2={startY}
-                          stroke={strokeColor}
-                          strokeWidth={strokeWidth}
-                          markerEnd={`url(#${markerId})`}
-                        />
-                        {isDeleteEdgeMode && (
-                          // Invisible hit area for the reverse-direction visual line.
-                          <line
-                            x1={endX}
-                            y1={endY}
-                            x2={startX}
-                            y2={startY}
-                            stroke="transparent"
-                            strokeWidth="12"
-                            pointerEvents="stroke"
-                            onClick={handleEdgePick}
-                          />
-                        )}
-                      </>
-                    )}
-                    {edge.direction === 'backward' && (
-                      <>
-                        {isDeleteEdgeMode && isSelected && (
-                          <line
-                            x1={endX}
-                            y1={endY}
-                            x2={startX}
-                            y2={startY}
-                            stroke="#2a4f9c"
-                            strokeWidth="12"
-                            strokeLinecap="round"
-                            opacity="0.22"
-                          />
-                        )}
-                        <line
-                          x1={endX}
-                          y1={endY}
-                          x2={startX}
-                          y2={startY}
-                          stroke={strokeColor}
-                          strokeWidth={strokeWidth}
-                          markerEnd={`url(#${markerId})`}
-                        />
-                        {isDeleteEdgeMode && (
-                          <line
-                            x1={endX}
-                            y1={endY}
-                            x2={startX}
-                            y2={startY}
-                            stroke="transparent"
-                            strokeWidth="12"
-                            pointerEvents="stroke"
-                            onClick={handleEdgePick}
-                          />
-                        )}
-                      </>
-                    )}
-                  </g>
-                )
-              })}
-            </svg>
+            <EdgesLayer
+              nodes={nodes}
+              edges={edges}
+              isDeleteEdgeMode={isDeleteEdgeMode}
+              selectedEdgeIds={selectedEdgeIds}
+              onToggleEdgeSelection={toggleEdgeSelection}
+            />
 
             {edges.map((edge) => {
               const fromNode = nodes.find((n) => n.id === edge.fromNodeId)
@@ -1225,128 +1014,21 @@ function App() {
           </div>
         </section>
 
-        <aside className="sidebar">
-          <div className="sidebar-section">
-            <h3>Algorithm</h3>
-            <div className="pill-group">
-              <button className="btn btn-pill btn-active" type="button">
-                BFS
-              </button>
-              <button className="btn btn-pill" type="button">
-                DFS
-              </button>
-            </div>
-          </div>
-
-          <div className="sidebar-section">
-            <h3>Inputs</h3>
-            <label className="field">
-              <span>Start node</span>
-              <input type="text" placeholder="A" />
-            </label>
-            <label className="field">
-              <span>Goal type</span>
-              <select
-                value={goalType}
-                onChange={(event) => setGoalType(event.target.value as GoalType)}
-              >
-                <option value="target-node">Target node</option>
-                <option value="target-value">Target value</option>
-                <option value="max-value">Find max value</option>
-                <option value="min-value">Find min value</option>
-              </select>
-            </label>
-            {goalType === 'target-node' && (
-              <label className="field">
-                <span>Goal node</span>
-                <input type="text" placeholder="F" />
-              </label>
-            )}
-            {goalType === 'target-value' && (
-              <label className="field">
-                <span>Goal value</span>
-                <input type="number" placeholder="10" />
-              </label>
-            )}
-            {(goalType === 'max-value' || goalType === 'min-value') && (
-              <p className="hint">No extra input needed for this goal.</p>
-            )}
-          </div>
-
-          <div className="sidebar-section">
-            <h3>Fill values</h3>
-            <label className="field">
-              <span>Minimum</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={fillMin}
-                onChange={handleFillMinChange}
-                onBlur={syncFillRange}
-                onKeyDown={handleFillRangeKeyDown}
-              />
-            </label>
-            <label className="field">
-              <span>Maximum</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={fillMax}
-                onChange={handleFillMaxChange}
-                onBlur={syncFillRange}
-                onKeyDown={handleFillRangeKeyDown}
-              />
-            </label>
-            <div className="fill-actions">
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={fillNullValues}
-                disabled={!canFillNulls}
-              >
-                Fill null values
-              </button>
-              <button
-                className="btn"
-                type="button"
-                onClick={handleNullifyAllClick}
-                disabled={nodes.length === 0}
-              >
-                Nullify all values
-              </button>
-            </div>
-          </div>
-
-          <div className="sidebar-section">
-            <h3>Playback</h3>
-            <div className="playback">
-              <button className="btn btn-ghost" type="button">
-                Play
-              </button>
-              <button className="btn btn-ghost" type="button">
-                Pause
-              </button>
-              <button className="btn btn-ghost" type="button">
-                Step
-              </button>
-            </div>
-            <input className="slider" type="range" min="0" max="10" />
-          </div>
-
-          <div className="sidebar-section">
-            <h3>Presets</h3>
-            {GRAPH_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                className="btn btn-ghost"
-                type="button"
-                onClick={() => handlePresetClick(preset)}
-              >
-                {preset.name}
-              </button>
-            ))}
-          </div>
-        </aside>
+        <Sidebar
+          goalType={goalType}
+          onGoalTypeChange={setGoalType}
+          fillMin={fillMin}
+          fillMax={fillMax}
+          onFillMinChange={handleFillMinChange}
+          onFillMaxChange={handleFillMaxChange}
+          onFillRangeBlur={syncFillRange}
+          onFillRangeKeyDown={handleFillRangeKeyDown}
+          onFillNullValues={fillNullValues}
+          canFillNulls={canFillNulls}
+          onNullifyAll={handleNullifyAllClick}
+          canNullify={nodes.length > 0}
+          onPresetClick={handlePresetClick}
+        />
       </div>
 
       {showClearConfirm && (
