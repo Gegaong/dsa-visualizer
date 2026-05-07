@@ -329,6 +329,69 @@
 	animation: rise 360ms ease;
 }
 
+.sidebar.is-canvas-setup {
+	height: 680px;
+}
+
+.sidebar-page-switch {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0;
+	padding: 0 0 2px;
+	border-bottom: 1px solid var(--border);
+}
+
+.sidebar-page-tab {
+	position: relative;
+	height: 32px;
+	width: 100%;
+	padding: 0 8px;
+	border: none;
+	background: transparent;
+	color: var(--muted);
+	font-size: 14px;
+	line-height: 1.1;
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	cursor: pointer;
+	transition: color 140ms ease;
+}
+
+.sidebar-page-tab:hover {
+	color: var(--ink);
+}
+
+.sidebar-page-tab::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -3px;
+	height: 2px;
+	border-radius: 999px;
+	background: transparent;
+	transition: background 140ms ease;
+}
+
+.sidebar-page-tab.is-active {
+	color: var(--ink);
+}
+
+.sidebar-page-tab.is-active::after {
+	background: var(--accent);
+}
+
+.sidebar-page-tab:focus-visible {
+	outline: 2px solid rgba(58, 111, 90, 0.34);
+	outline-offset: 2px;
+	border-radius: 6px;
+}
+
+.sidebar.is-canvas-setup .fill-actions .btn,
+.sidebar.is-canvas-setup .sidebar-section .btn.btn-ghost {
+	min-height: 42px;
+}
+
 .sidebar-section {
 	display: flex;
 	flex-direction: column;
@@ -716,6 +779,7 @@
 	}
 
 	.sidebar {
+		height: auto;
 		max-height: none;
 	}
 }
