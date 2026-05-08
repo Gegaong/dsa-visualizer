@@ -398,6 +398,11 @@
 	gap: 12px;
 }
 
+/* Keep algorithm input area height stable across goal-type switches. */
+.algorithm-inputs-section {
+	min-height: 248px;
+}
+
 .sidebar-section h3 {
 	margin: 0;
 	font-size: 14px;

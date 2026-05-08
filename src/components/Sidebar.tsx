@@ -168,7 +168,7 @@ export const Sidebar = ({
             </div>
           </div>
 
-          <div className="sidebar-section">
+          <div className="sidebar-section algorithm-inputs-section">
             <h3>Inputs</h3>
             <label className="field">
               <span>Start node</span>
