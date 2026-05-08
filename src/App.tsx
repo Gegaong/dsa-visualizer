@@ -66,15 +66,21 @@ import {
   getRandomIntInclusive,
   reindexNodes,
 } from './utils/format'
+import { runBfs } from './algorithms/bfs'
+import type { BfsResult } from './algorithms/types'
+import { buildBfsCompletionStatus, prepareBfsRunInputs } from './algorithms/bfsUIHelpers'
 
 // Root component for the DSA visualizer workspace.
 function App() {
   const [nodes, setNodes] = useState<GraphNode[]>([])
   const [goalType, setGoalType] = useState<GoalType>('target-node')
+  const [startNodeLabel, setStartNodeLabel] = useState('')
+  const [goalNodeLabel, setGoalNodeLabel] = useState('')
+  const [goalValueInput, setGoalValueInput] = useState('')
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [draftValue, setDraftValue] = useState('') // Temporary input value during inline editing
-  const [fillMin, setFillMin] = useState('')
-  const [fillMax, setFillMax] = useState('')
+  const [fillMin, setFillMin] = useState('1')
+  const [fillMax, setFillMax] = useState('10')
   const [showEmptyAllConfirm, setShowEmptyAllConfirm] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showPresetConfirm, setShowPresetConfirm] = useState(false)
@@ -89,16 +95,42 @@ function App() {
   const [connectionSource, setConnectionSource] = useState<string | null>(null)
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null)
+  const [bfsVisitedNodeIds, setBfsVisitedNodeIds] = useState<string[]>([])
+  const [bfsCurrentNodeId, setBfsCurrentNodeId] = useState<string | null>(null)
+  const [bfsStartNodeId, setBfsStartNodeId] = useState<string | null>(null)
+  const [bfsGoalNodeIds, setBfsGoalNodeIds] = useState<string[]>([])
+  const [bfsStatusText, setBfsStatusText] = useState('Enter start and goal, then run BFS.')
+  const [isBfsRunning, setIsBfsRunning] = useState(false)
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
+  const bfsTimerRef = useRef<number | null>(null)
   const suppressClickRef = useRef(false)
   const suppressCanvasClickRef = useRef(false)
 
   // Hide the node right-click menu.
   const closeContextMenu = () => {
     setContextMenu(null)
+  }
+
+  // Stop any running BFS playback timer.
+  const stopBfsPlayback = () => {
+    if (bfsTimerRef.current !== null) {
+      window.clearInterval(bfsTimerRef.current)
+      bfsTimerRef.current = null
+    }
+    setIsBfsRunning(false)
+  }
+
+  // Clear all BFS visual states and reset status message.
+  const resetBfsVisualization = () => {
+    stopBfsPlayback()
+    setBfsVisitedNodeIds([])
+    setBfsCurrentNodeId(null)
+    setBfsStartNodeId(null)
+    setBfsGoalNodeIds([])
+    setBfsStatusText('Enter start and goal, then run BFS.')
   }
 
   // Replace the current graph with a centered preset.
@@ -127,6 +159,7 @@ function App() {
 
   // Delete a single node and all its connected edges, then recalculate node labels.
   const deleteNode = (nodeId: string) => {
+    if (isBfsRunning) return // This is to stop user from modifying the graph during BFS
     setNodes((prev) => reindexNodes(prev.filter((node) => node.id !== nodeId)))
     setEdges((prev) =>
       prev.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId),
@@ -145,6 +178,7 @@ function App() {
 
   // Delete multiple nodes at once (used in delete mode) and clean up their edges.
   const deleteSelectedNodes = (nodeIds: string[]) => {
+    if (isBfsRunning) return
     if (nodeIds.length === 0) {
       return
     }
@@ -167,7 +201,10 @@ function App() {
   }
 
   // Delete the given edges from the canvas.
+  // First line is to stop user from modifying the graph during BFS
+  // It will be in every graph modification function for this same reason
   const deleteSelectedEdges = (edgeIds: string[]) => {
+    if (isBfsRunning) return
     if (edgeIds.length === 0) {
       return
     }
@@ -184,6 +221,7 @@ function App() {
 
   // Toggle a node's selected state for delete mode (add or remove from selection list).
   const toggleNodeSelection = (nodeId: string) => {
+    if (isBfsRunning) return
     setSelectedNodeIds((prev) =>
       prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId],
     )
@@ -196,6 +234,7 @@ function App() {
 
   // Toggle an edge in the delete-edge selection.
   const toggleEdgeSelection = (edgeId: string) => {
+    if (isBfsRunning) return
     setSelectedEdgeIds((prev) =>
       prev.includes(edgeId) ? prev.filter((id) => id !== edgeId) : [...prev, edgeId],
     )
@@ -209,6 +248,7 @@ function App() {
   // Mode management: Connect and Delete are mutually exclusive.
   // When entering one mode, we automatically exit the other and clean up.
   const enterDeleteMode = () => {
+    if (isBfsRunning) return
     setIsConnectMode(false) // Exit connect mode first
     setConnectionSource(null)
     setIsDeleteEdgeMode(false)
@@ -220,6 +260,7 @@ function App() {
 
   // Switch into delete-edge mode (turns off other modes first).
   const enterDeleteEdgeMode = () => {
+    if (isBfsRunning) return
     setIsConnectMode(false)
     setConnectionSource(null)
     setIsDeleteMode(false)
@@ -231,6 +272,7 @@ function App() {
 
   // Switch into connect mode (turns off other modes first).
   const enterConnectMode = () => {
+    if (isBfsRunning) return
     setIsDeleteMode(false) // Exit delete mode first
     setIsDeleteEdgeMode(false)
     clearSelection()
@@ -243,12 +285,14 @@ function App() {
 
   // Leave delete-node mode and clear its selection.
   const exitDeleteMode = () => {
+    if (isBfsRunning) return
     setIsDeleteMode(false)
     clearSelection()
   }
 
   // Leave delete-edge mode and clear its selection.
   const exitDeleteEdgeMode = () => {
+    if (isBfsRunning) return
     setIsDeleteEdgeMode(false)
     clearEdgeSelection()
   }
@@ -258,6 +302,7 @@ function App() {
   // straight from one node into another would otherwise silently drop the typed value
   // (the input unmounts before React fires onBlur).
   const beginEditingNode = (node: GraphNode) => {
+    if (isBfsRunning) return
     if (editingNodeId === node.id) {
       return
     }
@@ -280,6 +325,7 @@ function App() {
   // Skipped if any mode is active (connect/delete) or if this click came
   // immediately after a drag (the suppress flag is set in handleMouseUp).
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isBfsRunning) return
     if (suppressCanvasClickRef.current) {
       suppressCanvasClickRef.current = false
       return
@@ -319,12 +365,14 @@ function App() {
 
   // Block the browser's default right-click menu and close any open custom menus.
   const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isBfsRunning) return
     event.preventDefault()
     closeContextMenu()
   }
 
   // Start editing a node when clicked (unless in delete mode).
   const startEditingNode = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
+    if (isBfsRunning) return
     if (isDeleteMode) {
       return
     }
@@ -401,6 +449,7 @@ function App() {
     event: React.MouseEvent<HTMLDivElement>,
     node: GraphNode,
   ) => {
+    if (isBfsRunning) return
     event.preventDefault()
     event.stopPropagation()
 
@@ -524,8 +573,17 @@ function App() {
     }
   }, [canvasElement])
 
+  useEffect(() => () => {
+    stopBfsPlayback()
+  }, [])
+
+  useEffect(() => {
+    resetBfsVisualization()
+  }, [nodes.length, edges.length])
+
   // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isBfsRunning) return
     setDraftValue(sanitizeNumericInput(event.target.value))
   }
 
@@ -560,6 +618,7 @@ function App() {
 
   // Finalize node value from the latest input value to avoid stale state during fast typing.
   const commitNodeValue = (nodeId: string, rawValue: string) => {
+    if (isBfsRunning) return
     const normalizedValue = parseNumberInput(rawValue)
 
     setNodes((prev) =>
@@ -585,6 +644,8 @@ function App() {
 
   // Replace empty node values with inclusive random integers in the provided range.
   const fillEmptyValues = () => {
+    if (isBfsRunning) return
+    resetBfsVisualization()
     const minValue = parseNumberInput(fillMin)
     const maxValue = parseNumberInput(fillMax)
 
@@ -611,6 +672,8 @@ function App() {
   // Convert every empty node to null. No confirmation — this leaves user-entered
   // numbers untouched, so it's non-destructive.
   const nullifyEmptyValues = () => {
+    if (isBfsRunning) return
+    resetBfsVisualization()
     setNodes((prev) =>
       prev.map((node) =>
         node.value === 'empty'
@@ -622,6 +685,7 @@ function App() {
 
   // Ask before resetting every node back to empty — this *can* wipe user-entered numbers.
   const handleEmptyAllClick = () => {
+    if (isBfsRunning) return
     if (nodes.every((node) => node.value === 'empty')) {
       return
     }
@@ -631,8 +695,10 @@ function App() {
 
   // Reset every node to the 'empty' state.
   const confirmEmptyAll = () => {
+    if (isBfsRunning) return
+    resetBfsVisualization()
     setNodes((prev) =>
-      prev.map((node): GraphNode => ({
+     prev.map((node): GraphNode => ({
         ...node,
         value: 'empty',
       })),
@@ -663,6 +729,7 @@ function App() {
 
   // Show confirmation dialog before clearing the entire canvas (only if there are nodes).
   const handleClearCanvas = () => {
+    if (isBfsRunning) return
     if (nodes.length === 0) {
       return
     }
@@ -672,6 +739,8 @@ function App() {
 
   // Confirm clearing: reset everything to initial state and clean up all UI.
   const confirmClearCanvas = () => {
+    if (isBfsRunning) return
+    resetBfsVisualization()
     nextId.current = 1 // Reset ID counter for future node creation
     setNodes([])
     setEdges([])
@@ -693,6 +762,8 @@ function App() {
 
   // Load a preset, but ask first if there's already a graph on the canvas.
   const handlePresetClick = (preset: GraphPreset) => {
+    if (isBfsRunning) return
+    resetBfsVisualization()
     // If there's already a graph, confirm before replacing it.
     if (nodes.length === 0) {
       applyPreset(preset)
@@ -705,6 +776,7 @@ function App() {
 
   // Apply the pending preset and close the confirmation.
   const confirmPresetReplace = () => {
+    if (isBfsRunning) return
     // Apply the pending preset and close the confirmation modal.
     if (!pendingPreset) {
       setShowPresetConfirm(false)
@@ -725,6 +797,7 @@ function App() {
 
   // Create an edge between two nodes with validation to prevent duplicates and self-loops.
   const createEdge = (fromId: string, toId: string, direction: GraphEdge['direction']) => {
+    if (isBfsRunning) return
     // Prevent self-loops (a node cannot connect to itself)
     if (fromId === toId) {
       return
@@ -755,6 +828,7 @@ function App() {
 
   // Cycle through edge directions: both-ways → one-way → reverse → both-ways (repeat)
   const toggleEdgeDirection = (edgeId: string) => {
+    if (isBfsRunning) return
     setEdges((prev) =>
       prev.map((edge) => {
         if (edge.id !== edgeId) return edge
@@ -775,6 +849,7 @@ function App() {
 
   // Two-stage connection: first click selects source, second click selects target and creates edge.
   const handleConnectNodeClick = (nodeId: string) => {
+    if (isBfsRunning) return
     if (!connectionSource) {
       // First click: remember which node we're connecting from
       setConnectionSource(nodeId)
@@ -787,12 +862,14 @@ function App() {
 
   // Leave connect mode and forget the chosen source node.
   const cancelConnection = () => {
+    if (isBfsRunning) return
     setIsConnectMode(false)
     setConnectionSource(null)
   }
 
   // Delete button behavior: if already in delete mode with selections, delete them; otherwise toggle the mode.
   const handleDeleteModeToggle = () => {
+    if (isBfsRunning) return
     if (isDeleteMode) {
       if (selectedNodeIds.length > 0) {
         // Delete the selected nodes and exit delete mode
@@ -813,6 +890,7 @@ function App() {
 
   // Edge-delete button: delete the selection if any, otherwise toggle the mode.
   const handleDeleteEdgeModeToggle = () => {
+    if (isBfsRunning) return
     if (isDeleteEdgeMode) {
       if (selectedEdgeIds.length > 0) {
         deleteSelectedEdges(selectedEdgeIds)
@@ -830,6 +908,7 @@ function App() {
 
   // Connect button behavior: toggle connect mode on/off.
   const handleConnectModeToggle = () => {
+    if (isBfsRunning) return
     if (isConnectMode) {
       // Already connecting, so cancel and reset
       cancelConnection()
@@ -842,7 +921,108 @@ function App() {
 
   // Set the direction used for new edges created in connect mode.
   const handleNewEdgeDirectionChange = (direction: GraphEdge['direction']) => {
+    if (isBfsRunning) return
     setNewEdgeDirection(direction)
+  }
+
+  // Normalize goal-dependent inputs whenever the goal mode changes.
+  const handleGoalTypeChange = (type: GoalType) => {
+    resetBfsVisualization()
+    setGoalType(type)
+    setGoalNodeLabel('')
+    setGoalValueInput('')
+  }
+
+  // Clear old BFS highlights when the user starts changing algorithm inputs.
+  const handleStartNodeLabelChange = (value: string) => {
+    resetBfsVisualization()
+    setStartNodeLabel(value)
+  }
+
+  // Clear old BFS highlights when the user edits target-node input.
+  const handleGoalNodeLabelChange = (value: string) => {
+    resetBfsVisualization()
+    setGoalNodeLabel(value)
+  }
+
+  // Clear old BFS highlights when the user edits target-value input.
+  const handleGoalValueInputChange = (value: string) => {
+    resetBfsVisualization()
+    setGoalValueInput(sanitizeNumericInput(value))
+  }
+
+  // Apply end-of-run BFS statuses and final result highlighting.
+  const finalizeBfsRun = (result: BfsResult) => {
+    stopBfsPlayback()
+    setBfsCurrentNodeId(null)
+
+    if (!result.foundNodeLabel) {
+      setBfsStatusText('Done. Goal not found in reachable nodes.')
+      return
+    }
+
+    if (result.foundNodeIds.length > 0) {
+      setBfsGoalNodeIds(result.foundNodeIds)
+    }
+    setBfsStatusText(buildBfsCompletionStatus(result, nodes))
+  }
+
+  // Animate BFS visits and hand over to finalization when traversal completes.
+  const startBfsPlayback = (result: BfsResult) => {
+    let stepIndex = 0
+    setBfsStatusText('BFS running...')
+    setIsBfsRunning(true)
+
+    bfsTimerRef.current = window.setInterval(() => {
+      const step = result.steps[stepIndex]
+      if (!step) {
+        finalizeBfsRun(result)
+        return
+      }
+
+      setBfsCurrentNodeId(step.nodeId)
+      setBfsVisitedNodeIds((prev) => (prev.includes(step.nodeId) ? prev : [...prev, step.nodeId]))
+      setBfsStatusText(`Visiting ${step.nodeLabel} (step ${step.order}/${result.steps.length})`)
+      stepIndex += 1
+    }, 650)
+  }
+
+  // Validate sidebar inputs, run BFS, and animate visits on the canvas.
+  const runBfsFromSidebar = () => {
+    if (isBfsRunning) return
+    stopBfsPlayback()
+    setBfsVisitedNodeIds([])
+    setBfsCurrentNodeId(null)
+    setBfsGoalNodeIds([])
+
+    const preparation = prepareBfsRunInputs({
+      nodes,
+      goalType,
+      startNodeLabel,
+      goalNodeLabel,
+      goalValueInput,
+    })
+
+    if (preparation.ok === false) {
+      setBfsStatusText(preparation.error)
+      return
+    }
+    setBfsGoalNodeIds(preparation.initialGoalNodeIds)
+    setBfsStartNodeId(preparation.startNode.id)
+
+    const result = runBfs({
+      nodes,
+      edges,
+      startNodeLabel: preparation.startNode.label,
+      goal: preparation.goal,
+    })
+
+    if (result.steps.length === 0) {
+      setBfsStatusText('BFS could not start with the current graph and inputs.')
+      return
+    }
+
+    startBfsPlayback(result)
   }
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
@@ -853,6 +1033,16 @@ function App() {
   const canFillEmpty = hasEmptyNodes && fillRangeReady
   const canNullifyEmpty = hasEmptyNodes
   const canEmptyAll = hasNonEmptyNodes
+  const canRunBfs =
+    nodes.length > 0 &&
+    !hasEmptyNodes &&
+    startNodeLabel.trim() !== '' &&
+    (goalType !== 'target-node' || goalNodeLabel.trim() !== '') &&
+    (goalType !== 'target-value' || parseNumberInput(goalValueInput) !== null)
+  let sidebarBfsStatusText = bfsStatusText
+  if (hasEmptyNodes) {
+    sidebarBfsStatusText = 'Warning: fill or nullify all empty nodes before running BFS.'
+  }
 
   return (
     <div className="app">
@@ -870,6 +1060,7 @@ function App() {
                 className={`btn btn-pill connect-toggle-btn ${isConnectMode ? 'btn-active' : ''}`}
                 type="button"
                 onClick={handleConnectModeToggle}
+                disabled={isBfsRunning}
               >
                 {isConnectMode ? 'Cancel connect' : 'Connect nodes'}
               </button>
@@ -877,7 +1068,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'forward' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode}
+                  disabled={!isConnectMode || isBfsRunning}
                   aria-pressed={newEdgeDirection === 'forward'}
                   title="Create outbound edge (from selected node)"
                   onClick={() => handleNewEdgeDirectionChange('forward')}
@@ -887,7 +1078,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'both' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode}
+                  disabled={!isConnectMode || isBfsRunning}
                   aria-pressed={newEdgeDirection === 'both'}
                   title="Create bidirectional edge"
                   onClick={() => handleNewEdgeDirectionChange('both')}
@@ -897,7 +1088,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'backward' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode}
+                  disabled={!isConnectMode || isBfsRunning}
                   aria-pressed={newEdgeDirection === 'backward'}
                   title="Create inbound edge (toward selected node)"
                   onClick={() => handleNewEdgeDirectionChange('backward')}
@@ -910,6 +1101,7 @@ function App() {
                   className={`btn delete-stack-btn ${isDeleteMode ? 'btn-active' : ''}`}
                   type="button"
                   onClick={handleDeleteModeToggle}
+                  disabled={isBfsRunning}
                 >
                   {isDeleteMode
                     ? selectedNodeIds.length > 0
@@ -921,6 +1113,7 @@ function App() {
                   className={`btn delete-stack-btn ${isDeleteEdgeMode ? 'btn-active' : ''}`}
                   type="button"
                   onClick={handleDeleteEdgeModeToggle}
+                  disabled={isBfsRunning}
                 >
                   {isDeleteEdgeMode
                     ? selectedEdgeIds.length > 0
@@ -929,7 +1122,7 @@ function App() {
                     : 'Delete edges'}
                 </button>
               </div>
-              <button className="btn btn-clear" type="button" onClick={handleClearCanvas}>
+              <button className="btn btn-clear" type="button" onClick={handleClearCanvas} disabled={isBfsRunning}>
                 Clear canvas
               </button>
             </div>
@@ -977,6 +1170,10 @@ function App() {
               draggingNodeId={draggingNodeId}
               editingNodeId={editingNodeId}
               draftValue={draftValue}
+              bfsVisitedNodeIds={bfsVisitedNodeIds}
+              bfsCurrentNodeId={bfsCurrentNodeId}
+              bfsStartNodeId={bfsStartNodeId}
+              bfsGoalNodeIds={bfsGoalNodeIds}
               onNodeMouseDown={handleNodeMouseDown}
               onConnectNodeClick={handleConnectNodeClick}
               onToggleNodeSelection={toggleNodeSelection}
@@ -991,7 +1188,17 @@ function App() {
 
         <Sidebar
           goalType={goalType}
-          onGoalTypeChange={setGoalType}
+          onGoalTypeChange={handleGoalTypeChange}
+          startNodeLabel={startNodeLabel}
+          onStartNodeLabelChange={handleStartNodeLabelChange}
+          goalNodeLabel={goalNodeLabel}
+          onGoalNodeLabelChange={handleGoalNodeLabelChange}
+          goalValueInput={goalValueInput}
+          onGoalValueInputChange={handleGoalValueInputChange}
+          onRunBfs={runBfsFromSidebar}
+          canRunBfs={canRunBfs}
+          bfsStatusText={sidebarBfsStatusText}
+          isBfsRunning={isBfsRunning}
           fillMin={fillMin}
           fillMax={fillMax}
           onFillMinChange={handleFillMinChange}

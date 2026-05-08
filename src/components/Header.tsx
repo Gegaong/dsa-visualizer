@@ -4,7 +4,7 @@ export const Header = () => (
   <header className="topbar">
     <div className="brand">
       <span className="brand-title">DSA Visualizer</span>
-      <span className="brand-subtitle">Build structures, then run algorithms.</span>
+      <span className="brand-subtitle">Build structures, then test algorithms.</span>
     </div>
     <nav className="structure-nav">
       <button className="btn btn-pill btn-active" type="button">
@@ -20,5 +20,6 @@ export const Header = () => (
         Maze
       </button>
     </nav>
+    <div className="topbar-spacer" aria-hidden="true" />
   </header>
 )

@@ -5,6 +5,16 @@ import { GRAPH_PRESETS } from '../utils/presets'
 type SidebarProps = {
   goalType: GoalType
   onGoalTypeChange: (type: GoalType) => void
+  startNodeLabel: string
+  onStartNodeLabelChange: (value: string) => void
+  goalNodeLabel: string
+  onGoalNodeLabelChange: (value: string) => void
+  goalValueInput: string
+  onGoalValueInputChange: (value: string) => void
+  onRunBfs: () => void
+  canRunBfs: boolean
+  bfsStatusText: string
+  isBfsRunning: boolean
   fillMin: string
   fillMax: string
   onFillMinChange: (event: React.ChangeEvent<HTMLInputElement>) => void
@@ -26,6 +36,16 @@ type SidebarPage = 'canvas' | 'algorithm'
 export const Sidebar = ({
   goalType,
   onGoalTypeChange,
+  startNodeLabel,
+  onStartNodeLabelChange,
+  goalNodeLabel,
+  onGoalNodeLabelChange,
+  goalValueInput,
+  onGoalValueInputChange,
+  onRunBfs,
+  canRunBfs,
+  bfsStatusText,
+  isBfsRunning,
   fillMin,
   fillMax,
   onFillMinChange,
@@ -74,6 +94,7 @@ export const Sidebar = ({
                 onChange={onFillMinChange}
                 onBlur={onFillRangeBlur}
                 onKeyDown={onFillRangeKeyDown}
+                disabled={isBfsRunning}
               />
             </label>
             <label className="field">
@@ -85,6 +106,7 @@ export const Sidebar = ({
                 onChange={onFillMaxChange}
                 onBlur={onFillRangeBlur}
                 onKeyDown={onFillRangeKeyDown}
+                disabled={isBfsRunning}
               />
             </label>
             <div className="fill-actions">
@@ -92,7 +114,7 @@ export const Sidebar = ({
                 className="btn btn-primary"
                 type="button"
                 onClick={onFillEmptyValues}
-                disabled={!canFillEmpty}
+                disabled={!canFillEmpty || isBfsRunning}
               >
                 Fill empty values
               </button>
@@ -100,7 +122,7 @@ export const Sidebar = ({
                 className="btn"
                 type="button"
                 onClick={onNullifyEmptyValues}
-                disabled={!canNullifyEmpty}
+                disabled={!canNullifyEmpty || isBfsRunning}
               >
                 Nullify all empty values
               </button>
@@ -108,7 +130,7 @@ export const Sidebar = ({
                 className="btn"
                 type="button"
                 onClick={onEmptyAllValues}
-                disabled={!canEmptyAll}
+                disabled={!canEmptyAll || isBfsRunning}
               >
                 Empty all values
               </button>
@@ -123,6 +145,7 @@ export const Sidebar = ({
                 className="btn btn-ghost"
                 type="button"
                 onClick={() => onPresetClick(preset)}
+                disabled={isBfsRunning}
               >
                 {preset.name}
               </button>
@@ -149,13 +172,19 @@ export const Sidebar = ({
             <h3>Inputs</h3>
             <label className="field">
               <span>Start node</span>
-              <input type="text" placeholder="A" />
+              <input
+                type="text"
+                value={startNodeLabel}
+                onChange={(event) => onStartNodeLabelChange(event.target.value)}
+                disabled={isBfsRunning}
+              />
             </label>
             <label className="field">
               <span>Goal type</span>
               <select
                 value={goalType}
                 onChange={(event) => onGoalTypeChange(event.target.value as GoalType)}
+                disabled={isBfsRunning}
               >
                 <option value="target-node">Target node</option>
                 <option value="target-value">Target value</option>
@@ -166,13 +195,24 @@ export const Sidebar = ({
             {goalType === 'target-node' && (
               <label className="field">
                 <span>Goal node</span>
-                <input type="text" placeholder="F" />
+                <input
+                  type="text"
+                  value={goalNodeLabel}
+                  onChange={(event) => onGoalNodeLabelChange(event.target.value)}
+                  disabled={isBfsRunning}
+                />
               </label>
             )}
             {goalType === 'target-value' && (
               <label className="field">
                 <span>Goal value</span>
-                <input type="number" placeholder="10" />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={goalValueInput}
+                  onChange={(event) => onGoalValueInputChange(event.target.value)}
+                  disabled={isBfsRunning}
+                />
               </label>
             )}
             {(goalType === 'max-value' || goalType === 'min-value') && (
@@ -183,17 +223,16 @@ export const Sidebar = ({
           <div className="sidebar-section">
             <h3>Playback</h3>
             <div className="playback">
-              <button className="btn btn-ghost" type="button">
-                Play
-              </button>
-              <button className="btn btn-ghost" type="button">
-                Pause
-              </button>
-              <button className="btn btn-ghost" type="button">
-                Step
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={onRunBfs}
+                disabled={!canRunBfs || isBfsRunning}
+              >
+                {isBfsRunning ? 'Running BFS...' : 'Run BFS'}
               </button>
             </div>
-            <input className="slider" type="range" min="0" max="10" />
+            <p className="hint">{bfsStatusText}</p>
           </div>
         </>
       )}
