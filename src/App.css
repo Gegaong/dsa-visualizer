@@ -333,6 +333,11 @@
 	height: 680px;
 }
 
+.sidebar.is-algorithm-setup {
+	height: 680px;
+	overflow: hidden;
+}
+
 .sidebar-page-switch {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -400,7 +405,7 @@
 
 /* Keep algorithm input area height stable across goal-type switches. */
 .algorithm-inputs-section {
-	min-height: 248px;
+	min-height: 210px;
 }
 
 .sidebar-section h3 {
@@ -458,8 +463,83 @@
 	flex-wrap: wrap;
 }
 
+.playback-run-btn {
+	width: 100%;
+}
+
+.playback-step-controls {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+	width: 100%;
+}
+
+.playback-control-btn {
+	width: 100%;
+	min-width: 0;
+	height: 40px;
+}
+
+.playback-speed-field {
+	width: 100%;
+}
+
 .slider {
 	width: 100%;
+	padding: 0;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	appearance: none;
+	-webkit-appearance: none;
+	height: 20px;
+}
+
+.slider:focus {
+	outline: none;
+	box-shadow: none;
+}
+
+.field .slider:focus,
+.field .slider:focus-visible {
+	outline: none;
+	border-color: transparent;
+	box-shadow: none;
+}
+
+.slider::-webkit-slider-runnable-track {
+	height: 6px;
+	border-radius: 999px;
+	background: rgba(46, 32, 23, 0.18);
+}
+
+.slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: none;
+	background: #1f8be0;
+	cursor: pointer;
+	margin-top: -7px;
+}
+
+.slider::-moz-range-track {
+	height: 6px;
+	border: none;
+	border-radius: 999px;
+	background: rgba(46, 32, 23, 0.18);
+}
+
+.slider::-moz-range-thumb {
+	width: 20px;
+	height: 20px;
+	border: none;
+	border-radius: 50%;
+	background: #1f8be0;
+	cursor: pointer;
 }
 
 .btn {

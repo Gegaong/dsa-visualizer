@@ -101,6 +101,10 @@ function App() {
   const [bfsGoalNodeIds, setBfsGoalNodeIds] = useState<string[]>([])
   const [bfsStatusText, setBfsStatusText] = useState('Enter start and goal, then run BFS.')
   const [isBfsRunning, setIsBfsRunning] = useState(false)
+  const [isBfsPlaying, setIsBfsPlaying] = useState(false)
+  const [bfsPlaybackSpeed, setBfsPlaybackSpeed] = useState(55)
+  const [bfsStepIndex, setBfsStepIndex] = useState(-1)
+  const [bfsResult, setBfsResult] = useState<BfsResult | null>(null)
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
@@ -108,6 +112,8 @@ function App() {
   const bfsTimerRef = useRef<number | null>(null)
   const suppressClickRef = useRef(false)
   const suppressCanvasClickRef = useRef(false)
+  const BFS_PLAYBACK_MIN_DELAY = 80
+  const BFS_PLAYBACK_MAX_DELAY = 1300
 
   // Hide the node right-click menu.
   const closeContextMenu = () => {
@@ -120,7 +126,7 @@ function App() {
       window.clearInterval(bfsTimerRef.current)
       bfsTimerRef.current = null
     }
-    setIsBfsRunning(false)
+    setIsBfsPlaying(false)
   }
 
   // Clear all BFS visual states and reset status message.
@@ -130,7 +136,10 @@ function App() {
     setBfsCurrentNodeId(null)
     setBfsStartNodeId(null)
     setBfsGoalNodeIds([])
+    setBfsResult(null)
+    setBfsStepIndex(-1)
     setBfsStatusText('Enter start and goal, then run BFS.')
+    setIsBfsRunning(false)
   }
 
   // Replace the current graph with a centered preset.
@@ -958,6 +967,7 @@ function App() {
   const finalizeBfsRun = (result: BfsResult) => {
     stopBfsPlayback()
     setBfsCurrentNodeId(null)
+    setBfsStepIndex(result.steps.length - 1)
 
     if (!result.foundNodeLabel) {
       setBfsStatusText('Done. Goal not found in reachable nodes.')
@@ -970,29 +980,120 @@ function App() {
     setBfsStatusText(buildBfsCompletionStatus(result, nodes))
   }
 
-  // Animate BFS visits and hand over to finalization when traversal completes.
-  const startBfsPlayback = (result: BfsResult) => {
-    let stepIndex = 0
-    setBfsStatusText('BFS running...')
+  // Render one BFS step index by updating "current" node and visited history.
+  const applyBfsStepIndex = (result: BfsResult, index: number) => {
+    if (index < 0) {
+      setBfsCurrentNodeId(null)
+      setBfsVisitedNodeIds([])
+      setBfsStatusText('BFS ready. Press Play or step through manually.')
+      return
+    }
+
+    const boundedIndex = Math.min(index, result.steps.length - 1)
+    const currentStep = result.steps[boundedIndex]
+    const visitedIds = result.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
+
+    setBfsCurrentNodeId(currentStep.nodeId)
+    setBfsVisitedNodeIds(visitedIds)
+    setBfsStatusText(
+      `Visiting ${currentStep.nodeLabel} (step ${currentStep.order}/${result.steps.length})`,
+    )
+  }
+
+  // Move playback one step forward, and finalize when traversal reaches the end.
+  const stepBfsForward = () => {
+    if (!bfsResult) return
+
+    const nextIndex = bfsStepIndex + 1
+    if (nextIndex >= bfsResult.steps.length) {
+      finalizeBfsRun(bfsResult)
+      return
+    }
+
+    applyBfsStepIndex(bfsResult, nextIndex)
+    setBfsStepIndex(nextIndex)
+  }
+
+  // Move playback one step backward without changing the current BFS result.
+  const stepBfsBackward = () => {
+    if (!bfsResult) return
+    if (bfsStepIndex < 0) return
+
+    const previousIndex = bfsStepIndex - 1
+    applyBfsStepIndex(bfsResult, previousIndex)
+    setBfsStepIndex(previousIndex)
     setIsBfsRunning(true)
+    setBfsGoalNodeIds([])
+  }
+
+  // Convert slider value to timer delay so higher slider means faster playback.
+  const getBfsPlaybackDelay = (speedValue: number) => {
+    const speedRatio = speedValue / 100
+    return Math.round(
+      BFS_PLAYBACK_MAX_DELAY - speedRatio * (BFS_PLAYBACK_MAX_DELAY - BFS_PLAYBACK_MIN_DELAY),
+    )
+  }
+
+  // Advance playback by one step and finish when the traversal reaches the end.
+  const advanceBfsPlaybackStep = (result: BfsResult, currentIndex: number) => {
+    const nextIndex = currentIndex + 1
+    if (nextIndex >= result.steps.length) {
+      finalizeBfsRun(result)
+      return result.steps.length - 1
+    }
+
+    applyBfsStepIndex(result, nextIndex)
+    return nextIndex
+  }
+
+  // Start or restart the BFS playback timer with the provided delay.
+  const startBfsPlaybackTimer = (result: BfsResult, delayMs: number) => {
+    if (bfsTimerRef.current !== null) {
+      window.clearInterval(bfsTimerRef.current)
+      bfsTimerRef.current = null
+    }
 
     bfsTimerRef.current = window.setInterval(() => {
-      const step = result.steps[stepIndex]
-      if (!step) {
-        finalizeBfsRun(result)
-        return
-      }
+      setBfsStepIndex((currentIndex) => advanceBfsPlaybackStep(result, currentIndex))
+    }, delayMs)
+  }
 
-      setBfsCurrentNodeId(step.nodeId)
-      setBfsVisitedNodeIds((prev) => (prev.includes(step.nodeId) ? prev : [...prev, step.nodeId]))
-      setBfsStatusText(`Visiting ${step.nodeLabel} (step ${step.order}/${result.steps.length})`)
-      stepIndex += 1
-    }, 650)
+  // Start or resume automated BFS playback using the selected speed.
+  const playBfs = () => {
+    if (!bfsResult) return
+    if (isBfsPlaying) return
+
+    if (bfsStepIndex >= bfsResult.steps.length - 1) {
+      applyBfsStepIndex(bfsResult, -1)
+      setBfsStepIndex(-1)
+      setBfsGoalNodeIds([])
+      setIsBfsRunning(true)
+    }
+
+    setIsBfsPlaying(true)
+    startBfsPlaybackTimer(bfsResult, getBfsPlaybackDelay(bfsPlaybackSpeed))
+  }
+
+  // Pause automated BFS playback and keep current step visible.
+  const pauseBfs = () => {
+    stopBfsPlayback()
+  }
+
+  // Change BFS playback speed from the slider.
+  const handleBfsPlaybackSpeedChange = (value: number) => {
+    const clampedValue = Math.min(100, Math.max(0, value))
+    setBfsPlaybackSpeed(clampedValue)
+
+    if (!isBfsPlaying || !bfsResult) {
+      return
+    }
+
+    startBfsPlaybackTimer(bfsResult, getBfsPlaybackDelay(clampedValue))
   }
 
   // Validate sidebar inputs, run BFS, and animate visits on the canvas.
   const runBfsFromSidebar = () => {
-    if (isBfsRunning) return
+    if (isBfsPlaying) return
     stopBfsPlayback()
     setBfsVisitedNodeIds([])
     setBfsCurrentNodeId(null)
@@ -1025,7 +1126,10 @@ function App() {
       return
     }
 
-    startBfsPlayback(result)
+    setBfsResult(result)
+    setBfsStepIndex(-1)
+    setIsBfsRunning(true)
+    setBfsStatusText('BFS ready. Press Play or step through manually.')
   }
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
@@ -1042,6 +1146,11 @@ function App() {
     startNodeLabel.trim() !== '' &&
     (goalType !== 'target-node' || goalNodeLabel.trim() !== '') &&
     (goalType !== 'target-value' || parseNumberInput(goalValueInput) !== null)
+  const canStepBackward = bfsResult !== null && bfsStepIndex >= 0 && !isBfsPlaying
+  const canStepForward = bfsResult !== null && bfsStepIndex < bfsResult.steps.length - 1 && !isBfsPlaying
+  const canTogglePlay = bfsResult !== null
+  const isBfsPlaybackComplete =
+    bfsResult !== null && bfsStepIndex >= bfsResult.steps.length - 1 && !isBfsPlaying
   let sidebarBfsStatusText = bfsStatusText
   if (hasEmptyNodes) {
     sidebarBfsStatusText = 'Warning: fill or nullify all empty nodes before running BFS.'
@@ -1199,9 +1308,21 @@ function App() {
           goalValueInput={goalValueInput}
           onGoalValueInputChange={handleGoalValueInputChange}
           onRunBfs={runBfsFromSidebar}
+          onStopBfs={resetBfsVisualization}
           canRunBfs={canRunBfs}
           bfsStatusText={sidebarBfsStatusText}
           isBfsRunning={isBfsRunning}
+          isBfsPlaying={isBfsPlaying}
+          bfsPlaybackSpeed={bfsPlaybackSpeed}
+          onBfsPlaybackSpeedChange={handleBfsPlaybackSpeedChange}
+          onPlayBfs={playBfs}
+          onPauseBfs={pauseBfs}
+          onNextBfsStep={stepBfsForward}
+          onPreviousBfsStep={stepBfsBackward}
+          canStepForward={canStepForward}
+          canStepBackward={canStepBackward}
+          canTogglePlay={canTogglePlay}
+          isBfsPlaybackComplete={isBfsPlaybackComplete}
           fillMin={fillMin}
           fillMax={fillMax}
           onFillMinChange={handleFillMinChange}

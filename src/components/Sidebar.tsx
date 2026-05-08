@@ -12,9 +12,21 @@ type SidebarProps = {
   goalValueInput: string
   onGoalValueInputChange: (value: string) => void
   onRunBfs: () => void
+  onStopBfs: () => void
   canRunBfs: boolean
   bfsStatusText: string
   isBfsRunning: boolean
+  isBfsPlaying: boolean
+  bfsPlaybackSpeed: number
+  onBfsPlaybackSpeedChange: (value: number) => void
+  onPlayBfs: () => void
+  onPauseBfs: () => void
+  onNextBfsStep: () => void
+  onPreviousBfsStep: () => void
+  canStepForward: boolean
+  canStepBackward: boolean
+  canTogglePlay: boolean
+  isBfsPlaybackComplete: boolean
   fillMin: string
   fillMax: string
   onFillMinChange: (event: React.ChangeEvent<HTMLInputElement>) => void
@@ -43,9 +55,21 @@ export const Sidebar = ({
   goalValueInput,
   onGoalValueInputChange,
   onRunBfs,
+  onStopBfs,
   canRunBfs,
   bfsStatusText,
   isBfsRunning,
+  isBfsPlaying,
+  bfsPlaybackSpeed,
+  onBfsPlaybackSpeedChange,
+  onPlayBfs,
+  onPauseBfs,
+  onNextBfsStep,
+  onPreviousBfsStep,
+  canStepForward,
+  canStepBackward,
+  canTogglePlay,
+  isBfsPlaybackComplete,
   fillMin,
   fillMax,
   onFillMinChange,
@@ -63,7 +87,9 @@ export const Sidebar = ({
   const [activePage, setActivePage] = useState<SidebarPage>('canvas')
 
   return (
-    <aside className={`sidebar ${activePage === 'canvas' ? 'is-canvas-setup' : ''}`}>
+    <aside
+      className={`sidebar ${activePage === 'canvas' ? 'is-canvas-setup' : 'is-algorithm-setup'}`}
+    >
       <div className="sidebar-page-switch">
         <button
           className={`sidebar-page-tab ${activePage === 'canvas' ? 'is-active' : ''}`}
@@ -224,13 +250,52 @@ export const Sidebar = ({
             <h3>Playback</h3>
             <div className="playback">
               <button
-                className="btn btn-primary"
+                className={`btn playback-run-btn ${isBfsRunning ? 'btn-active' : ''}`}
                 type="button"
-                onClick={onRunBfs}
-                disabled={!canRunBfs || isBfsRunning}
+                onClick={isBfsRunning ? onStopBfs : onRunBfs}
+                disabled={!isBfsRunning && !canRunBfs}
               >
-                {isBfsRunning ? 'Running BFS...' : 'Run BFS'}
+                {isBfsRunning ? 'Stop BFS' : 'Run BFS'}
               </button>
+              <div className="playback-step-controls">
+                <button
+                  className="btn playback-control-btn"
+                  type="button"
+                  onClick={onPreviousBfsStep}
+                  disabled={!canStepBackward}
+                >
+                  Previous
+                </button>
+                <button
+                  className="btn btn-primary playback-control-btn"
+                  type="button"
+                  onClick={isBfsPlaying ? onPauseBfs : onPlayBfs}
+                  disabled={!canTogglePlay}
+                >
+                  {isBfsPlaying ? 'Pause' : isBfsPlaybackComplete ? 'Replay' : 'Play'}
+                </button>
+                <button
+                  className="btn playback-control-btn"
+                  type="button"
+                  onClick={onNextBfsStep}
+                  disabled={!canStepForward}
+                >
+                  Next
+                </button>
+              </div>
+              <label className="field playback-speed-field">
+                <span>Speed</span>
+                <input
+                  className="slider"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step="any"
+                  value={bfsPlaybackSpeed}
+                  onChange={(event) => onBfsPlaybackSpeedChange(Number(event.target.value))}
+                  disabled={!canTogglePlay}
+                />
+              </label>
             </div>
             <p className="hint">{bfsStatusText}</p>
           </div>
