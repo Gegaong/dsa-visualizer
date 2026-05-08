@@ -249,6 +249,7 @@ function App() {
   // When entering one mode, we automatically exit the other and clean up.
   const enterDeleteMode = () => {
     if (isBfsRunning) return
+    resetBfsVisualization()
     setIsConnectMode(false) // Exit connect mode first
     setConnectionSource(null)
     setIsDeleteEdgeMode(false)
@@ -261,6 +262,7 @@ function App() {
   // Switch into delete-edge mode (turns off other modes first).
   const enterDeleteEdgeMode = () => {
     if (isBfsRunning) return
+    resetBfsVisualization()
     setIsConnectMode(false)
     setConnectionSource(null)
     setIsDeleteMode(false)
@@ -273,6 +275,7 @@ function App() {
   // Switch into connect mode (turns off other modes first).
   const enterConnectMode = () => {
     if (isBfsRunning) return
+    resetBfsVisualization()
     setIsDeleteMode(false) // Exit delete mode first
     setIsDeleteEdgeMode(false)
     clearSelection()
@@ -763,7 +766,6 @@ function App() {
   // Load a preset, but ask first if there's already a graph on the canvas.
   const handlePresetClick = (preset: GraphPreset) => {
     if (isBfsRunning) return
-    resetBfsVisualization()
     // If there's already a graph, confirm before replacing it.
     if (nodes.length === 0) {
       applyPreset(preset)
@@ -783,6 +785,7 @@ function App() {
       return
     }
 
+    resetBfsVisualization()
     applyPreset(pendingPreset)
     setPendingPreset(null)
     setShowPresetConfirm(false)
