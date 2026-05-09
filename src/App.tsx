@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 
 import type {
@@ -66,6 +66,11 @@ import {
   getRandomIntInclusive,
   reindexNodes,
 } from './utils/format'
+import {
+  canCreateEdge,
+  getNextAllowedEdgeDirection,
+  sanitizeEdgesForNullNodes,
+} from './utils/graphRules'
 import { runBfs } from './algorithms/bfs'
 import type { BfsResult } from './algorithms/types'
 import { buildBfsCompletionStatus, prepareBfsRunInputs } from './algorithms/bfsUIHelpers'
@@ -130,17 +135,20 @@ function App() {
   }
 
   // Convert client coordinates into canvas-space coordinates for the current zoom level.
-  const getCanvasPointerPosition = (clientX: number, clientY: number, canvasBounds: DOMRect) => {
-    const centerX = canvasBounds.width / 2
-    const centerY = canvasBounds.height / 2
-    const pointerX = clientX - canvasBounds.left
-    const pointerY = clientY - canvasBounds.top
+  const getCanvasPointerPosition = useCallback(
+    (clientX: number, clientY: number, canvasBounds: DOMRect) => {
+      const centerX = canvasBounds.width / 2
+      const centerY = canvasBounds.height / 2
+      const pointerX = clientX - canvasBounds.left
+      const pointerY = clientY - canvasBounds.top
 
-    return {
-      x: (pointerX - (1 - canvasZoom) * centerX) / canvasZoom,
-      y: (pointerY - (1 - canvasZoom) * centerY) / canvasZoom,
-    }
-  }
+      return {
+        x: (pointerX - (1 - canvasZoom) * centerX) / canvasZoom,
+        y: (pointerY - (1 - canvasZoom) * centerY) / canvasZoom,
+      }
+    },
+    [canvasZoom],
+  )
 
   // Increase zoom by one step.
   const handleZoomIn = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -203,6 +211,7 @@ function App() {
   // Delete a single node and all its connected edges, then recalculate node labels.
   const deleteNode = (nodeId: string) => {
     if (isBfsRunning) return // This is to stop user from modifying the graph during BFS
+    resetBfsVisualization()
     setNodes((prev) => reindexNodes(prev.filter((node) => node.id !== nodeId)))
     setEdges((prev) =>
       prev.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId),
@@ -226,6 +235,7 @@ function App() {
       return
     }
 
+    resetBfsVisualization()
     const idSet = new Set(nodeIds)
     setNodes((prev) => reindexNodes(prev.filter((node) => !idSet.has(node.id))))
     setEdges((prev) =>
@@ -252,6 +262,7 @@ function App() {
       return
     }
 
+    resetBfsVisualization()
     const idSet = new Set(edgeIds)
     setEdges((prev) => prev.filter((edge) => !idSet.has(edge.id)))
   }
@@ -619,15 +630,11 @@ function App() {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [canvasElement, canvasZoom])
+  }, [canvasElement, getCanvasPointerPosition])
 
   useEffect(() => () => {
     stopBfsPlayback()
   }, [])
-
-  useEffect(() => {
-    resetBfsVisualization()
-  }, [nodes.length, edges.length])
 
   // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -682,6 +689,10 @@ function App() {
 
     setEditingNodeId(null)
     setDraftValue('')
+
+    if (normalizedValue === null) {
+      setEdges((prev) => sanitizeEdgesForNullNodes(prev, [nodeId]))
+    }
   }
 
   // Close edit mode without saving changes to the node value.
@@ -722,6 +733,10 @@ function App() {
   const nullifyEmptyValues = () => {
     if (isBfsRunning) return
     resetBfsVisualization()
+    const nullifiedNodeIds = nodes
+      .filter((node) => node.value === 'empty')
+      .map((node) => node.id)
+
     setNodes((prev) =>
       prev.map((node) =>
         node.value === 'empty'
@@ -729,6 +744,10 @@ function App() {
           : node,
       ),
     )
+
+    if (nullifiedNodeIds.length > 0) {
+      setEdges((prev) => sanitizeEdgesForNullNodes(prev, nullifiedNodeIds))
+    }
   }
 
   // Ask before resetting every node back to empty — this *can* wipe user-entered numbers.
@@ -846,23 +865,11 @@ function App() {
   // Create an edge between two nodes with validation to prevent duplicates and self-loops.
   const createEdge = (fromId: string, toId: string, direction: GraphEdge['direction']) => {
     if (isBfsRunning) return
-    // Prevent self-loops (a node cannot connect to itself)
-    if (fromId === toId) {
+    if (!canCreateEdge(nodes, edges, fromId, toId, direction)) {
       return
     }
 
-    // Prevent duplicate edges in either direction
-    // (we check both directions because edges can be bidirectional)
-    const edgeExists = edges.some(
-      (e) =>
-        (e.fromNodeId === fromId && e.toNodeId === toId) ||
-        (e.fromNodeId === toId && e.toNodeId === fromId),
-    )
-
-    if (edgeExists) {
-      return
-    }
-
+    resetBfsVisualization()
     const newEdge: GraphEdge = {
       id: `edge-${nextId.current}`,
       fromNodeId: fromId,
@@ -877,19 +884,15 @@ function App() {
   // Cycle through edge directions: both-ways → one-way → reverse → both-ways (repeat)
   const toggleEdgeDirection = (edgeId: string) => {
     if (isBfsRunning) return
+    resetBfsVisualization()
     setEdges((prev) =>
       prev.map((edge) => {
         if (edge.id !== edgeId) return edge
-
-        const directionCycle = {
-          both: 'forward',
-          forward: 'backward',
-          backward: 'both',
-        } as const
+        const nextDirection = getNextAllowedEdgeDirection(edge, nodes)
 
         return {
           ...edge,
-          direction: directionCycle[edge.direction],
+          direction: nextDirection,
         }
       }),
     )
