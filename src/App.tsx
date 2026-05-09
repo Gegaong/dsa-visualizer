@@ -1191,7 +1191,20 @@ function App() {
   const isBfsPlaybackComplete =
     bfsResult !== null && bfsStepIndex >= bfsResult.steps.length - 1 && !isBfsPlaying
   let sidebarBfsStatusText = bfsStatusText
-  if (hasEmptyNodes) {
+  const startNodeMissing = startNodeLabel.trim() === ''
+  const goalNodeMissing = goalType === 'target-node' && goalNodeLabel.trim() === ''
+  const goalValueMissing = goalType === 'target-value' && parseNumberInput(goalValueInput) === null
+  if (startNodeMissing && goalNodeMissing) {
+    sidebarBfsStatusText = 'Warning: Start node and Goal node are required fields.'
+  } else if (startNodeMissing && goalValueMissing) {
+    sidebarBfsStatusText = 'Warning: Start node and Goal value are required fields.'
+  } else if (startNodeMissing) {
+    sidebarBfsStatusText = 'Warning: Start node is a required field.'
+  } else if (goalNodeMissing) {
+    sidebarBfsStatusText = 'Warning: Goal node is a required field.'
+  } else if (goalValueMissing) {
+    sidebarBfsStatusText = 'Warning: Goal value is a required field.'
+  } else if (hasEmptyNodes) {
     sidebarBfsStatusText = 'Warning: fill or nullify all empty nodes before running BFS.'
   }
 

@@ -367,10 +367,10 @@
 	background: var(--panel);
 	border: 1px solid var(--border);
 	border-radius: 22px;
-	padding: 20px;
+	padding: 16px 20px 20px;
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: 17px;
 	max-height: 680px;
 	overflow: auto;
 	box-shadow: 0 16px 28px rgba(46, 32, 23, 0.08);
@@ -386,19 +386,30 @@
 	overflow: hidden;
 }
 
+/* Fills space below tabs; same inset under the tab bar on canvas and algorithm. */
+.sidebar-page-body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	padding-top: 12px;
+}
+
 .sidebar-page-switch {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 0;
-	padding: 0 0 2px;
+	gap: 6px;
+	margin-top: 4px;
+	padding: 0 0 4px;
 	border-bottom: 1px solid var(--border);
 }
 
 .sidebar-page-tab {
 	position: relative;
-	height: 32px;
+	height: 38px;
 	width: 100%;
-	padding: 0 8px;
+	padding: 0 10px;
 	border: none;
 	background: transparent;
 	color: var(--muted);
@@ -476,6 +487,17 @@
 	gap: 6px;
 	font-size: 13px;
 	color: var(--muted);
+}
+
+.required-indicator {
+	display: inline-block;
+	margin-left: 2px;
+	font-weight: 700;
+	font-size: 1.5625em;
+	line-height: 1;
+	vertical-align: text-top;
+	color: #8f2c22;
+	font-family: Arial, Helvetica, sans-serif;
 }
 
 .field input,

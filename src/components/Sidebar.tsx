@@ -108,7 +108,7 @@ export const Sidebar = ({
       </div>
 
       {activePage === 'canvas' && (
-        <>
+        <div className="sidebar-page-body">
           <div className="sidebar-section">
             <h3>Node values</h3>
             <label className="field">
@@ -177,11 +177,11 @@ export const Sidebar = ({
               </button>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {activePage === 'algorithm' && (
-        <>
+        <div className="sidebar-page-body">
           <div className="sidebar-section">
             <h3>Algorithm</h3>
             <div className="pill-group">
@@ -197,7 +197,9 @@ export const Sidebar = ({
           <div className="sidebar-section algorithm-inputs-section">
             <h3>Inputs</h3>
             <label className="field">
-              <span>Start node</span>
+              <span>
+                Start node <span className="required-indicator" aria-hidden="true">*</span>
+              </span>
               <input
                 type="text"
                 value={startNodeLabel}
@@ -220,7 +222,9 @@ export const Sidebar = ({
             </label>
             {goalType === 'target-node' && (
               <label className="field">
-                <span>Goal node</span>
+                <span>
+                  Goal node <span className="required-indicator" aria-hidden="true">*</span>
+                </span>
                 <input
                   type="text"
                   value={goalNodeLabel}
@@ -231,7 +235,9 @@ export const Sidebar = ({
             )}
             {goalType === 'target-value' && (
               <label className="field">
-                <span>Goal value</span>
+                <span>
+                  Goal value <span className="required-indicator" aria-hidden="true">*</span>
+                </span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -267,7 +273,7 @@ export const Sidebar = ({
                   Previous
                 </button>
                 <button
-                  className="btn btn-primary playback-control-btn"
+                  className={`btn playback-control-btn ${isBfsPlaying ? 'btn-active' : ''}`}
                   type="button"
                   onClick={isBfsPlaying ? onPauseBfs : onPlayBfs}
                   disabled={!canTogglePlay}
@@ -299,7 +305,7 @@ export const Sidebar = ({
             </div>
             <p className="hint">{bfsStatusText}</p>
           </div>
-        </>
+        </div>
       )}
     </aside>
   )
