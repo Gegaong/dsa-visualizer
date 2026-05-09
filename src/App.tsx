@@ -95,6 +95,7 @@ function App() {
   const [connectionSource, setConnectionSource] = useState<string | null>(null)
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null)
+  const [canvasZoom, setCanvasZoom] = useState(1)
   const [bfsVisitedNodeIds, setBfsVisitedNodeIds] = useState<string[]>([])
   const [bfsCurrentNodeId, setBfsCurrentNodeId] = useState<string | null>(null)
   const [bfsStartNodeId, setBfsStartNodeId] = useState<string | null>(null)
@@ -112,12 +113,45 @@ function App() {
   const bfsTimerRef = useRef<number | null>(null)
   const suppressClickRef = useRef(false)
   const suppressCanvasClickRef = useRef(false)
+  const CANVAS_ZOOM_MIN = 0.5
+  const CANVAS_ZOOM_MAX = 2
+  const CANVAS_ZOOM_STEP = 0.1
   const BFS_PLAYBACK_MIN_DELAY = 80
   const BFS_PLAYBACK_MAX_DELAY = 1300
 
   // Hide the node right-click menu.
   const closeContextMenu = () => {
     setContextMenu(null)
+  }
+
+  // Keep zoom values inside the supported range.
+  const clampCanvasZoom = (value: number) => {
+    return Math.min(CANVAS_ZOOM_MAX, Math.max(CANVAS_ZOOM_MIN, value))
+  }
+
+  // Convert client coordinates into canvas-space coordinates for the current zoom level.
+  const getCanvasPointerPosition = (clientX: number, clientY: number, canvasBounds: DOMRect) => {
+    const centerX = canvasBounds.width / 2
+    const centerY = canvasBounds.height / 2
+    const pointerX = clientX - canvasBounds.left
+    const pointerY = clientY - canvasBounds.top
+
+    return {
+      x: (pointerX - (1 - canvasZoom) * centerX) / canvasZoom,
+      y: (pointerY - (1 - canvasZoom) * centerY) / canvasZoom,
+    }
+  }
+
+  // Increase zoom by one step.
+  const handleZoomIn = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    setCanvasZoom((prev) => clampCanvasZoom(prev + CANVAS_ZOOM_STEP))
+  }
+
+  // Decrease zoom by one step.
+  const handleZoomOut = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    setCanvasZoom((prev) => clampCanvasZoom(prev - CANVAS_ZOOM_STEP))
   }
 
   // Stop any running BFS playback timer.
@@ -352,8 +386,9 @@ function App() {
     }
 
     const rect = event.currentTarget.getBoundingClientRect()
-    const rawX = event.clientX - rect.left
-    const rawY = event.clientY - rect.top
+    const pointer = getCanvasPointerPosition(event.clientX, event.clientY, rect)
+    const rawX = pointer.x
+    const rawY = pointer.y
     const clampedX = Math.min(Math.max(0, rawX - NODE_RADIUS), rect.width - NODE_SIZE)
     const clampedY = Math.min(Math.max(0, rawY - NODE_RADIUS), rect.height - NODE_SIZE)
 
@@ -443,14 +478,13 @@ function App() {
       setDraftValue('')
     }
 
-    const pointerX = event.clientX - canvasBounds.left
-    const pointerY = event.clientY - canvasBounds.top
+    const pointer = getCanvasPointerPosition(event.clientX, event.clientY, canvasBounds)
     dragStateRef.current = {
       nodeId: node.id,
-      offsetX: pointerX - node.x,
-      offsetY: pointerY - node.y,
-      startPointerX: pointerX,
-      startPointerY: pointerY,
+      offsetX: pointer.x - node.x,
+      offsetY: pointer.y - node.y,
+      startPointerX: pointer.x,
+      startPointerY: pointer.y,
       hasMoved: false,
     }
     setDraggingNodeId(node.id)
@@ -487,8 +521,9 @@ function App() {
       const canvasBounds = canvasElement?.getBoundingClientRect()
       if (!canvasBounds) return
 
-      const pointerX = event.clientX - canvasBounds.left
-      const pointerY = event.clientY - canvasBounds.top
+      const pointer = getCanvasPointerPosition(event.clientX, event.clientY, canvasBounds)
+      const pointerX = pointer.x
+      const pointerY = pointer.y
       const deltaX = pointerX - dragState.startPointerX
       const deltaY = pointerY - dragState.startPointerY
       const distance = Math.hypot(deltaX, deltaY)
@@ -546,8 +581,9 @@ function App() {
       const canvasBounds = canvasElement?.getBoundingClientRect()
       if (!canvasBounds) return
 
-      const pointerX = event.clientX - canvasBounds.left
-      const pointerY = event.clientY - canvasBounds.top
+      const pointer = getCanvasPointerPosition(event.clientX, event.clientY, canvasBounds)
+      const pointerX = pointer.x
+      const pointerY = pointer.y
       const targetX = pointerX - dragState.offsetX
       const targetY = pointerY - dragState.offsetY
 
@@ -583,7 +619,7 @@ function App() {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [canvasElement])
+  }, [canvasElement, canvasZoom])
 
   useEffect(() => () => {
     stopBfsPlayback()
@@ -1255,46 +1291,73 @@ function App() {
             }}
             onContextMenu={handleCanvasContextMenu}
           >
-            <EdgesLayer
-              nodes={nodes}
-              edges={edges}
-              isDeleteEdgeMode={isDeleteEdgeMode}
-              selectedEdgeIds={selectedEdgeIds}
-              onToggleEdgeSelection={toggleEdgeSelection}
-            />
+            <div className="canvas-zoom-controls" onClick={(event) => event.stopPropagation()}>
+              <button
+                className="canvas-zoom-btn"
+                type="button"
+                onClick={handleZoomOut}
+                disabled={canvasZoom <= CANVAS_ZOOM_MIN}
+                aria-label="Zoom out"
+              >
+                -
+              </button>
+              <span className="canvas-zoom-value">{Math.round(canvasZoom * 100)}%</span>
+              <button
+                className="canvas-zoom-btn"
+                type="button"
+                onClick={handleZoomIn}
+                disabled={canvasZoom >= CANVAS_ZOOM_MAX}
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+            </div>
 
-            <EdgeToggles
-              nodes={nodes}
-              edges={edges}
-              isDeleteEdgeMode={isDeleteEdgeMode}
-              selectedEdgeIds={selectedEdgeIds}
-              onToggleEdgeDirection={toggleEdgeDirection}
-              onToggleEdgeSelection={toggleEdgeSelection}
-            />
+            <div
+              className="canvas-content"
+              style={{ transform: `scale(${canvasZoom})`, transformOrigin: 'center center' }}
+            >
+              <EdgesLayer
+                nodes={nodes}
+                edges={edges}
+                isDeleteEdgeMode={isDeleteEdgeMode}
+                selectedEdgeIds={selectedEdgeIds}
+                onToggleEdgeSelection={toggleEdgeSelection}
+              />
 
-            <GraphNodeLayer
-              nodes={nodes}
-              isConnectMode={isConnectMode}
-              isDeleteMode={isDeleteMode}
-              isDeleteEdgeMode={isDeleteEdgeMode}
-              selectedNodeIds={selectedNodeIds}
-              connectionSource={connectionSource}
-              draggingNodeId={draggingNodeId}
-              editingNodeId={editingNodeId}
-              draftValue={draftValue}
-              bfsVisitedNodeIds={bfsVisitedNodeIds}
-              bfsCurrentNodeId={bfsCurrentNodeId}
-              bfsStartNodeId={bfsStartNodeId}
-              bfsGoalNodeIds={bfsGoalNodeIds}
-              onNodeMouseDown={handleNodeMouseDown}
-              onConnectNodeClick={handleConnectNodeClick}
-              onToggleNodeSelection={toggleNodeSelection}
-              onStartEditingNode={startEditingNode}
-              onNodeContextMenu={handleNodeContextMenu}
-              onValueChange={handleValueChange}
-              onValueKeyDown={handleValueKeyDown}
-              onCommitNodeValue={commitNodeValue}
-            />
+              <EdgeToggles
+                nodes={nodes}
+                edges={edges}
+                isDeleteEdgeMode={isDeleteEdgeMode}
+                selectedEdgeIds={selectedEdgeIds}
+                onToggleEdgeDirection={toggleEdgeDirection}
+                onToggleEdgeSelection={toggleEdgeSelection}
+              />
+
+              <GraphNodeLayer
+                nodes={nodes}
+                isConnectMode={isConnectMode}
+                isDeleteMode={isDeleteMode}
+                isDeleteEdgeMode={isDeleteEdgeMode}
+                selectedNodeIds={selectedNodeIds}
+                connectionSource={connectionSource}
+                draggingNodeId={draggingNodeId}
+                editingNodeId={editingNodeId}
+                draftValue={draftValue}
+                bfsVisitedNodeIds={bfsVisitedNodeIds}
+                bfsCurrentNodeId={bfsCurrentNodeId}
+                bfsStartNodeId={bfsStartNodeId}
+                bfsGoalNodeIds={bfsGoalNodeIds}
+                onNodeMouseDown={handleNodeMouseDown}
+                onConnectNodeClick={handleConnectNodeClick}
+                onToggleNodeSelection={toggleNodeSelection}
+                onStartEditingNode={startEditingNode}
+                onNodeContextMenu={handleNodeContextMenu}
+                onValueChange={handleValueChange}
+                onValueKeyDown={handleValueKeyDown}
+                onCommitNodeValue={commitNodeValue}
+              />
+            </div>
           </div>
         </section>
 

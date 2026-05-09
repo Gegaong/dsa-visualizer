@@ -237,6 +237,54 @@
 	overflow: hidden;
 }
 
+.canvas-content {
+	position: absolute;
+	inset: 0;
+}
+
+.canvas-zoom-controls {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	z-index: 20;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 8px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: rgba(255, 253, 251, 0.94);
+	box-shadow: 0 8px 18px rgba(24, 20, 16, 0.12);
+}
+
+.canvas-zoom-btn {
+	width: 24px;
+	height: 24px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: #fff8f2;
+	color: var(--ink);
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1;
+	display: grid;
+	place-items: center;
+	cursor: pointer;
+}
+
+.canvas-zoom-btn:hover {
+	border-color: var(--accent);
+}
+
+.canvas-zoom-value {
+	min-width: 42px;
+	text-align: center;
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--ink);
+	user-select: none;
+}
+
 .canvas.is-place {
 	cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='20'%20height='20'%20viewBox='0%200%2020%2020'%3E%3Cpath%20d='M10%202v6M10%2012v6M2%2010h6M12%2010h6'%20stroke='%232e2017'%20stroke-width='1.2'%20stroke-linecap='round'/%3E%3C/svg%3E") 10 10, crosshair;
 }
