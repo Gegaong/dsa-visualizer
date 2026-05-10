@@ -72,8 +72,12 @@ import {
   sanitizeEdgesForNullNodes,
 } from './utils/graphRules'
 import { runBfs } from './algorithms/bfs'
+import { runDfs } from './algorithms/dfs'
 import type { BfsResult } from './algorithms/types'
 import { buildBfsCompletionStatus, prepareBfsRunInputs } from './algorithms/bfsUIHelpers'
+import { buildDfsCompletionStatus, prepareDfsRunInputs } from './algorithms/dfsUIHelpers'
+
+type GraphAlgorithmTab = 'bfs' | 'dfs'
 
 // Root component for the DSA visualizer workspace.
 function App() {
@@ -101,28 +105,29 @@ function App() {
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null)
   const [canvasZoom, setCanvasZoom] = useState(1)
-  const [bfsVisitedNodeIds, setBfsVisitedNodeIds] = useState<string[]>([])
-  const [bfsCurrentNodeId, setBfsCurrentNodeId] = useState<string | null>(null)
-  const [bfsStartNodeId, setBfsStartNodeId] = useState<string | null>(null)
-  const [bfsGoalNodeIds, setBfsGoalNodeIds] = useState<string[]>([])
-  const [bfsStatusText, setBfsStatusText] = useState('Enter start and goal, then run BFS.')
-  const [isBfsRunning, setIsBfsRunning] = useState(false)
-  const [isBfsPlaying, setIsBfsPlaying] = useState(false)
-  const [bfsPlaybackSpeed, setBfsPlaybackSpeed] = useState(55)
-  const [bfsStepIndex, setBfsStepIndex] = useState(-1)
-  const [bfsResult, setBfsResult] = useState<BfsResult | null>(null)
+  const [algorithmTab, setAlgorithmTab] = useState<GraphAlgorithmTab>('bfs')
+  const [traversalVisitedNodeIds, setTraversalVisitedNodeIds] = useState<string[]>([])
+  const [traversalCurrentNodeId, setTraversalCurrentNodeId] = useState<string | null>(null)
+  const [traversalStartNodeId, setTraversalStartNodeId] = useState<string | null>(null)
+  const [traversalGoalNodeIds, setTraversalGoalNodeIds] = useState<string[]>([])
+  const [traversalStatusText, setTraversalStatusText] = useState('Enter start and goal, then run the selected algorithm.')
+  const [isTraversalRunning, setIsTraversalRunning] = useState(false)
+  const [isTraversalPlaying, setIsTraversalPlaying] = useState(false)
+  const [traversalPlaybackSpeed, setTraversalPlaybackSpeed] = useState(55)
+  const [traversalStepIndex, setTraversalStepIndex] = useState(-1)
+  const [traversalResult, setTraversalResult] = useState<BfsResult | null>(null)
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
-  const bfsTimerRef = useRef<number | null>(null)
+  const traversalPlaybackTimerRef = useRef<number | null>(null)
   const suppressClickRef = useRef(false)
   const suppressCanvasClickRef = useRef(false)
   const CANVAS_ZOOM_MIN = 0.5
   const CANVAS_ZOOM_MAX = 2
   const CANVAS_ZOOM_STEP = 0.1
-  const BFS_PLAYBACK_MIN_DELAY = 80
-  const BFS_PLAYBACK_MAX_DELAY = 1300
+  const TRAVERSAL_PLAYBACK_MIN_DELAY = 80
+  const TRAVERSAL_PLAYBACK_MAX_DELAY = 1300
 
   // Hide the node right-click menu.
   const closeContextMenu = () => {
@@ -162,26 +167,35 @@ function App() {
     setCanvasZoom((prev) => clampCanvasZoom(prev - CANVAS_ZOOM_STEP))
   }
 
-  // Stop any running BFS playback timer.
-  const stopBfsPlayback = () => {
-    if (bfsTimerRef.current !== null) {
-      window.clearInterval(bfsTimerRef.current)
-      bfsTimerRef.current = null
+  // Stop any running traversal playback timer.
+  const stopTraversalPlayback = () => {
+    if (traversalPlaybackTimerRef.current !== null) {
+      window.clearInterval(traversalPlaybackTimerRef.current)
+      traversalPlaybackTimerRef.current = null
     }
-    setIsBfsPlaying(false)
+    setIsTraversalPlaying(false)
   }
 
-  // Clear all BFS visual states and reset status message.
-  const resetBfsVisualization = () => {
-    stopBfsPlayback()
-    setBfsVisitedNodeIds([])
-    setBfsCurrentNodeId(null)
-    setBfsStartNodeId(null)
-    setBfsGoalNodeIds([])
-    setBfsResult(null)
-    setBfsStepIndex(-1)
-    setBfsStatusText('Enter start and goal, then run BFS.')
-    setIsBfsRunning(false)
+  // Clear traversal visual state and reset the idle status line (BFS or DFS).
+  const resetTraversalVisualization = (idleAlgorithm: GraphAlgorithmTab = algorithmTab) => {
+    stopTraversalPlayback()
+    setTraversalVisitedNodeIds([])
+    setTraversalCurrentNodeId(null)
+    setTraversalStartNodeId(null)
+    setTraversalGoalNodeIds([])
+    setTraversalResult(null)
+    setTraversalStepIndex(-1)
+    const algoName = idleAlgorithm === 'dfs' ? 'DFS' : 'BFS'
+    setTraversalStatusText(`Enter start and goal, then run ${algoName}.`)
+    setIsTraversalRunning(false)
+  }
+
+  // Switch BFS/DFS in the sidebar; clears any in-progress traversal UI.
+  const handleAlgorithmTabChange = (tab: GraphAlgorithmTab) => {
+    if (isTraversalRunning) return
+    if (tab === algorithmTab) return
+    setAlgorithmTab(tab)
+    resetTraversalVisualization(tab)
   }
 
   // Replace the current graph with a centered preset.
@@ -210,8 +224,8 @@ function App() {
 
   // Delete a single node and all its connected edges, then recalculate node labels.
   const deleteNode = (nodeId: string) => {
-    if (isBfsRunning) return // This is to stop user from modifying the graph during BFS
-    resetBfsVisualization()
+    if (isTraversalRunning) return // Block graph edits while a traversal run is active.
+    resetTraversalVisualization()
     setNodes((prev) => reindexNodes(prev.filter((node) => node.id !== nodeId)))
     setEdges((prev) =>
       prev.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId),
@@ -230,12 +244,12 @@ function App() {
 
   // Delete multiple nodes at once (used in delete mode) and clean up their edges.
   const deleteSelectedNodes = (nodeIds: string[]) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (nodeIds.length === 0) {
       return
     }
 
-    resetBfsVisualization()
+    resetTraversalVisualization()
     const idSet = new Set(nodeIds)
     setNodes((prev) => reindexNodes(prev.filter((node) => !idSet.has(node.id))))
     setEdges((prev) =>
@@ -254,15 +268,14 @@ function App() {
   }
 
   // Delete the given edges from the canvas.
-  // First line is to stop user from modifying the graph during BFS
-  // It will be in every graph modification function for this same reason
+  // Block edits while a traversal run is active (same guard as other graph mutators).
   const deleteSelectedEdges = (edgeIds: string[]) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (edgeIds.length === 0) {
       return
     }
 
-    resetBfsVisualization()
+    resetTraversalVisualization()
     const idSet = new Set(edgeIds)
     setEdges((prev) => prev.filter((edge) => !idSet.has(edge.id)))
   }
@@ -275,7 +288,7 @@ function App() {
 
   // Toggle a node's selected state for delete mode (add or remove from selection list).
   const toggleNodeSelection = (nodeId: string) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     setSelectedNodeIds((prev) =>
       prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId],
     )
@@ -288,7 +301,7 @@ function App() {
 
   // Toggle an edge in the delete-edge selection.
   const toggleEdgeSelection = (edgeId: string) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     setSelectedEdgeIds((prev) =>
       prev.includes(edgeId) ? prev.filter((id) => id !== edgeId) : [...prev, edgeId],
     )
@@ -302,8 +315,8 @@ function App() {
   // Mode management: Connect and Delete are mutually exclusive.
   // When entering one mode, we automatically exit the other and clean up.
   const enterDeleteMode = () => {
-    if (isBfsRunning) return
-    resetBfsVisualization()
+    if (isTraversalRunning) return
+    resetTraversalVisualization()
     setIsConnectMode(false) // Exit connect mode first
     setConnectionSource(null)
     setIsDeleteEdgeMode(false)
@@ -315,8 +328,8 @@ function App() {
 
   // Switch into delete-edge mode (turns off other modes first).
   const enterDeleteEdgeMode = () => {
-    if (isBfsRunning) return
-    resetBfsVisualization()
+    if (isTraversalRunning) return
+    resetTraversalVisualization()
     setIsConnectMode(false)
     setConnectionSource(null)
     setIsDeleteMode(false)
@@ -328,8 +341,8 @@ function App() {
 
   // Switch into connect mode (turns off other modes first).
   const enterConnectMode = () => {
-    if (isBfsRunning) return
-    resetBfsVisualization()
+    if (isTraversalRunning) return
+    resetTraversalVisualization()
     setIsDeleteMode(false) // Exit delete mode first
     setIsDeleteEdgeMode(false)
     clearSelection()
@@ -342,14 +355,14 @@ function App() {
 
   // Leave delete-node mode and clear its selection.
   const exitDeleteMode = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     setIsDeleteMode(false)
     clearSelection()
   }
 
   // Leave delete-edge mode and clear its selection.
   const exitDeleteEdgeMode = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     setIsDeleteEdgeMode(false)
     clearEdgeSelection()
   }
@@ -359,7 +372,7 @@ function App() {
   // straight from one node into another would otherwise silently drop the typed value
   // (the input unmounts before React fires onBlur).
   const beginEditingNode = (node: GraphNode) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (editingNodeId === node.id) {
       return
     }
@@ -382,7 +395,7 @@ function App() {
   // Skipped if any mode is active (connect/delete) or if this click came
   // immediately after a drag (the suppress flag is set in handleMouseUp).
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (suppressCanvasClickRef.current) {
       suppressCanvasClickRef.current = false
       return
@@ -423,14 +436,14 @@ function App() {
 
   // Block the browser's default right-click menu and close any open custom menus.
   const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     event.preventDefault()
     closeContextMenu()
   }
 
   // Start editing a node when clicked (unless in delete mode).
   const startEditingNode = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (isDeleteMode) {
       return
     }
@@ -506,7 +519,7 @@ function App() {
     event: React.MouseEvent<HTMLDivElement>,
     node: GraphNode,
   ) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     event.preventDefault()
     event.stopPropagation()
 
@@ -633,12 +646,12 @@ function App() {
   }, [canvasElement, getCanvasPointerPosition])
 
   useEffect(() => () => {
-    stopBfsPlayback()
+    stopTraversalPlayback()
   }, [])
 
   // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     setDraftValue(sanitizeNumericInput(event.target.value))
   }
 
@@ -673,7 +686,7 @@ function App() {
 
   // Finalize node value from the latest input value to avoid stale state during fast typing.
   const commitNodeValue = (nodeId: string, rawValue: string) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     const normalizedValue = parseNumberInput(rawValue)
 
     setNodes((prev) =>
@@ -703,8 +716,8 @@ function App() {
 
   // Replace empty node values with inclusive random integers in the provided range.
   const fillEmptyValues = () => {
-    if (isBfsRunning) return
-    resetBfsVisualization()
+    if (isTraversalRunning) return
+    resetTraversalVisualization()
     const minValue = parseNumberInput(fillMin)
     const maxValue = parseNumberInput(fillMax)
 
@@ -731,8 +744,8 @@ function App() {
   // Convert every empty node to null. No confirmation — this leaves user-entered
   // numbers untouched, so it's non-destructive.
   const nullifyEmptyValues = () => {
-    if (isBfsRunning) return
-    resetBfsVisualization()
+    if (isTraversalRunning) return
+    resetTraversalVisualization()
     const nullifiedNodeIds = nodes
       .filter((node) => node.value === 'empty')
       .map((node) => node.id)
@@ -752,7 +765,7 @@ function App() {
 
   // Ask before resetting every node back to empty — this *can* wipe user-entered numbers.
   const handleEmptyAllClick = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (nodes.every((node) => node.value === 'empty')) {
       return
     }
@@ -762,8 +775,8 @@ function App() {
 
   // Reset every node to the 'empty' state.
   const confirmEmptyAll = () => {
-    if (isBfsRunning) return
-    resetBfsVisualization()
+    if (isTraversalRunning) return
+    resetTraversalVisualization()
     setNodes((prev) =>
      prev.map((node): GraphNode => ({
         ...node,
@@ -796,7 +809,7 @@ function App() {
 
   // Show confirmation dialog before clearing the entire canvas (only if there are nodes).
   const handleClearCanvas = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (nodes.length === 0) {
       return
     }
@@ -806,8 +819,8 @@ function App() {
 
   // Confirm clearing: reset everything to initial state and clean up all UI.
   const confirmClearCanvas = () => {
-    if (isBfsRunning) return
-    resetBfsVisualization()
+    if (isTraversalRunning) return
+    resetTraversalVisualization()
     nextId.current = 1 // Reset ID counter for future node creation
     setNodes([])
     setEdges([])
@@ -829,7 +842,7 @@ function App() {
 
   // Load a preset, but ask first if there's already a graph on the canvas.
   const handlePresetClick = (preset: GraphPreset) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     // If there's already a graph, confirm before replacing it.
     if (nodes.length === 0) {
       applyPreset(preset)
@@ -842,14 +855,14 @@ function App() {
 
   // Apply the pending preset and close the confirmation.
   const confirmPresetReplace = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     // Apply the pending preset and close the confirmation modal.
     if (!pendingPreset) {
       setShowPresetConfirm(false)
       return
     }
 
-    resetBfsVisualization()
+    resetTraversalVisualization()
     applyPreset(pendingPreset)
     setPendingPreset(null)
     setShowPresetConfirm(false)
@@ -864,12 +877,12 @@ function App() {
 
   // Create an edge between two nodes with validation to prevent duplicates and self-loops.
   const createEdge = (fromId: string, toId: string, direction: GraphEdge['direction']) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (!canCreateEdge(nodes, edges, fromId, toId, direction)) {
       return
     }
 
-    resetBfsVisualization()
+    resetTraversalVisualization()
     const newEdge: GraphEdge = {
       id: `edge-${nextId.current}`,
       fromNodeId: fromId,
@@ -883,8 +896,8 @@ function App() {
 
   // Cycle through edge directions: both-ways → one-way → reverse → both-ways (repeat)
   const toggleEdgeDirection = (edgeId: string) => {
-    if (isBfsRunning) return
-    resetBfsVisualization()
+    if (isTraversalRunning) return
+    resetTraversalVisualization()
     setEdges((prev) =>
       prev.map((edge) => {
         if (edge.id !== edgeId) return edge
@@ -900,7 +913,7 @@ function App() {
 
   // Two-stage connection: first click selects source, second click selects target and creates edge.
   const handleConnectNodeClick = (nodeId: string) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (!connectionSource) {
       // First click: remember which node we're connecting from
       setConnectionSource(nodeId)
@@ -913,14 +926,14 @@ function App() {
 
   // Leave connect mode and forget the chosen source node.
   const cancelConnection = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     setIsConnectMode(false)
     setConnectionSource(null)
   }
 
   // Delete button behavior: if already in delete mode with selections, delete them; otherwise toggle the mode.
   const handleDeleteModeToggle = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (isDeleteMode) {
       if (selectedNodeIds.length > 0) {
         // Delete the selected nodes and exit delete mode
@@ -941,7 +954,7 @@ function App() {
 
   // Edge-delete button: delete the selection if any, otherwise toggle the mode.
   const handleDeleteEdgeModeToggle = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (isDeleteEdgeMode) {
       if (selectedEdgeIds.length > 0) {
         deleteSelectedEdges(selectedEdgeIds)
@@ -959,7 +972,7 @@ function App() {
 
   // Connect button behavior: toggle connect mode on/off.
   const handleConnectModeToggle = () => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     if (isConnectMode) {
       // Already connecting, so cancel and reset
       cancelConnection()
@@ -972,59 +985,64 @@ function App() {
 
   // Set the direction used for new edges created in connect mode.
   const handleNewEdgeDirectionChange = (direction: GraphEdge['direction']) => {
-    if (isBfsRunning) return
+    if (isTraversalRunning) return
     setNewEdgeDirection(direction)
   }
 
   // Normalize goal-dependent inputs whenever the goal mode changes.
   const handleGoalTypeChange = (type: GoalType) => {
-    resetBfsVisualization()
+    resetTraversalVisualization()
     setGoalType(type)
     setGoalNodeLabel('')
     setGoalValueInput('')
   }
 
-  // Clear old BFS highlights when the user starts changing algorithm inputs.
+  // Clear old traversal highlights when the user starts changing algorithm inputs.
   const handleStartNodeLabelChange = (value: string) => {
-    resetBfsVisualization()
-    setStartNodeLabel(value)
+    resetTraversalVisualization()
+    setStartNodeLabel(value.toUpperCase())
   }
 
-  // Clear old BFS highlights when the user edits target-node input.
+  // Clear old traversal highlights when the user edits target-node input.
   const handleGoalNodeLabelChange = (value: string) => {
-    resetBfsVisualization()
-    setGoalNodeLabel(value)
+    resetTraversalVisualization()
+    setGoalNodeLabel(value.toUpperCase())
   }
 
-  // Clear old BFS highlights when the user edits target-value input.
+  // Clear old traversal highlights when the user edits target-value input.
   const handleGoalValueInputChange = (value: string) => {
-    resetBfsVisualization()
+    resetTraversalVisualization()
     setGoalValueInput(sanitizeNumericInput(value))
   }
 
-  // Apply end-of-run BFS statuses and final result highlighting.
-  const finalizeBfsRun = (result: BfsResult) => {
-    stopBfsPlayback()
-    setBfsCurrentNodeId(null)
-    setBfsStepIndex(result.steps.length - 1)
+  // Apply end-of-run traversal status and final result highlighting.
+  const finalizeTraversalRun = (result: BfsResult) => {
+    stopTraversalPlayback()
+    setTraversalCurrentNodeId(null)
+    setTraversalStepIndex(result.steps.length - 1)
 
     if (!result.foundNodeLabel) {
-      setBfsStatusText('Done. Goal not found in reachable nodes.')
+      setTraversalStatusText('Done. Goal not found in reachable nodes.')
       return
     }
 
     if (result.foundNodeIds.length > 0) {
-      setBfsGoalNodeIds(result.foundNodeIds)
+      setTraversalGoalNodeIds(result.foundNodeIds)
     }
-    setBfsStatusText(buildBfsCompletionStatus(result, nodes))
+    if (algorithmTab === 'dfs') {
+      setTraversalStatusText(buildDfsCompletionStatus(result, nodes))
+    } else {
+      setTraversalStatusText(buildBfsCompletionStatus(result, nodes))
+    }
   }
 
-  // Render one BFS step index by updating "current" node and visited history.
-  const applyBfsStepIndex = (result: BfsResult, index: number) => {
+  // Render one traversal step index by updating "current" node and visited history.
+  const applyTraversalStepIndex = (result: BfsResult, index: number) => {
+    const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
     if (index < 0) {
-      setBfsCurrentNodeId(null)
-      setBfsVisitedNodeIds([])
-      setBfsStatusText('BFS ready. Press Play or step through manually.')
+      setTraversalCurrentNodeId(null)
+      setTraversalVisitedNodeIds([])
+      setTraversalStatusText(`${algoName} ready. Press Play or step through manually.`)
       return
     }
 
@@ -1032,143 +1050,155 @@ function App() {
     const currentStep = result.steps[boundedIndex]
     const visitedIds = result.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
 
-    setBfsCurrentNodeId(currentStep.nodeId)
-    setBfsVisitedNodeIds(visitedIds)
-    setBfsStatusText(
+    setTraversalCurrentNodeId(currentStep.nodeId)
+    setTraversalVisitedNodeIds(visitedIds)
+    setTraversalStatusText(
       `Visiting ${currentStep.nodeLabel} (step ${currentStep.order}/${result.steps.length})`,
     )
   }
 
   // Move playback one step forward, and finalize when traversal reaches the end.
-  const stepBfsForward = () => {
-    if (!bfsResult) return
+  const stepTraversalForward = () => {
+    if (!traversalResult) return
 
-    const nextIndex = bfsStepIndex + 1
-    if (nextIndex >= bfsResult.steps.length) {
-      finalizeBfsRun(bfsResult)
+    const nextIndex = traversalStepIndex + 1
+    if (nextIndex >= traversalResult.steps.length) {
+      finalizeTraversalRun(traversalResult)
       return
     }
 
-    applyBfsStepIndex(bfsResult, nextIndex)
-    setBfsStepIndex(nextIndex)
+    applyTraversalStepIndex(traversalResult, nextIndex)
+    setTraversalStepIndex(nextIndex)
   }
 
-  // Move playback one step backward without changing the current BFS result.
-  const stepBfsBackward = () => {
-    if (!bfsResult) return
-    if (bfsStepIndex < 0) return
+  // Move playback one step backward without changing the current traversal result.
+  const stepTraversalBackward = () => {
+    if (!traversalResult) return
+    if (traversalStepIndex < 0) return
 
-    const previousIndex = bfsStepIndex - 1
-    applyBfsStepIndex(bfsResult, previousIndex)
-    setBfsStepIndex(previousIndex)
-    setIsBfsRunning(true)
-    setBfsGoalNodeIds([])
+    const previousIndex = traversalStepIndex - 1
+    applyTraversalStepIndex(traversalResult, previousIndex)
+    setTraversalStepIndex(previousIndex)
+    setIsTraversalRunning(true)
+    setTraversalGoalNodeIds([])
   }
 
   // Convert slider value to timer delay so higher slider means faster playback.
-  const getBfsPlaybackDelay = (speedValue: number) => {
+  const getTraversalPlaybackDelay = (speedValue: number) => {
     const speedRatio = speedValue / 100
     return Math.round(
-      BFS_PLAYBACK_MAX_DELAY - speedRatio * (BFS_PLAYBACK_MAX_DELAY - BFS_PLAYBACK_MIN_DELAY),
+      TRAVERSAL_PLAYBACK_MAX_DELAY - speedRatio * (TRAVERSAL_PLAYBACK_MAX_DELAY - TRAVERSAL_PLAYBACK_MIN_DELAY),
     )
   }
 
   // Advance playback by one step and finish when the traversal reaches the end.
-  const advanceBfsPlaybackStep = (result: BfsResult, currentIndex: number) => {
+  const advanceTraversalPlaybackStep = (result: BfsResult, currentIndex: number) => {
     const nextIndex = currentIndex + 1
     if (nextIndex >= result.steps.length) {
-      finalizeBfsRun(result)
+      finalizeTraversalRun(result)
       return result.steps.length - 1
     }
 
-    applyBfsStepIndex(result, nextIndex)
+    applyTraversalStepIndex(result, nextIndex)
     return nextIndex
   }
 
-  // Start or restart the BFS playback timer with the provided delay.
-  const startBfsPlaybackTimer = (result: BfsResult, delayMs: number) => {
-    if (bfsTimerRef.current !== null) {
-      window.clearInterval(bfsTimerRef.current)
-      bfsTimerRef.current = null
+  // Start or restart the traversal playback timer with the provided delay.
+  const startTraversalPlaybackTimer = (result: BfsResult, delayMs: number) => {
+    if (traversalPlaybackTimerRef.current !== null) {
+      window.clearInterval(traversalPlaybackTimerRef.current)
+      traversalPlaybackTimerRef.current = null
     }
 
-    bfsTimerRef.current = window.setInterval(() => {
-      setBfsStepIndex((currentIndex) => advanceBfsPlaybackStep(result, currentIndex))
+    traversalPlaybackTimerRef.current = window.setInterval(() => {
+      setTraversalStepIndex((currentIndex) => advanceTraversalPlaybackStep(result, currentIndex))
     }, delayMs)
   }
 
-  // Start or resume automated BFS playback using the selected speed.
-  const playBfs = () => {
-    if (!bfsResult) return
-    if (isBfsPlaying) return
+  // Start or resume automated traversal playback using the selected speed.
+  const playTraversal = () => {
+    if (!traversalResult) return
+    if (isTraversalPlaying) return
 
-    if (bfsStepIndex >= bfsResult.steps.length - 1) {
-      applyBfsStepIndex(bfsResult, -1)
-      setBfsStepIndex(-1)
-      setBfsGoalNodeIds([])
-      setIsBfsRunning(true)
+    if (traversalStepIndex >= traversalResult.steps.length - 1) {
+      applyTraversalStepIndex(traversalResult, -1)
+      setTraversalStepIndex(-1)
+      setTraversalGoalNodeIds([])
+      setIsTraversalRunning(true)
     }
 
-    setIsBfsPlaying(true)
-    startBfsPlaybackTimer(bfsResult, getBfsPlaybackDelay(bfsPlaybackSpeed))
+    setIsTraversalPlaying(true)
+    startTraversalPlaybackTimer(traversalResult, getTraversalPlaybackDelay(traversalPlaybackSpeed))
   }
 
-  // Pause automated BFS playback and keep current step visible.
-  const pauseBfs = () => {
-    stopBfsPlayback()
+  // Pause automated traversal playback and keep current step visible.
+  const pauseTraversal = () => {
+    stopTraversalPlayback()
   }
 
-  // Change BFS playback speed from the slider.
-  const handleBfsPlaybackSpeedChange = (value: number) => {
+  // Change traversal playback speed from the slider.
+  const handleTraversalPlaybackSpeedChange = (value: number) => {
     const clampedValue = Math.min(100, Math.max(0, value))
-    setBfsPlaybackSpeed(clampedValue)
+    setTraversalPlaybackSpeed(clampedValue)
 
-    if (!isBfsPlaying || !bfsResult) {
+    if (!isTraversalPlaying || !traversalResult) {
       return
     }
 
-    startBfsPlaybackTimer(bfsResult, getBfsPlaybackDelay(clampedValue))
+    startTraversalPlaybackTimer(traversalResult, getTraversalPlaybackDelay(clampedValue))
   }
 
-  // Validate sidebar inputs, run BFS, and animate visits on the canvas.
-  const runBfsFromSidebar = () => {
-    if (isBfsPlaying) return
-    stopBfsPlayback()
-    setBfsVisitedNodeIds([])
-    setBfsCurrentNodeId(null)
-    setBfsGoalNodeIds([])
+  // Validate sidebar inputs, run BFS or DFS, and prepare step playback on the canvas.
+  const runTraversalFromSidebar = () => {
+    if (isTraversalPlaying) return
+    stopTraversalPlayback()
+    setTraversalVisitedNodeIds([])
+    setTraversalCurrentNodeId(null)
+    setTraversalGoalNodeIds([])
 
-    const preparation = prepareBfsRunInputs({
-      nodes,
-      goalType,
-      startNodeLabel,
-      goalNodeLabel,
-      goalValueInput,
-    })
+    const preparation =
+      algorithmTab === 'dfs'
+        ? prepareDfsRunInputs({
+          nodes,
+          goalType,
+          startNodeLabel,
+          goalNodeLabel,
+          goalValueInput,
+        })
+        : prepareBfsRunInputs({
+          nodes,
+          goalType,
+          startNodeLabel,
+          goalNodeLabel,
+          goalValueInput,
+        })
 
     if (preparation.ok === false) {
-      setBfsStatusText(preparation.error)
+      setTraversalStatusText(preparation.error)
       return
     }
-    setBfsGoalNodeIds(preparation.initialGoalNodeIds)
-    setBfsStartNodeId(preparation.startNode.id)
+    setTraversalGoalNodeIds(preparation.initialGoalNodeIds)
+    setTraversalStartNodeId(preparation.startNode.id)
 
-    const result = runBfs({
+    const runInput = {
       nodes,
       edges,
       startNodeLabel: preparation.startNode.label,
       goal: preparation.goal,
-    })
+    }
+    const result = algorithmTab === 'dfs' ? runDfs(runInput) : runBfs(runInput)
 
     if (result.steps.length === 0) {
-      setBfsStatusText('BFS could not start with the current graph and inputs.')
+      const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
+      setTraversalStatusText(`${algoName} could not start with the current graph and inputs.`)
       return
     }
 
-    setBfsResult(result)
-    setBfsStepIndex(-1)
-    setIsBfsRunning(true)
-    setBfsStatusText('BFS ready. Press Play or step through manually.')
+    setTraversalResult(result)
+    setTraversalStepIndex(-1)
+    setIsTraversalRunning(true)
+    const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
+    setTraversalStatusText(`${algoName} ready. Press Play or step through manually.`)
   }
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
@@ -1179,33 +1209,34 @@ function App() {
   const canFillEmpty = hasEmptyNodes && fillRangeReady
   const canNullifyEmpty = hasEmptyNodes
   const canEmptyAll = hasNonEmptyNodes
-  const canRunBfs =
+  const canRunTraversal =
     nodes.length > 0 &&
     !hasEmptyNodes &&
     startNodeLabel.trim() !== '' &&
     (goalType !== 'target-node' || goalNodeLabel.trim() !== '') &&
     (goalType !== 'target-value' || parseNumberInput(goalValueInput) !== null)
-  const canStepBackward = bfsResult !== null && bfsStepIndex >= 0 && !isBfsPlaying
-  const canStepForward = bfsResult !== null && bfsStepIndex < bfsResult.steps.length - 1 && !isBfsPlaying
-  const canTogglePlay = bfsResult !== null
-  const isBfsPlaybackComplete =
-    bfsResult !== null && bfsStepIndex >= bfsResult.steps.length - 1 && !isBfsPlaying
-  let sidebarBfsStatusText = bfsStatusText
+  const canStepBackward = traversalResult !== null && traversalStepIndex >= 0 && !isTraversalPlaying
+  const canStepForward = traversalResult !== null && traversalStepIndex < traversalResult.steps.length - 1 && !isTraversalPlaying
+  const canTogglePlay = traversalResult !== null
+  const isTraversalPlaybackComplete =
+    traversalResult !== null && traversalStepIndex >= traversalResult.steps.length - 1 && !isTraversalPlaying
+  let sidebarTraversalStatusText = traversalStatusText
   const startNodeMissing = startNodeLabel.trim() === ''
   const goalNodeMissing = goalType === 'target-node' && goalNodeLabel.trim() === ''
   const goalValueMissing = goalType === 'target-value' && parseNumberInput(goalValueInput) === null
   if (startNodeMissing && goalNodeMissing) {
-    sidebarBfsStatusText = 'Warning: Start node and Goal node are required fields.'
+    sidebarTraversalStatusText = 'Warning: Start node and Goal node are required fields.'
   } else if (startNodeMissing && goalValueMissing) {
-    sidebarBfsStatusText = 'Warning: Start node and Goal value are required fields.'
+    sidebarTraversalStatusText = 'Warning: Start node and Goal value are required fields.'
   } else if (startNodeMissing) {
-    sidebarBfsStatusText = 'Warning: Start node is a required field.'
+    sidebarTraversalStatusText = 'Warning: Start node is a required field.'
   } else if (goalNodeMissing) {
-    sidebarBfsStatusText = 'Warning: Goal node is a required field.'
+    sidebarTraversalStatusText = 'Warning: Goal node is a required field.'
   } else if (goalValueMissing) {
-    sidebarBfsStatusText = 'Warning: Goal value is a required field.'
+    sidebarTraversalStatusText = 'Warning: Goal value is a required field.'
   } else if (hasEmptyNodes) {
-    sidebarBfsStatusText = 'Warning: fill or nullify all empty nodes before running BFS.'
+    const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
+    sidebarTraversalStatusText = `Warning: fill or nullify all empty nodes before running ${algoName}.`
   }
 
   return (
@@ -1224,7 +1255,7 @@ function App() {
                 className={`btn btn-pill connect-toggle-btn ${isConnectMode ? 'btn-active' : ''}`}
                 type="button"
                 onClick={handleConnectModeToggle}
-                disabled={isBfsRunning}
+                disabled={isTraversalRunning}
               >
                 {isConnectMode ? 'Cancel connect' : 'Connect nodes'}
               </button>
@@ -1232,7 +1263,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'forward' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode || isBfsRunning}
+                  disabled={!isConnectMode || isTraversalRunning}
                   aria-pressed={newEdgeDirection === 'forward'}
                   title="Create outbound edge (from selected node)"
                   onClick={() => handleNewEdgeDirectionChange('forward')}
@@ -1242,7 +1273,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'both' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode || isBfsRunning}
+                  disabled={!isConnectMode || isTraversalRunning}
                   aria-pressed={newEdgeDirection === 'both'}
                   title="Create bidirectional edge"
                   onClick={() => handleNewEdgeDirectionChange('both')}
@@ -1252,7 +1283,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'backward' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode || isBfsRunning}
+                  disabled={!isConnectMode || isTraversalRunning}
                   aria-pressed={newEdgeDirection === 'backward'}
                   title="Create inbound edge (toward selected node)"
                   onClick={() => handleNewEdgeDirectionChange('backward')}
@@ -1265,7 +1296,7 @@ function App() {
                   className={`btn delete-stack-btn ${isDeleteMode ? 'btn-active' : ''}`}
                   type="button"
                   onClick={handleDeleteModeToggle}
-                  disabled={isBfsRunning}
+                  disabled={isTraversalRunning}
                 >
                   {isDeleteMode
                     ? selectedNodeIds.length > 0
@@ -1277,7 +1308,7 @@ function App() {
                   className={`btn delete-stack-btn ${isDeleteEdgeMode ? 'btn-active' : ''}`}
                   type="button"
                   onClick={handleDeleteEdgeModeToggle}
-                  disabled={isBfsRunning}
+                  disabled={isTraversalRunning}
                 >
                   {isDeleteEdgeMode
                     ? selectedEdgeIds.length > 0
@@ -1286,7 +1317,7 @@ function App() {
                     : 'Delete edges'}
                 </button>
               </div>
-              <button className="btn btn-clear" type="button" onClick={handleClearCanvas} disabled={isBfsRunning}>
+              <button className="btn btn-clear" type="button" onClick={handleClearCanvas} disabled={isTraversalRunning}>
                 Clear canvas
               </button>
             </div>
@@ -1360,10 +1391,10 @@ function App() {
                 draggingNodeId={draggingNodeId}
                 editingNodeId={editingNodeId}
                 draftValue={draftValue}
-                bfsVisitedNodeIds={bfsVisitedNodeIds}
-                bfsCurrentNodeId={bfsCurrentNodeId}
-                bfsStartNodeId={bfsStartNodeId}
-                bfsGoalNodeIds={bfsGoalNodeIds}
+                traversalVisitedNodeIds={traversalVisitedNodeIds}
+                traversalCurrentNodeId={traversalCurrentNodeId}
+                traversalStartNodeId={traversalStartNodeId}
+                traversalGoalNodeIds={traversalGoalNodeIds}
                 onNodeMouseDown={handleNodeMouseDown}
                 onConnectNodeClick={handleConnectNodeClick}
                 onToggleNodeSelection={toggleNodeSelection}
@@ -1378,6 +1409,8 @@ function App() {
         </section>
 
         <Sidebar
+          algorithmTab={algorithmTab}
+          onAlgorithmTabChange={handleAlgorithmTabChange}
           goalType={goalType}
           onGoalTypeChange={handleGoalTypeChange}
           startNodeLabel={startNodeLabel}
@@ -1386,22 +1419,22 @@ function App() {
           onGoalNodeLabelChange={handleGoalNodeLabelChange}
           goalValueInput={goalValueInput}
           onGoalValueInputChange={handleGoalValueInputChange}
-          onRunBfs={runBfsFromSidebar}
-          onStopBfs={resetBfsVisualization}
-          canRunBfs={canRunBfs}
-          bfsStatusText={sidebarBfsStatusText}
-          isBfsRunning={isBfsRunning}
-          isBfsPlaying={isBfsPlaying}
-          bfsPlaybackSpeed={bfsPlaybackSpeed}
-          onBfsPlaybackSpeedChange={handleBfsPlaybackSpeedChange}
-          onPlayBfs={playBfs}
-          onPauseBfs={pauseBfs}
-          onNextBfsStep={stepBfsForward}
-          onPreviousBfsStep={stepBfsBackward}
+          onRunTraversal={runTraversalFromSidebar}
+          onStopTraversal={resetTraversalVisualization}
+          canRunTraversal={canRunTraversal}
+          traversalStatusText={sidebarTraversalStatusText}
+          isTraversalRunning={isTraversalRunning}
+          isTraversalPlaying={isTraversalPlaying}
+          traversalPlaybackSpeed={traversalPlaybackSpeed}
+          onTraversalPlaybackSpeedChange={handleTraversalPlaybackSpeedChange}
+          onPlayTraversal={playTraversal}
+          onPauseTraversal={pauseTraversal}
+          onNextTraversalStep={stepTraversalForward}
+          onPreviousTraversalStep={stepTraversalBackward}
           canStepForward={canStepForward}
           canStepBackward={canStepBackward}
           canTogglePlay={canTogglePlay}
-          isBfsPlaybackComplete={isBfsPlaybackComplete}
+          isTraversalPlaybackComplete={isTraversalPlaybackComplete}
           fillMin={fillMin}
           fillMax={fillMax}
           onFillMinChange={handleFillMinChange}

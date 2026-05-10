@@ -2,7 +2,11 @@ import type { GoalType, GraphPreset } from '../types'
 import { useState } from 'react'
 import { GRAPH_PRESETS } from '../utils/presets'
 
+type GraphAlgorithmTab = 'bfs' | 'dfs'
+
 type SidebarProps = {
+  algorithmTab: GraphAlgorithmTab
+  onAlgorithmTabChange: (tab: GraphAlgorithmTab) => void
   goalType: GoalType
   onGoalTypeChange: (type: GoalType) => void
   startNodeLabel: string
@@ -11,22 +15,22 @@ type SidebarProps = {
   onGoalNodeLabelChange: (value: string) => void
   goalValueInput: string
   onGoalValueInputChange: (value: string) => void
-  onRunBfs: () => void
-  onStopBfs: () => void
-  canRunBfs: boolean
-  bfsStatusText: string
-  isBfsRunning: boolean
-  isBfsPlaying: boolean
-  bfsPlaybackSpeed: number
-  onBfsPlaybackSpeedChange: (value: number) => void
-  onPlayBfs: () => void
-  onPauseBfs: () => void
-  onNextBfsStep: () => void
-  onPreviousBfsStep: () => void
+  onRunTraversal: () => void
+  onStopTraversal: () => void
+  canRunTraversal: boolean
+  traversalStatusText: string
+  isTraversalRunning: boolean
+  isTraversalPlaying: boolean
+  traversalPlaybackSpeed: number
+  onTraversalPlaybackSpeedChange: (value: number) => void
+  onPlayTraversal: () => void
+  onPauseTraversal: () => void
+  onNextTraversalStep: () => void
+  onPreviousTraversalStep: () => void
   canStepForward: boolean
   canStepBackward: boolean
   canTogglePlay: boolean
-  isBfsPlaybackComplete: boolean
+  isTraversalPlaybackComplete: boolean
   fillMin: string
   fillMax: string
   onFillMinChange: (event: React.ChangeEvent<HTMLInputElement>) => void
@@ -46,6 +50,8 @@ type SidebarPage = 'canvas' | 'algorithm'
 
 // Right-side control panel: algorithm picker, inputs, fill values, playback, and presets.
 export const Sidebar = ({
+  algorithmTab,
+  onAlgorithmTabChange,
   goalType,
   onGoalTypeChange,
   startNodeLabel,
@@ -54,22 +60,22 @@ export const Sidebar = ({
   onGoalNodeLabelChange,
   goalValueInput,
   onGoalValueInputChange,
-  onRunBfs,
-  onStopBfs,
-  canRunBfs,
-  bfsStatusText,
-  isBfsRunning,
-  isBfsPlaying,
-  bfsPlaybackSpeed,
-  onBfsPlaybackSpeedChange,
-  onPlayBfs,
-  onPauseBfs,
-  onNextBfsStep,
-  onPreviousBfsStep,
+  onRunTraversal,
+  onStopTraversal,
+  canRunTraversal,
+  traversalStatusText,
+  isTraversalRunning,
+  isTraversalPlaying,
+  traversalPlaybackSpeed,
+  onTraversalPlaybackSpeedChange,
+  onPlayTraversal,
+  onPauseTraversal,
+  onNextTraversalStep,
+  onPreviousTraversalStep,
   canStepForward,
   canStepBackward,
   canTogglePlay,
-  isBfsPlaybackComplete,
+  isTraversalPlaybackComplete,
   fillMin,
   fillMax,
   onFillMinChange,
@@ -85,6 +91,15 @@ export const Sidebar = ({
   onPresetClick,
 }: SidebarProps) => {
   const [activePage, setActivePage] = useState<SidebarPage>('canvas')
+  const algoShort = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
+
+  // Enter confirms the field by moving focus away (same idea as “done typing”).
+  const confirmNodeLabelFieldOnEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      event.currentTarget.blur()
+    }
+  }
 
   return (
     <aside
@@ -120,7 +135,7 @@ export const Sidebar = ({
                 onChange={onFillMinChange}
                 onBlur={onFillRangeBlur}
                 onKeyDown={onFillRangeKeyDown}
-                disabled={isBfsRunning}
+                disabled={isTraversalRunning}
               />
             </label>
             <label className="field">
@@ -132,7 +147,7 @@ export const Sidebar = ({
                 onChange={onFillMaxChange}
                 onBlur={onFillRangeBlur}
                 onKeyDown={onFillRangeKeyDown}
-                disabled={isBfsRunning}
+                disabled={isTraversalRunning}
               />
             </label>
             <div className="fill-actions">
@@ -140,7 +155,7 @@ export const Sidebar = ({
                 className="btn btn-primary"
                 type="button"
                 onClick={onFillEmptyValues}
-                disabled={!canFillEmpty || isBfsRunning}
+                disabled={!canFillEmpty || isTraversalRunning}
               >
                 Fill empty values
               </button>
@@ -148,7 +163,7 @@ export const Sidebar = ({
                 className="btn"
                 type="button"
                 onClick={onNullifyEmptyValues}
-                disabled={!canNullifyEmpty || isBfsRunning}
+                disabled={!canNullifyEmpty || isTraversalRunning}
               >
                 Nullify all empty values
               </button>
@@ -156,7 +171,7 @@ export const Sidebar = ({
                 className="btn"
                 type="button"
                 onClick={onEmptyAllValues}
-                disabled={!canEmptyAll || isBfsRunning}
+                disabled={!canEmptyAll || isTraversalRunning}
               >
                 Empty all values
               </button>
@@ -171,7 +186,7 @@ export const Sidebar = ({
                 className="btn btn-ghost"
                 type="button"
                 onClick={() => onPresetClick(preset)}
-                disabled={isBfsRunning}
+                disabled={isTraversalRunning}
               >
                 {preset.name}
               </button>
@@ -185,10 +200,20 @@ export const Sidebar = ({
           <div className="sidebar-section">
             <h3>Algorithm</h3>
             <div className="pill-group">
-              <button className="btn btn-pill btn-active" type="button">
+              <button
+                className={`btn btn-pill ${algorithmTab === 'bfs' ? 'btn-active' : ''}`}
+                type="button"
+                disabled={isTraversalRunning}
+                onClick={() => onAlgorithmTabChange('bfs')}
+              >
                 BFS
               </button>
-              <button className="btn btn-pill" type="button">
+              <button
+                className={`btn btn-pill ${algorithmTab === 'dfs' ? 'btn-active' : ''}`}
+                type="button"
+                disabled={isTraversalRunning}
+                onClick={() => onAlgorithmTabChange('dfs')}
+              >
                 DFS
               </button>
             </div>
@@ -204,7 +229,8 @@ export const Sidebar = ({
                 type="text"
                 value={startNodeLabel}
                 onChange={(event) => onStartNodeLabelChange(event.target.value)}
-                disabled={isBfsRunning}
+                onKeyDown={confirmNodeLabelFieldOnEnter}
+                disabled={isTraversalRunning}
               />
             </label>
             <label className="field">
@@ -212,7 +238,7 @@ export const Sidebar = ({
               <select
                 value={goalType}
                 onChange={(event) => onGoalTypeChange(event.target.value as GoalType)}
-                disabled={isBfsRunning}
+                disabled={isTraversalRunning}
               >
                 <option value="target-node">Target node</option>
                 <option value="target-value">Target value</option>
@@ -229,7 +255,8 @@ export const Sidebar = ({
                   type="text"
                   value={goalNodeLabel}
                   onChange={(event) => onGoalNodeLabelChange(event.target.value)}
-                  disabled={isBfsRunning}
+                  onKeyDown={confirmNodeLabelFieldOnEnter}
+                  disabled={isTraversalRunning}
                 />
               </label>
             )}
@@ -243,7 +270,7 @@ export const Sidebar = ({
                   inputMode="numeric"
                   value={goalValueInput}
                   onChange={(event) => onGoalValueInputChange(event.target.value)}
-                  disabled={isBfsRunning}
+                  disabled={isTraversalRunning}
                 />
               </label>
             )}
@@ -256,34 +283,34 @@ export const Sidebar = ({
             <h3>Playback</h3>
             <div className="playback">
               <button
-                className={`btn playback-run-btn ${isBfsRunning ? 'btn-active' : ''}`}
+                className={`btn playback-run-btn ${isTraversalRunning ? 'btn-active' : ''}`}
                 type="button"
-                onClick={isBfsRunning ? onStopBfs : onRunBfs}
-                disabled={!isBfsRunning && !canRunBfs}
+                onClick={isTraversalRunning ? onStopTraversal : onRunTraversal}
+                disabled={!isTraversalRunning && !canRunTraversal}
               >
-                {isBfsRunning ? 'Stop BFS' : 'Run BFS'}
+                {isTraversalRunning ? `Stop ${algoShort}` : `Run ${algoShort}`}
               </button>
               <div className="playback-step-controls">
                 <button
                   className="btn playback-control-btn"
                   type="button"
-                  onClick={onPreviousBfsStep}
+                  onClick={onPreviousTraversalStep}
                   disabled={!canStepBackward}
                 >
                   Previous
                 </button>
                 <button
-                  className={`btn playback-control-btn ${isBfsPlaying ? 'btn-active' : ''}`}
+                  className={`btn playback-control-btn ${isTraversalPlaying ? 'btn-active' : ''}`}
                   type="button"
-                  onClick={isBfsPlaying ? onPauseBfs : onPlayBfs}
+                  onClick={isTraversalPlaying ? onPauseTraversal : onPlayTraversal}
                   disabled={!canTogglePlay}
                 >
-                  {isBfsPlaying ? 'Pause' : isBfsPlaybackComplete ? 'Replay' : 'Play'}
+                  {isTraversalPlaying ? 'Pause' : isTraversalPlaybackComplete ? 'Replay' : 'Play'}
                 </button>
                 <button
                   className="btn playback-control-btn"
                   type="button"
-                  onClick={onNextBfsStep}
+                  onClick={onNextTraversalStep}
                   disabled={!canStepForward}
                 >
                   Next
@@ -297,13 +324,13 @@ export const Sidebar = ({
                   min={0}
                   max={100}
                   step="any"
-                  value={bfsPlaybackSpeed}
-                  onChange={(event) => onBfsPlaybackSpeedChange(Number(event.target.value))}
+                  value={traversalPlaybackSpeed}
+                  onChange={(event) => onTraversalPlaybackSpeedChange(Number(event.target.value))}
                   disabled={!canTogglePlay}
                 />
               </label>
             </div>
-            <p className="hint">{bfsStatusText}</p>
+            <p className="hint">{traversalStatusText}</p>
           </div>
         </div>
       )}

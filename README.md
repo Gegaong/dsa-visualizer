@@ -13,6 +13,14 @@ npm install
 npm run dev
 ```
 
+## BFS and DFS visit order
+
+When a node has more than one neighbor, the step-by-step order can vary. The app , of course, runs a correct BFS or DFS.s However, exact sequence of visits may change depending on how neighbors are ordered.
+
+Here, neighbor order matches the order your edges are stored in after you build the graph. BFS and DFS both use that same order (BFS with a queue, DFS with a stack).
+
+Your graph on screen always produces the same animation. Changing edges can change the order of steps. That is normal.
+
 ## Project Roadmap
 - [x] Project setup + tooling
 - [x] Base UI layout (top bar, canvas, sidebar)

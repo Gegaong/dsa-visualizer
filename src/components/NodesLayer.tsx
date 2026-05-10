@@ -35,10 +35,10 @@ type GraphNodeLayerProps = {
   draggingNodeId: string | null
   editingNodeId: string | null
   draftValue: string
-  bfsVisitedNodeIds: string[]
-  bfsCurrentNodeId: string | null
-  bfsStartNodeId: string | null
-  bfsGoalNodeIds: string[]
+  traversalVisitedNodeIds: string[]
+  traversalCurrentNodeId: string | null
+  traversalStartNodeId: string | null
+  traversalGoalNodeIds: string[]
   onNodeMouseDown: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
   onConnectNodeClick: (nodeId: string) => void
   onToggleNodeSelection: (nodeId: string) => void
@@ -62,10 +62,10 @@ export const GraphNodeLayer = ({
   draggingNodeId,
   editingNodeId,
   draftValue,
-  bfsVisitedNodeIds,
-  bfsCurrentNodeId,
-  bfsStartNodeId,
-  bfsGoalNodeIds,
+  traversalVisitedNodeIds,
+  traversalCurrentNodeId,
+  traversalStartNodeId,
+  traversalGoalNodeIds,
   onNodeMouseDown,
   onConnectNodeClick,
   onToggleNodeSelection,
@@ -83,17 +83,17 @@ export const GraphNodeLayer = ({
         : 'node-value'
       const isSelected = selectedNodeIds.includes(node.id)
       const isConnectionSource = connectionSource === node.id
-      const isVisited = bfsVisitedNodeIds.includes(node.id)
-      const isCurrent = bfsCurrentNodeId === node.id
-      const isStart = bfsStartNodeId === node.id
-      const isGoal = bfsGoalNodeIds.includes(node.id)
+      const isVisited = traversalVisitedNodeIds.includes(node.id)
+      const isCurrent = traversalCurrentNodeId === node.id
+      const isStart = traversalStartNodeId === node.id
+      const isGoal = traversalGoalNodeIds.includes(node.id)
       // Long values are truncated inside the circle; reveal the full value on hover.
       const showHoverValue = typeof node.value === 'number' && String(node.value).length > 5
 
       return (
         <div
           key={node.id}
-          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited ? 'is-bfs-visited' : ''} ${isCurrent ? 'is-bfs-current' : ''} ${isStart ? 'is-bfs-start' : ''} ${isGoal ? 'is-bfs-goal' : ''}`}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited ? 'is-traversal-visited' : ''} ${isCurrent ? 'is-traversal-current' : ''} ${isStart ? 'is-traversal-start' : ''} ${isGoal ? 'is-traversal-goal' : ''}`}
           style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
         >
           <div
