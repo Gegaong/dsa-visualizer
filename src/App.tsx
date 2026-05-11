@@ -16,7 +16,11 @@ import {
   DEFAULT_CANVAS_WIDTH,
   DEFAULT_CANVAS_HEIGHT,
   DRAG_THRESHOLD,
+  PLAYBACK_MIN_DELAY_MS,
+  PLAYBACK_MAX_DELAY_MS,
 } from './utils/constants'
+
+import { useStepPlayback } from './hooks/useStepPlayback'
 
 import {
   isOverlapping,
@@ -112,22 +116,79 @@ function App() {
   const [traversalGoalNodeIds, setTraversalGoalNodeIds] = useState<string[]>([])
   const [traversalStatusText, setTraversalStatusText] = useState('Enter start and goal, then run the selected algorithm.')
   const [isTraversalRunning, setIsTraversalRunning] = useState(false)
-  const [isTraversalPlaying, setIsTraversalPlaying] = useState(false)
-  const [traversalPlaybackSpeed, setTraversalPlaybackSpeed] = useState(55)
-  const [traversalStepIndex, setTraversalStepIndex] = useState(-1)
   const [traversalResult, setTraversalResult] = useState<BfsResult | null>(null)
+  const traversalResultRef = useRef<BfsResult | null>(null)
+  traversalResultRef.current = traversalResult
+  const finalizeTraversalRunRef = useRef<(r: BfsResult) => void>(() => {})
+  const traversalPlaybackStopRef = useRef(() => {})
+  const [traversalPlaybackSession, setTraversalPlaybackSession] = useState(0)
+
+  const applyTraversalStepIndex = (result: BfsResult, index: number) => {
+    const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
+    if (index < 0) {
+      setTraversalCurrentNodeId(null)
+      setTraversalVisitedNodeIds([])
+      setTraversalStatusText(`${algoName} ready. Press Play or step through manually.`)
+      return
+    }
+
+    const boundedIndex = Math.min(index, result.steps.length - 1)
+    const currentStep = result.steps[boundedIndex]
+    const visitedIds = result.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
+
+    setTraversalCurrentNodeId(currentStep.nodeId)
+    setTraversalVisitedNodeIds(visitedIds)
+    setTraversalStatusText(
+      `Visiting ${currentStep.nodeLabel} (step ${currentStep.order}/${result.steps.length})`,
+    )
+  }
+
+  const traversalPlayback = useStepPlayback({
+    stepCount: traversalResult?.steps.length ?? 0,
+    minDelay: PLAYBACK_MIN_DELAY_MS,
+    maxDelay: PLAYBACK_MAX_DELAY_MS,
+    resetSignal: traversalPlaybackSession,
+    onStepIndexChange: (index) => {
+      const r = traversalResultRef.current
+      if (!r) return
+      applyTraversalStepIndex(r, index)
+    },
+    onComplete: () => {
+      const r = traversalResultRef.current
+      if (r) finalizeTraversalRunRef.current(r)
+    },
+  })
+
+  const finalizeTraversalRun = (result: BfsResult) => {
+    traversalPlayback.stopPlayback()
+    setTraversalCurrentNodeId(null)
+
+    if (!result.foundNodeLabel) {
+      setTraversalStatusText('Done. Goal not found in reachable nodes.')
+      return
+    }
+
+    if (result.foundNodeIds.length > 0) {
+      setTraversalGoalNodeIds(result.foundNodeIds)
+    }
+    if (algorithmTab === 'dfs') {
+      setTraversalStatusText(buildDfsCompletionStatus(result, nodes))
+    } else {
+      setTraversalStatusText(buildBfsCompletionStatus(result, nodes))
+    }
+  }
+  finalizeTraversalRunRef.current = finalizeTraversalRun
+  traversalPlaybackStopRef.current = () => traversalPlayback.stopPlayback()
+
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
-  const traversalPlaybackTimerRef = useRef<number | null>(null)
   const suppressClickRef = useRef(false)
   const suppressCanvasClickRef = useRef(false)
   const CANVAS_ZOOM_MIN = 0.5
   const CANVAS_ZOOM_MAX = 2
   const CANVAS_ZOOM_STEP = 0.1
-  const TRAVERSAL_PLAYBACK_MIN_DELAY = 80
-  const TRAVERSAL_PLAYBACK_MAX_DELAY = 1300
 
   // Hide the node right-click menu.
   const closeContextMenu = () => {
@@ -167,24 +228,14 @@ function App() {
     setCanvasZoom((prev) => clampCanvasZoom(prev - CANVAS_ZOOM_STEP))
   }
 
-  // Stop any running traversal playback timer.
-  const stopTraversalPlayback = () => {
-    if (traversalPlaybackTimerRef.current !== null) {
-      window.clearInterval(traversalPlaybackTimerRef.current)
-      traversalPlaybackTimerRef.current = null
-    }
-    setIsTraversalPlaying(false)
-  }
-
   // Clear traversal visual state and reset the idle status line (BFS or DFS).
   const resetTraversalVisualization = (idleAlgorithm: GraphAlgorithmTab = algorithmTab) => {
-    stopTraversalPlayback()
+    traversalPlaybackStopRef.current()
     setTraversalVisitedNodeIds([])
     setTraversalCurrentNodeId(null)
     setTraversalStartNodeId(null)
     setTraversalGoalNodeIds([])
     setTraversalResult(null)
-    setTraversalStepIndex(-1)
     const algoName = idleAlgorithm === 'dfs' ? 'DFS' : 'BFS'
     setTraversalStatusText(`Enter start and goal, then run ${algoName}.`)
     setIsTraversalRunning(false)
@@ -645,10 +696,6 @@ function App() {
     }
   }, [canvasElement, getCanvasPointerPosition])
 
-  useEffect(() => () => {
-    stopTraversalPlayback()
-  }, [])
-
   // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (isTraversalRunning) return
@@ -1015,143 +1062,41 @@ function App() {
     setGoalValueInput(sanitizeNumericInput(value))
   }
 
-  // Apply end-of-run traversal status and final result highlighting.
-  const finalizeTraversalRun = (result: BfsResult) => {
-    stopTraversalPlayback()
-    setTraversalCurrentNodeId(null)
-    setTraversalStepIndex(result.steps.length - 1)
-
-    if (!result.foundNodeLabel) {
-      setTraversalStatusText('Done. Goal not found in reachable nodes.')
-      return
-    }
-
-    if (result.foundNodeIds.length > 0) {
-      setTraversalGoalNodeIds(result.foundNodeIds)
-    }
-    if (algorithmTab === 'dfs') {
-      setTraversalStatusText(buildDfsCompletionStatus(result, nodes))
-    } else {
-      setTraversalStatusText(buildBfsCompletionStatus(result, nodes))
-    }
-  }
-
-  // Render one traversal step index by updating "current" node and visited history.
-  const applyTraversalStepIndex = (result: BfsResult, index: number) => {
-    const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
-    if (index < 0) {
-      setTraversalCurrentNodeId(null)
-      setTraversalVisitedNodeIds([])
-      setTraversalStatusText(`${algoName} ready. Press Play or step through manually.`)
-      return
-    }
-
-    const boundedIndex = Math.min(index, result.steps.length - 1)
-    const currentStep = result.steps[boundedIndex]
-    const visitedIds = result.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
-
-    setTraversalCurrentNodeId(currentStep.nodeId)
-    setTraversalVisitedNodeIds(visitedIds)
-    setTraversalStatusText(
-      `Visiting ${currentStep.nodeLabel} (step ${currentStep.order}/${result.steps.length})`,
-    )
-  }
-
-  // Move playback one step forward, and finalize when traversal reaches the end.
   const stepTraversalForward = () => {
     if (!traversalResult) return
-
-    const nextIndex = traversalStepIndex + 1
-    if (nextIndex >= traversalResult.steps.length) {
-      finalizeTraversalRun(traversalResult)
-      return
-    }
-
-    applyTraversalStepIndex(traversalResult, nextIndex)
-    setTraversalStepIndex(nextIndex)
+    traversalPlayback.stepForward()
   }
 
-  // Move playback one step backward without changing the current traversal result.
   const stepTraversalBackward = () => {
     if (!traversalResult) return
-    if (traversalStepIndex < 0) return
-
-    const previousIndex = traversalStepIndex - 1
-    applyTraversalStepIndex(traversalResult, previousIndex)
-    setTraversalStepIndex(previousIndex)
+    traversalPlayback.stepBackward()
     setIsTraversalRunning(true)
     setTraversalGoalNodeIds([])
   }
 
-  // Convert slider value to timer delay so higher slider means faster playback.
-  const getTraversalPlaybackDelay = (speedValue: number) => {
-    const speedRatio = speedValue / 100
-    return Math.round(
-      TRAVERSAL_PLAYBACK_MAX_DELAY - speedRatio * (TRAVERSAL_PLAYBACK_MAX_DELAY - TRAVERSAL_PLAYBACK_MIN_DELAY),
-    )
-  }
-
-  // Advance playback by one step and finish when the traversal reaches the end.
-  const advanceTraversalPlaybackStep = (result: BfsResult, currentIndex: number) => {
-    const nextIndex = currentIndex + 1
-    if (nextIndex >= result.steps.length) {
-      finalizeTraversalRun(result)
-      return result.steps.length - 1
-    }
-
-    applyTraversalStepIndex(result, nextIndex)
-    return nextIndex
-  }
-
-  // Start or restart the traversal playback timer with the provided delay.
-  const startTraversalPlaybackTimer = (result: BfsResult, delayMs: number) => {
-    if (traversalPlaybackTimerRef.current !== null) {
-      window.clearInterval(traversalPlaybackTimerRef.current)
-      traversalPlaybackTimerRef.current = null
-    }
-
-    traversalPlaybackTimerRef.current = window.setInterval(() => {
-      setTraversalStepIndex((currentIndex) => advanceTraversalPlaybackStep(result, currentIndex))
-    }, delayMs)
-  }
-
-  // Start or resume automated traversal playback using the selected speed.
   const playTraversal = () => {
     if (!traversalResult) return
-    if (isTraversalPlaying) return
-
-    if (traversalStepIndex >= traversalResult.steps.length - 1) {
-      applyTraversalStepIndex(traversalResult, -1)
-      setTraversalStepIndex(-1)
+    const replayFromEnd =
+      traversalPlayback.stepIndex >= traversalResult.steps.length - 1
+    traversalPlayback.togglePlay()
+    if (replayFromEnd) {
       setTraversalGoalNodeIds([])
       setIsTraversalRunning(true)
     }
-
-    setIsTraversalPlaying(true)
-    startTraversalPlaybackTimer(traversalResult, getTraversalPlaybackDelay(traversalPlaybackSpeed))
   }
 
-  // Pause automated traversal playback and keep current step visible.
   const pauseTraversal = () => {
-    stopTraversalPlayback()
+    traversalPlayback.stopPlayback()
   }
 
-  // Change traversal playback speed from the slider.
   const handleTraversalPlaybackSpeedChange = (value: number) => {
-    const clampedValue = Math.min(100, Math.max(0, value))
-    setTraversalPlaybackSpeed(clampedValue)
-
-    if (!isTraversalPlaying || !traversalResult) {
-      return
-    }
-
-    startTraversalPlaybackTimer(traversalResult, getTraversalPlaybackDelay(clampedValue))
+    traversalPlayback.setPlaybackSpeed(value)
   }
 
   // Validate sidebar inputs, run BFS or DFS, and prepare step playback on the canvas.
   const runTraversalFromSidebar = () => {
-    if (isTraversalPlaying) return
-    stopTraversalPlayback()
+    if (traversalPlayback.isPlaying) return
+    traversalPlaybackStopRef.current()
     setTraversalVisitedNodeIds([])
     setTraversalCurrentNodeId(null)
     setTraversalGoalNodeIds([])
@@ -1195,7 +1140,7 @@ function App() {
     }
 
     setTraversalResult(result)
-    setTraversalStepIndex(-1)
+    setTraversalPlaybackSession((s) => s + 1)
     setIsTraversalRunning(true)
     const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
     setTraversalStatusText(`${algoName} ready. Press Play or step through manually.`)
@@ -1215,11 +1160,11 @@ function App() {
     startNodeLabel.trim() !== '' &&
     (goalType !== 'target-node' || goalNodeLabel.trim() !== '') &&
     (goalType !== 'target-value' || parseNumberInput(goalValueInput) !== null)
-  const canStepBackward = traversalResult !== null && traversalStepIndex >= 0 && !isTraversalPlaying
-  const canStepForward = traversalResult !== null && traversalStepIndex < traversalResult.steps.length - 1 && !isTraversalPlaying
-  const canTogglePlay = traversalResult !== null
+  const canStepBackward = traversalResult !== null && traversalPlayback.canStepBackward
+  const canStepForward = traversalResult !== null && traversalPlayback.canStepForward
+  const canTogglePlay = traversalResult !== null && traversalPlayback.canTogglePlay
   const isTraversalPlaybackComplete =
-    traversalResult !== null && traversalStepIndex >= traversalResult.steps.length - 1 && !isTraversalPlaying
+    traversalResult !== null && traversalPlayback.isPlaybackComplete
   let sidebarTraversalStatusText = traversalStatusText
   const startNodeMissing = startNodeLabel.trim() === ''
   const goalNodeMissing = goalType === 'target-node' && goalNodeLabel.trim() === ''
@@ -1424,8 +1369,8 @@ function App() {
           canRunTraversal={canRunTraversal}
           traversalStatusText={sidebarTraversalStatusText}
           isTraversalRunning={isTraversalRunning}
-          isTraversalPlaying={isTraversalPlaying}
-          traversalPlaybackSpeed={traversalPlaybackSpeed}
+          isTraversalPlaying={traversalPlayback.isPlaying}
+          traversalPlaybackSpeed={traversalPlayback.playbackSpeed}
           onTraversalPlaybackSpeedChange={handleTraversalPlaybackSpeedChange}
           onPlayTraversal={playTraversal}
           onPauseTraversal={pauseTraversal}

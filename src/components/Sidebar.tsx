@@ -1,6 +1,8 @@
 import type { GoalType, GraphPreset } from '../types'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GRAPH_PRESETS } from '../utils/presets'
+import { useStepPlayback } from '../hooks/useStepPlayback'
+import { PLAYBACK_MAX_DELAY_MS, PLAYBACK_MIN_DELAY_MS } from '../utils/constants'
 
 type GraphAlgorithmTab = 'bfs' | 'dfs'
 type TraversalStrategy = 'bfs' | 'dfs'
@@ -10,6 +12,15 @@ type AlgorithmMode =
   | 'bipartite'
   | 'shortest-path'
   | 'topological-sort'
+
+/** Mock step counts for sidebar-only playback previews (no canvas wiring yet). */
+const GRAPH_ALGO_MOCK_STEPS: Record<AlgorithmMode, number> = {
+  components: 12,
+  cycle: 8,
+  bipartite: 14,
+  'shortest-path': 11,
+  'topological-sort': 15,
+}
 
 type SidebarProps = {
   algorithmTab: GraphAlgorithmTab
@@ -162,6 +173,49 @@ export const Sidebar = ({
   const algoShort = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
   const needsTraversalStrategy = selectedAlgorithm.usesTraversal
   const needsAlgorithmInputs = selectedAlgorithm.needsInputs
+
+  const [graphAlgoArmed, setGraphAlgoArmed] = useState(false)
+  const [mockPlaybackSession, setMockPlaybackSession] = useState(0)
+
+  useEffect(() => {
+    setGraphAlgoArmed(false)
+    setMockPlaybackSession((s) => s + 1)
+  }, [algorithmMode])
+
+  const mockStepsTotal = graphAlgoArmed ? GRAPH_ALGO_MOCK_STEPS[algorithmMode] : 0
+
+  const graphAlgoPlayback = useStepPlayback({
+    stepCount: mockStepsTotal,
+    minDelay: PLAYBACK_MIN_DELAY_MS,
+    maxDelay: PLAYBACK_MAX_DELAY_MS,
+    resetSignal: mockPlaybackSession,
+    onStepIndexChange: () => {},
+    onComplete: () => {},
+  })
+
+  const toggleGraphAlgoRun = () => {
+    if (isTraversalRunning) return
+    if (graphAlgoArmed) {
+      setGraphAlgoArmed(false)
+      return
+    }
+    setGraphAlgoArmed(true)
+    setMockPlaybackSession((s) => s + 1)
+  }
+
+  let graphAlgoPlaybackHint = ''
+  if (!graphAlgoArmed) {
+    graphAlgoPlaybackHint = `Configure if needed, then press Run to preview ${selectedAlgorithm.label.toLowerCase()} playback.`
+  } else if (graphAlgoPlayback.stepIndex < 0) {
+    graphAlgoPlaybackHint = `${selectedAlgorithm.label}: ready. Press Play or step through manually.`
+  } else if (
+    graphAlgoPlayback.stepIndex >= mockStepsTotal - 1 &&
+    !graphAlgoPlayback.isPlaying
+  ) {
+    graphAlgoPlaybackHint = `Done. Mock playback finished (${mockStepsTotal} steps).`
+  } else {
+    graphAlgoPlaybackHint = `Mock step ${graphAlgoPlayback.stepIndex + 1} / ${mockStepsTotal}.`
+  }
 
   // Enter confirms the field by moving focus away (same idea as “done typing”).
   const confirmNodeLabelFieldOnEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -426,7 +480,7 @@ export const Sidebar = ({
               <select
                 value={algorithmMode}
                 onChange={(event) => setAlgorithmMode(event.target.value as AlgorithmMode)}
-                disabled={isTraversalRunning}
+                disabled={isTraversalRunning || graphAlgoArmed}
               >
                 <option value="components">Connected components</option>
                 <option value="cycle">Cycle detection</option>
@@ -445,7 +499,7 @@ export const Sidebar = ({
                   <button
                     className={`btn btn-pill ${algorithmTraversal === 'bfs' ? 'btn-active' : ''}`}
                     type="button"
-                    disabled={isTraversalRunning}
+                    disabled={isTraversalRunning || graphAlgoArmed}
                     onClick={() => setAlgorithmTraversal('bfs')}
                   >
                     BFS
@@ -453,7 +507,7 @@ export const Sidebar = ({
                   <button
                     className={`btn btn-pill ${algorithmTraversal === 'dfs' ? 'btn-active' : ''}`}
                     type="button"
-                    disabled={isTraversalRunning}
+                    disabled={isTraversalRunning || graphAlgoArmed}
                     onClick={() => setAlgorithmTraversal('dfs')}
                   >
                     DFS
@@ -472,7 +526,7 @@ export const Sidebar = ({
                       value={shortestPathStart}
                       onChange={(event) => setShortestPathStart(event.target.value.toUpperCase())}
                       onKeyDown={confirmNodeLabelFieldOnEnter}
-                      disabled={isTraversalRunning}
+                      disabled={isTraversalRunning || graphAlgoArmed}
                     />
                   </label>
                   <label className="field">
@@ -484,7 +538,7 @@ export const Sidebar = ({
                       value={shortestPathGoal}
                       onChange={(event) => setShortestPathGoal(event.target.value.toUpperCase())}
                       onKeyDown={confirmNodeLabelFieldOnEnter}
-                      disabled={isTraversalRunning}
+                      disabled={isTraversalRunning || graphAlgoArmed}
                     />
                   </label>
                 </div>
@@ -496,25 +550,76 @@ export const Sidebar = ({
             </div>
           </div>
 
-          {isComponentsMode ? (
-            <>
-              <div className="sidebar-section">
-                <h3>Run</h3>
-                <div className="algorithm-actions">
-                  <button
-                    className="btn btn-primary algorithm-run-btn"
-                    type="button"
-                    disabled={isTraversalRunning}
-                  >
-                    Run connected components
-                  </button>
-                  <p className="hint algorithm-status">Ready to run connected components.</p>
-                </div>
+          <div className="sidebar-section">
+            <h3>Playback</h3>
+            <div className="playback">
+              <button
+                className={`btn playback-run-btn ${graphAlgoArmed ? 'btn-active' : ''}`}
+                type="button"
+                onClick={toggleGraphAlgoRun}
+                disabled={isTraversalRunning}
+              >
+                {graphAlgoArmed ? 'Stop run' : selectedAlgorithm.runLabel}
+              </button>
+              <div className="playback-step-controls">
+                <button
+                  className="btn playback-control-btn"
+                  type="button"
+                  onClick={() => graphAlgoPlayback.stepBackward()}
+                  disabled={!graphAlgoPlayback.canStepBackward || isTraversalRunning}
+                >
+                  Previous
+                </button>
+                <button
+                  className={`btn playback-control-btn ${graphAlgoPlayback.isPlaying ? 'btn-active' : ''}`}
+                  type="button"
+                  onClick={() => graphAlgoPlayback.togglePlay()}
+                  disabled={!graphAlgoPlayback.canTogglePlay || isTraversalRunning}
+                >
+                  {graphAlgoPlayback.isPlaying ? 'Pause' : graphAlgoPlayback.isPlaybackComplete ? 'Replay' : 'Play'}
+                </button>
+                <button
+                  className="btn playback-control-btn"
+                  type="button"
+                  onClick={() => graphAlgoPlayback.stepForward()}
+                  disabled={!graphAlgoPlayback.canStepForward || isTraversalRunning}
+                >
+                  Next
+                </button>
+              </div>
+              <label className="field playback-speed-field">
+                <span>Speed</span>
+                <input
+                  className="slider"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step="any"
+                  value={graphAlgoPlayback.playbackSpeed}
+                  onChange={(event) =>
+                    graphAlgoPlayback.setPlaybackSpeed(Number(event.target.value))
+                  }
+                  disabled={!graphAlgoPlayback.canTogglePlay || isTraversalRunning}
+                />
+              </label>
+            </div>
+            <p className="hint">{graphAlgoPlaybackHint}</p>
+          </div>
+
+          <div className="sidebar-section">
+            <h3>Output</h3>
+            <div className="algorithm-output">
+              <div className="output-row">
+                <span className="output-label">Playback step</span>
+                <span className="output-value">
+                  {graphAlgoArmed && graphAlgoPlayback.stepIndex >= 0
+                    ? `${graphAlgoPlayback.stepIndex + 1} / ${mockStepsTotal}`
+                    : '—'}
+                </span>
               </div>
 
-              <div className="sidebar-section">
-                <h3>Output</h3>
-                <div className="algorithm-output">
+              {isComponentsMode ? (
+                <>
                   <div className="output-row">
                     <span className="output-label">Components found</span>
                     <span className="output-value">—</span>
@@ -527,40 +632,18 @@ export const Sidebar = ({
                     <span className="output-label">Groups</span>
                     <div className="output-list">—</div>
                   </div>
-                  <p className="hint">Components will list node labels once the algorithm is wired.</p>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="sidebar-section">
-                <h3>Run</h3>
-                <div className="algorithm-actions">
-                  <button
-                    className="btn btn-primary algorithm-run-btn"
-                    type="button"
-                    disabled={isTraversalRunning}
-                  >
-                    {selectedAlgorithm.runLabel}
-                  </button>
-                  <p className="hint algorithm-status">
-                    Ready to run {selectedAlgorithm.label.toLowerCase()}.
-                  </p>
-                </div>
-              </div>
-
-              <div className="sidebar-section">
-                <h3>Output</h3>
-                <div className="algorithm-output">
+                </>
+              ) : (
+                <>
                   <div className="output-row">
                     <span className="output-label">{selectedAlgorithm.outputLabel}</span>
                     <span className="output-value">—</span>
                   </div>
                   <p className="hint">{selectedAlgorithm.outputHint}</p>
-                </div>
-              </div>
-            </>
-          )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </aside>
