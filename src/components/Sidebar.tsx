@@ -3,6 +3,13 @@ import { useState } from 'react'
 import { GRAPH_PRESETS } from '../utils/presets'
 
 type GraphAlgorithmTab = 'bfs' | 'dfs'
+type TraversalStrategy = 'bfs' | 'dfs'
+type AlgorithmMode =
+  | 'components'
+  | 'cycle'
+  | 'bipartite'
+  | 'shortest-path'
+  | 'topological-sort'
 
 type SidebarProps = {
   algorithmTab: GraphAlgorithmTab
@@ -46,7 +53,7 @@ type SidebarProps = {
   onPresetClick: (preset: GraphPreset) => void
 }
 
-type SidebarPage = 'canvas' | 'algorithm'
+type SidebarPage = 'canvas' | 'traversal' | 'algorithms'
 
 // Right-side control panel: algorithm picker, inputs, fill values, playback, and presets.
 export const Sidebar = ({
@@ -91,7 +98,16 @@ export const Sidebar = ({
   onPresetClick,
 }: SidebarProps) => {
   const [activePage, setActivePage] = useState<SidebarPage>('canvas')
+  const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>('components')
+  const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
+  const [shortestPathStart, setShortestPathStart] = useState('')
+  const [shortestPathGoal, setShortestPathGoal] = useState('')
   const algoShort = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
+  const needsTraversalStrategy =
+    algorithmMode === 'components' ||
+    algorithmMode === 'cycle' ||
+    algorithmMode === 'bipartite'
+  const needsAlgorithmInputs = algorithmMode === 'shortest-path'
 
   // Enter confirms the field by moving focus away (same idea as “done typing”).
   const confirmNodeLabelFieldOnEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -103,7 +119,12 @@ export const Sidebar = ({
 
   return (
     <aside
-      className={`sidebar ${activePage === 'canvas' ? 'is-canvas-setup' : 'is-algorithm-setup'}`}
+      className={`sidebar ${activePage === 'canvas'
+        ? 'is-canvas-setup'
+        : activePage === 'traversal'
+          ? 'is-traversal-setup'
+          : 'is-algorithm-setup'
+        }`}
     >
       <div className="sidebar-page-switch">
         <button
@@ -114,11 +135,18 @@ export const Sidebar = ({
           Canvas setup
         </button>
         <button
-          className={`sidebar-page-tab ${activePage === 'algorithm' ? 'is-active' : ''}`}
+          className={`sidebar-page-tab ${activePage === 'traversal' ? 'is-active' : ''}`}
           type="button"
-          onClick={() => setActivePage('algorithm')}
+          onClick={() => setActivePage('traversal')}
         >
-          Algorithm setup
+          Traversal mode
+        </button>
+        <button
+          className={`sidebar-page-tab ${activePage === 'algorithms' ? 'is-active' : ''}`}
+          type="button"
+          onClick={() => setActivePage('algorithms')}
+        >
+          Algorithms
         </button>
       </div>
 
@@ -195,10 +223,10 @@ export const Sidebar = ({
         </div>
       )}
 
-      {activePage === 'algorithm' && (
+      {activePage === 'traversal' && (
         <div className="sidebar-page-body">
           <div className="sidebar-section">
-            <h3>Algorithm</h3>
+            <h3>Traversal</h3>
             <div className="pill-group">
               <button
                 className={`btn btn-pill ${algorithmTab === 'bfs' ? 'btn-active' : ''}`}
@@ -332,6 +360,110 @@ export const Sidebar = ({
             </div>
             <p className="hint">{traversalStatusText}</p>
           </div>
+        </div>
+      )}
+
+      {activePage === 'algorithms' && (
+        <div className="sidebar-page-body">
+          <div className="sidebar-section">
+            <h3>Algorithm</h3>
+            <div className="pill-group">
+              <button
+                className={`btn btn-pill ${algorithmMode === 'components' ? 'btn-active' : ''}`}
+                type="button"
+                disabled={isTraversalRunning}
+                onClick={() => setAlgorithmMode('components')}
+              >
+                Connected components
+              </button>
+              <button
+                className={`btn btn-pill ${algorithmMode === 'cycle' ? 'btn-active' : ''}`}
+                type="button"
+                disabled={isTraversalRunning}
+                onClick={() => setAlgorithmMode('cycle')}
+              >
+                Cycle detection
+              </button>
+              <button
+                className={`btn btn-pill ${algorithmMode === 'bipartite' ? 'btn-active' : ''}`}
+                type="button"
+                disabled={isTraversalRunning}
+                onClick={() => setAlgorithmMode('bipartite')}
+              >
+                Bipartite check
+              </button>
+              <button
+                className={`btn btn-pill ${algorithmMode === 'shortest-path' ? 'btn-active' : ''}`}
+                type="button"
+                disabled={isTraversalRunning}
+                onClick={() => setAlgorithmMode('shortest-path')}
+              >
+                Shortest path
+              </button>
+              <button
+                className={`btn btn-pill ${algorithmMode === 'topological-sort' ? 'btn-active' : ''}`}
+                type="button"
+                disabled={isTraversalRunning}
+                onClick={() => setAlgorithmMode('topological-sort')}
+              >
+                Topological sort
+              </button>
+            </div>
+          </div>
+
+          {needsTraversalStrategy && (
+            <div className="sidebar-section">
+              <h3>Traversal strategy</h3>
+              <div className="pill-group">
+                <button
+                  className={`btn btn-pill ${algorithmTraversal === 'bfs' ? 'btn-active' : ''}`}
+                  type="button"
+                  disabled={isTraversalRunning}
+                  onClick={() => setAlgorithmTraversal('bfs')}
+                >
+                  BFS
+                </button>
+                <button
+                  className={`btn btn-pill ${algorithmTraversal === 'dfs' ? 'btn-active' : ''}`}
+                  type="button"
+                  disabled={isTraversalRunning}
+                  onClick={() => setAlgorithmTraversal('dfs')}
+                >
+                  DFS
+                </button>
+              </div>
+            </div>
+          )}
+
+          {needsAlgorithmInputs && (
+            <div className="sidebar-section algorithm-inputs-section">
+              <h3>Inputs</h3>
+              <label className="field">
+                <span>
+                  Start node <span className="required-indicator" aria-hidden="true">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={shortestPathStart}
+                  onChange={(event) => setShortestPathStart(event.target.value.toUpperCase())}
+                  onKeyDown={confirmNodeLabelFieldOnEnter}
+                  disabled={isTraversalRunning}
+                />
+              </label>
+              <label className="field">
+                <span>
+                  Goal node <span className="required-indicator" aria-hidden="true">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={shortestPathGoal}
+                  onChange={(event) => setShortestPathGoal(event.target.value.toUpperCase())}
+                  onKeyDown={confirmNodeLabelFieldOnEnter}
+                  disabled={isTraversalRunning}
+                />
+              </label>
+            </div>
+          )}
         </div>
       )}
     </aside>

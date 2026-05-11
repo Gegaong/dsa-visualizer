@@ -381,6 +381,11 @@
 	height: 680px;
 }
 
+.sidebar.is-traversal-setup {
+	height: 680px;
+	overflow: hidden;
+}
+
 .sidebar.is-algorithm-setup {
 	height: 680px;
 	overflow: hidden;
@@ -398,7 +403,7 @@
 
 .sidebar-page-switch {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 6px;
 	margin-top: 4px;
 	padding: 0 0 4px;
