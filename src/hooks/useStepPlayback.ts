@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 export type UseStepPlaybackOptions = {
   // Number of steps (0 disables playback controls).
@@ -38,9 +38,11 @@ export function useStepPlayback({
   const onStepIndexChangeRef = useRef(onStepIndexChange)
   const onCompleteRef = useRef(onComplete)
   const stepCountRef = useRef(stepCount)
-  onStepIndexChangeRef.current = onStepIndexChange
-  onCompleteRef.current = onComplete
-  stepCountRef.current = stepCount
+  useLayoutEffect(() => {
+    onStepIndexChangeRef.current = onStepIndexChange
+    onCompleteRef.current = onComplete
+    stepCountRef.current = stepCount
+  })
 
   const clearTimerOnly = useCallback(() => {
     if (timerRef.current !== null) {

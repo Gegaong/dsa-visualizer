@@ -66,8 +66,7 @@ import {
   buildConnectedComponentsCompletionStatus,
   formatWeakCCGroupsDisplay,
 } from './algorithms/connectedComponentsUIHelpers'
-import { buildBfsCompletionStatus, prepareBfsRunInputs } from './algorithms/bfsUIHelpers'
-import { buildDfsCompletionStatus, prepareDfsRunInputs } from './algorithms/dfsUIHelpers'
+import { buildTraversalCompletionStatus, prepareTraversalRunInputs } from './algorithms/traversalUIHelpers'
 
 type GraphAlgorithmTab = 'bfs' | 'dfs'
 
@@ -190,9 +189,7 @@ function App() {
       if (result.foundNodeIds.length > 0) {
         setTraversalGoalNodeIds(result.foundNodeIds)
       }
-      const buildCompletion =
-        algorithmTab === 'dfs' ? buildDfsCompletionStatus : buildBfsCompletionStatus
-      setTraversalStatusText(buildCompletion(result, nodes))
+      setTraversalStatusText(buildTraversalCompletionStatus(result, nodes))
     }
   }, [algorithmTab, nodes, traversalPlayback])
 
@@ -1223,10 +1220,7 @@ function App() {
       goalValueInput,
     }
 
-    const preparation =
-      algorithmTab === 'dfs'
-        ? prepareDfsRunInputs(traversalSidebarInputs)
-        : prepareBfsRunInputs(traversalSidebarInputs)
+    const preparation = prepareTraversalRunInputs(algorithmTab, traversalSidebarInputs)
 
     if (preparation.ok === false) {
       setTraversalStatusText(preparation.error)

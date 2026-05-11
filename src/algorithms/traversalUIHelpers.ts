@@ -22,16 +22,15 @@ type PrepareResult =
     error: string
   }
 
-// Validate DFS inputs and build the goal payload used by runDfs.
-export const prepareDfsRunInputs = ({
-  nodes,
-  goalType,
-  startNodeLabel,
-  goalNodeLabel,
-  goalValueInput,
-}: PrepareArgs): PrepareResult => {
+// Validate BFS or DFS inputs and build the goal payload used by runBfs / runDfs.
+export const prepareTraversalRunInputs = (
+  algo: 'bfs' | 'dfs',
+  { nodes, goalType, startNodeLabel, goalNodeLabel, goalValueInput }: PrepareArgs,
+): PrepareResult => {
+  const algoLabel = algo === 'bfs' ? 'BFS' : 'DFS'
+
   if (nodes.length === 0) {
-    return { ok: false, error: 'Add nodes before running DFS.' }
+    return { ok: false, error: `Add nodes before running ${algoLabel}.` }
   }
 
   if (nodes.some((node) => node.value === 'empty')) {
@@ -98,17 +97,14 @@ export const prepareDfsRunInputs = ({
   }
 }
 
-// Build the final DFS status line after traversal completes.
-export const buildDfsCompletionStatus = (result: BfsResult, nodes: GraphNode[]) => {
+// Build the final status line after BFS or DFS traversal completes.
+export const buildTraversalCompletionStatus = (result: BfsResult, nodes: GraphNode[]) => {
   if (!result.foundNodeLabel) {
     return 'Done. Goal not found in reachable nodes.'
   }
 
   if (result.goalType === 'max-value' || result.goalType === 'min-value') {
-    let valueLabel = 'Minimum'
-    if (result.goalType === 'max-value') {
-      valueLabel = 'Maximum'
-    }
+    const valueLabel = result.goalType === 'max-value' ? 'Maximum' : 'Minimum'
     const nodeLabels = nodes
       .filter((node) => result.foundNodeIds.includes(node.id))
       .map((node) => node.label)
