@@ -1,4 +1,6 @@
+import type { ChangeEvent, CSSProperties, KeyboardEvent, MouseEvent } from 'react'
 import type { GraphNode } from '../types'
+import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 
 // Pick the right text + size class for a node's value.
 // 'empty' renders as a blank circle, null renders as the word "null",
@@ -39,13 +41,16 @@ type GraphNodeLayerProps = {
   traversalCurrentNodeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
-  onNodeMouseDown: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  // Full weak-CC outline color (HSL per component); applied when enabled and visited.
+  weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
+  weakCCOutlineActive: boolean
+  onNodeMouseDown: (event: MouseEvent<HTMLDivElement>, node: GraphNode) => void
   onConnectNodeClick: (nodeId: string) => void
   onToggleNodeSelection: (nodeId: string) => void
-  onStartEditingNode: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
-  onNodeContextMenu: (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => void
-  onValueChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onValueKeyDown: (event: React.KeyboardEvent<HTMLInputElement>, nodeId: string) => void
+  onStartEditingNode: (event: MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  onNodeContextMenu: (event: MouseEvent<HTMLDivElement>, node: GraphNode) => void
+  onValueChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onValueKeyDown: (event: KeyboardEvent<HTMLInputElement>, nodeId: string) => void
   onCommitNodeValue: (nodeId: string, rawValue: string) => void
 }
 
@@ -66,6 +71,8 @@ export const GraphNodeLayer = ({
   traversalCurrentNodeId,
   traversalStartNodeId,
   traversalGoalNodeIds,
+  weakCCOutlineHslByNodeId,
+  weakCCOutlineActive,
   onNodeMouseDown,
   onConnectNodeClick,
   onToggleNodeSelection,
@@ -87,17 +94,42 @@ export const GraphNodeLayer = ({
       const isCurrent = traversalCurrentNodeId === node.id
       const isStart = traversalStartNodeId === node.id
       const isGoal = traversalGoalNodeIds.includes(node.id)
+      const weakCcColored =
+        weakCCOutlineHslByNodeId !== null && weakCCOutlineHslByNodeId.has(node.id)
+      const ccHsl = weakCCOutlineHslByNodeId?.get(node.id)
+      const ccOutline =
+        weakCCOutlineActive &&
+        ccHsl !== undefined &&
+        isVisited &&
+        !isConnectMode &&
+        !isDeleteMode &&
+        !isDeleteEdgeMode
+      const isCcCurrent = ccOutline && isCurrent
       // Long values are truncated inside the circle; reveal the full value on hover.
       const showHoverValue = typeof node.value === 'number' && String(node.value).length > 5
+
+      const ccNodeStyle: CSSProperties | undefined =
+        ccOutline && ccHsl
+          ? {
+              borderColor: `hsl(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}%)`,
+              borderWidth: isCcCurrent ? 3 : 2,
+              background: `hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.22)`,
+              boxShadow: isCcCurrent
+                ? `0 0 0 6px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.3), 0 0 0 12px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.14), 0 14px 24px rgba(46, 32, 23, 0.2)`
+                : `0 0 0 4px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.26), 0 12px 22px rgba(46, 32, 23, 0.2)`,
+              transform: isCcCurrent ? 'scale(1.06)' : undefined,
+            }
+          : undefined
 
       return (
         <div
           key={node.id}
-          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited ? 'is-traversal-visited' : ''} ${isCurrent ? 'is-traversal-current' : ''} ${isStart ? 'is-traversal-start' : ''} ${isGoal ? 'is-traversal-goal' : ''}`}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''}`}
           style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
         >
           <div
             className="node"
+            style={ccNodeStyle}
             onMouseDown={(event) => onNodeMouseDown(event, node)}
             onClick={(event) => {
               if (isConnectMode) {

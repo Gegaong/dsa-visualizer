@@ -1,18 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type UseStepPlaybackOptions = {
-  /** Number of steps (0 disables playback controls). */
+  // Number of steps (0 disables playback controls).
   stepCount: number
   minDelay: number
   maxDelay: number
   initialSpeed?: number
-  /**
-   * Bump this when starting a new run so the hook resets to step -1 (e.g. new traversal result).
-   */
+  // Bump when starting a new run so the hook resets to step -1 (e.g. new traversal result).
   resetSignal?: number
-  /** Called synchronously whenever the step index changes (including -1 for “ready”). */
+  // Called whenever the step index changes (including -1 for “ready”).
   onStepIndexChange: (index: number) => void
-  /** Called when stepping would move past the last step (run finished). */
+  // Called when stepping would move past the last step (run finished).
   onComplete: () => void
 }
 
@@ -21,10 +19,8 @@ function getPlaybackDelay(speedValue: number, minDelay: number, maxDelay: number
   return Math.round(maxDelay - speedRatio * (maxDelay - minDelay))
 }
 
-/**
- * Shared step playback: timer, speed slider mapping, previous / play / next.
- * Used by traversal (App) and algorithm mocks (Sidebar).
- */
+// Shared step playback: timer, speed slider mapping, previous / play / next.
+// Used by traversal (App) and algorithm mocks (Sidebar).
 export function useStepPlayback({
   stepCount,
   minDelay,
@@ -67,15 +63,19 @@ export function useStepPlayback({
 
   useEffect(() => {
     if (stepCount <= 0) {
+      queueMicrotask(() => {
+        clearTimerOnly()
+        setIsPlaying(false)
+        setStepIndex(-1)
+      })
+      return
+    }
+    queueMicrotask(() => {
       clearTimerOnly()
       setIsPlaying(false)
       setStepIndex(-1)
-      return
-    }
-    clearTimerOnly()
-    setIsPlaying(false)
-    setStepIndex(-1)
-    onStepIndexChangeRef.current(-1)
+      onStepIndexChangeRef.current(-1)
+    })
   }, [resetSignal, stepCount, clearTimerOnly])
 
   useEffect(

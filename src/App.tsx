@@ -11,6 +11,10 @@ import type {
 } from './types'
 
 import {
+  buildWeakCCOutlineHSLByNodeId,
+  type WeakCCOutlineHSL,
+} from './utils/weakCCOutlineHues'
+import {
   NODE_SIZE,
   NODE_RADIUS,
   DEFAULT_CANVAS_WIDTH,
@@ -28,41 +32,20 @@ import {
   resolveDragPosition,
 } from './utils/geometry'
 
-import {
-  buildPresetGraph,
-} from './utils/presets'
+import { buildPresetGraph } from './utils/presets'
 
-import {
-  DirectionIcon,
-} from './components/DirectionIcon'
-
-import {
-  GraphNodeLayer,
-} from './components/NodesLayer'
-
+import { DirectionIcon } from './components/DirectionIcon'
+import { EdgesLayer } from './components/EdgesLayer'
+import { EdgeToggles } from './components/EdgeToggles'
+import { GraphNodeLayer } from './components/NodesLayer'
+import { Header } from './components/Header'
+import { ConfirmModal } from './components/Modals'
+import { NodeContextMenu } from './components/NodeContextMenu'
 import {
   Sidebar,
+  type AlgorithmMode,
+  type SidebarPage,
 } from './components/Sidebar'
-
-import {
-  EdgesLayer,
-} from './components/EdgesLayer'
-
-import {
-  Header,
-} from './components/Header'
-
-import {
-  EdgeToggles,
-} from './components/EdgeToggles'
-
-import {
-  ConfirmModal,
-} from './components/Modals'
-
-import {
-  NodeContextMenu,
-} from './components/NodeContextMenu'
 
 import {
   sanitizeNumericInput,
@@ -77,11 +60,20 @@ import {
 } from './utils/graphRules'
 import { runBfs } from './algorithms/bfs'
 import { runDfs } from './algorithms/dfs'
-import type { BfsResult } from './algorithms/types'
+import type { BfsResult, ConnectedComponentsResult, ConnectedComponentsStrategy } from './algorithms/types'
+import { runConnectedComponents } from './algorithms/connectedComponents'
+import {
+  buildConnectedComponentsCompletionStatus,
+  formatWeakCCGroupsDisplay,
+} from './algorithms/connectedComponentsUIHelpers'
 import { buildBfsCompletionStatus, prepareBfsRunInputs } from './algorithms/bfsUIHelpers'
 import { buildDfsCompletionStatus, prepareDfsRunInputs } from './algorithms/dfsUIHelpers'
 
 type GraphAlgorithmTab = 'bfs' | 'dfs'
+
+function bfsDfsLabel(mode: GraphAlgorithmTab | ConnectedComponentsStrategy): 'DFS' | 'BFS' {
+  return mode === 'dfs' ? 'DFS' : 'BFS'
+}
 
 // Root component for the DSA visualizer workspace.
 function App() {
@@ -118,13 +110,39 @@ function App() {
   const [isTraversalRunning, setIsTraversalRunning] = useState(false)
   const [traversalResult, setTraversalResult] = useState<BfsResult | null>(null)
   const traversalResultRef = useRef<BfsResult | null>(null)
-  traversalResultRef.current = traversalResult
   const finalizeTraversalRunRef = useRef<(r: BfsResult) => void>(() => {})
   const traversalPlaybackStopRef = useRef(() => {})
   const [traversalPlaybackSession, setTraversalPlaybackSession] = useState(0)
 
+  const [connectedComponentsResult, setConnectedComponentsResult] =
+    useState<ConnectedComponentsResult | null>(null)
+  const connectedComponentsResultRef = useRef<ConnectedComponentsResult | null>(null)
+  const connectedComponentsStrategyRef = useRef<ConnectedComponentsStrategy>('bfs')
+  const sidebarAlgorithmModeRef = useRef<AlgorithmMode>('components')
+  const finalizeConnectedComponentsRunRef = useRef<(r: ConnectedComponentsResult) => void>(() => {})
+  const connectedComponentsPlaybackStopRef = useRef(() => {})
+  const [connectedComponentsPlaybackSession, setConnectedComponentsPlaybackSession] = useState(0)
+  const [isConnectedComponentsRunning, setIsConnectedComponentsRunning] = useState(false)
+  const [connectedComponentsStatusText, setConnectedComponentsStatusText] = useState(
+    'Select BFS or DFS, then run weakly connected components.',
+  )
+  const [weakCCOutlineHslByNodeId, setWeakCCOutlineHslByNodeId] = useState<Map<
+    string,
+    WeakCCOutlineHSL
+  > | null>(null)
+
+  useEffect(() => {
+    traversalResultRef.current = traversalResult
+  }, [traversalResult])
+
+  useEffect(() => {
+    connectedComponentsResultRef.current = connectedComponentsResult
+  }, [connectedComponentsResult])
+
+  const blockGraphInteraction = isTraversalRunning || isConnectedComponentsRunning
+
   const applyTraversalStepIndex = (result: BfsResult, index: number) => {
-    const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
+    const algoName = bfsDfsLabel(algorithmTab)
     if (index < 0) {
       setTraversalCurrentNodeId(null)
       setTraversalVisitedNodeIds([])
@@ -159,26 +177,86 @@ function App() {
     },
   })
 
-  const finalizeTraversalRun = (result: BfsResult) => {
-    traversalPlayback.stopPlayback()
-    setTraversalCurrentNodeId(null)
+  useEffect(() => {
+    finalizeTraversalRunRef.current = (result: BfsResult) => {
+      traversalPlayback.stopPlayback()
+      setTraversalCurrentNodeId(null)
 
-    if (!result.foundNodeLabel) {
-      setTraversalStatusText('Done. Goal not found in reachable nodes.')
+      if (!result.foundNodeLabel) {
+        setTraversalStatusText('Done. Goal not found in reachable nodes.')
+        return
+      }
+
+      if (result.foundNodeIds.length > 0) {
+        setTraversalGoalNodeIds(result.foundNodeIds)
+      }
+      const buildCompletion =
+        algorithmTab === 'dfs' ? buildDfsCompletionStatus : buildBfsCompletionStatus
+      setTraversalStatusText(buildCompletion(result, nodes))
+    }
+  }, [algorithmTab, nodes, traversalPlayback])
+
+  useEffect(() => {
+    traversalPlaybackStopRef.current = () => traversalPlayback.stopPlayback()
+  }, [traversalPlayback])
+
+  const applyConnectedComponentsStepIndex = (result: ConnectedComponentsResult, index: number) => {
+    const strategyLabel = bfsDfsLabel(connectedComponentsStrategyRef.current)
+    if (index < 0) {
+      setTraversalCurrentNodeId(null)
+      setTraversalVisitedNodeIds([])
+      setTraversalStartNodeId(null)
+      setTraversalGoalNodeIds([])
+      setConnectedComponentsStatusText(
+        `Weakly connected components (${strategyLabel}) ready. Press Play or step through manually.`,
+      )
       return
     }
 
-    if (result.foundNodeIds.length > 0) {
-      setTraversalGoalNodeIds(result.foundNodeIds)
-    }
-    if (algorithmTab === 'dfs') {
-      setTraversalStatusText(buildDfsCompletionStatus(result, nodes))
-    } else {
-      setTraversalStatusText(buildBfsCompletionStatus(result, nodes))
-    }
+    const boundedIndex = Math.min(index, result.steps.length - 1)
+    const currentStep = result.steps[boundedIndex]
+    const visitedIds = result.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
+
+    setTraversalCurrentNodeId(currentStep.nodeId)
+    setTraversalVisitedNodeIds(visitedIds)
+    setTraversalStartNodeId(currentStep.componentRootNodeId)
+    setConnectedComponentsStatusText(
+      `Visiting ${currentStep.nodeLabel} (step ${currentStep.order}/${result.steps.length}) · ${strategyLabel}`,
+    )
   }
-  finalizeTraversalRunRef.current = finalizeTraversalRun
-  traversalPlaybackStopRef.current = () => traversalPlayback.stopPlayback()
+
+  const connectedComponentsPlayback = useStepPlayback({
+    stepCount: connectedComponentsResult?.steps.length ?? 0,
+    minDelay: PLAYBACK_MIN_DELAY_MS,
+    maxDelay: PLAYBACK_MAX_DELAY_MS,
+    resetSignal: connectedComponentsPlaybackSession,
+    onStepIndexChange: (index) => {
+      const r = connectedComponentsResultRef.current
+      if (!r) return
+      applyConnectedComponentsStepIndex(r, index)
+    },
+    onComplete: () => {
+      const r = connectedComponentsResultRef.current
+      if (r) finalizeConnectedComponentsRunRef.current(r)
+    },
+  })
+
+  const weakCCOutlineActive =
+    connectedComponentsResult !== null && connectedComponentsPlayback.stepIndex >= 0
+
+  useEffect(() => {
+    finalizeConnectedComponentsRunRef.current = (result: ConnectedComponentsResult) => {
+      connectedComponentsPlayback.stopPlayback()
+      setTraversalCurrentNodeId(null)
+      setTraversalStartNodeId(null)
+      setTraversalGoalNodeIds([])
+      setConnectedComponentsStatusText(buildConnectedComponentsCompletionStatus(result, nodes))
+    }
+  }, [connectedComponentsPlayback, nodes])
+
+  useEffect(() => {
+    connectedComponentsPlaybackStopRef.current = () => connectedComponentsPlayback.stopPlayback()
+  }, [connectedComponentsPlayback])
 
   // useRef instead of useState: changing nextId doesn't trigger a re-render (we only use it for ID generation)
   const nextId = useRef(1)
@@ -228,22 +306,57 @@ function App() {
     setCanvasZoom((prev) => clampCanvasZoom(prev - CANVAS_ZOOM_STEP))
   }
 
-  // Clear traversal visual state and reset the idle status line (BFS or DFS).
-  const resetTraversalVisualization = (idleAlgorithm: GraphAlgorithmTab = algorithmTab) => {
-    traversalPlaybackStopRef.current()
+  // Stop BFS/DFS playback and clear traversal highlights / traversal-specific UI state only.
+  const resetTraversalVisualization = useCallback(
+    (idleAlgorithm: GraphAlgorithmTab = algorithmTab) => {
+      traversalPlaybackStopRef.current()
+      setTraversalVisitedNodeIds([])
+      setTraversalCurrentNodeId(null)
+      setTraversalStartNodeId(null)
+      setTraversalGoalNodeIds([])
+      setTraversalResult(null)
+      setTraversalPlaybackSession((s) => s + 1)
+      const algoName = bfsDfsLabel(idleAlgorithm)
+      setTraversalStatusText(`Enter start and goal, then run ${algoName}.`)
+      setIsTraversalRunning(false)
+    },
+    [algorithmTab],
+  )
+
+  const clearConnectedComponentsPlaybackAndResult = useCallback(() => {
+    connectedComponentsPlaybackStopRef.current()
+    setConnectedComponentsResult(null)
+    setConnectedComponentsPlaybackSession((s) => s + 1)
+  }, [])
+
+  const resetConnectedComponentsVisualization = useCallback(() => {
+    clearConnectedComponentsPlaybackAndResult()
     setTraversalVisitedNodeIds([])
     setTraversalCurrentNodeId(null)
     setTraversalStartNodeId(null)
     setTraversalGoalNodeIds([])
-    setTraversalResult(null)
-    const algoName = idleAlgorithm === 'dfs' ? 'DFS' : 'BFS'
-    setTraversalStatusText(`Enter start and goal, then run ${algoName}.`)
-    setIsTraversalRunning(false)
+    setConnectedComponentsStatusText('Select BFS or DFS, then run weakly connected components.')
+    setIsConnectedComponentsRunning(false)
+    setWeakCCOutlineHslByNodeId(null)
+  }, [clearConnectedComponentsPlaybackAndResult])
+
+  // Full reset for graph edits / presets: compose traversal + connected-components resets.
+  const resetAllGraphAlgorithmVisualizations = useCallback(
+    (idleAlgorithm: GraphAlgorithmTab = algorithmTab) => {
+      resetTraversalVisualization(idleAlgorithm)
+      resetConnectedComponentsVisualization()
+    },
+    [algorithmTab, resetTraversalVisualization, resetConnectedComponentsVisualization],
+  )
+
+  const clearConnectedComponentsAlgorithmStateOnly = () => {
+    clearConnectedComponentsPlaybackAndResult()
+    setIsConnectedComponentsRunning(false)
+    setWeakCCOutlineHslByNodeId(null)
   }
 
-  // Switch BFS/DFS in the sidebar; clears any in-progress traversal UI.
+  // Switch BFS/DFS in the sidebar; stops the current traversal run and clears canvas highlights.
   const handleAlgorithmTabChange = (tab: GraphAlgorithmTab) => {
-    if (isTraversalRunning) return
     if (tab === algorithmTab) return
     setAlgorithmTab(tab)
     resetTraversalVisualization(tab)
@@ -275,8 +388,8 @@ function App() {
 
   // Delete a single node and all its connected edges, then recalculate node labels.
   const deleteNode = (nodeId: string) => {
-    if (isTraversalRunning) return // Block graph edits while a traversal run is active.
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return // Block graph edits while a traversal run is active.
+    resetAllGraphAlgorithmVisualizations()
     setNodes((prev) => reindexNodes(prev.filter((node) => node.id !== nodeId)))
     setEdges((prev) =>
       prev.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId),
@@ -295,12 +408,12 @@ function App() {
 
   // Delete multiple nodes at once (used in delete mode) and clean up their edges.
   const deleteSelectedNodes = (nodeIds: string[]) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (nodeIds.length === 0) {
       return
     }
 
-    resetTraversalVisualization()
+    resetAllGraphAlgorithmVisualizations()
     const idSet = new Set(nodeIds)
     setNodes((prev) => reindexNodes(prev.filter((node) => !idSet.has(node.id))))
     setEdges((prev) =>
@@ -321,12 +434,12 @@ function App() {
   // Delete the given edges from the canvas.
   // Block edits while a traversal run is active (same guard as other graph mutators).
   const deleteSelectedEdges = (edgeIds: string[]) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (edgeIds.length === 0) {
       return
     }
 
-    resetTraversalVisualization()
+    resetAllGraphAlgorithmVisualizations()
     const idSet = new Set(edgeIds)
     setEdges((prev) => prev.filter((edge) => !idSet.has(edge.id)))
   }
@@ -339,7 +452,7 @@ function App() {
 
   // Toggle a node's selected state for delete mode (add or remove from selection list).
   const toggleNodeSelection = (nodeId: string) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     setSelectedNodeIds((prev) =>
       prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId],
     )
@@ -352,7 +465,7 @@ function App() {
 
   // Toggle an edge in the delete-edge selection.
   const toggleEdgeSelection = (edgeId: string) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     setSelectedEdgeIds((prev) =>
       prev.includes(edgeId) ? prev.filter((id) => id !== edgeId) : [...prev, edgeId],
     )
@@ -366,8 +479,8 @@ function App() {
   // Mode management: Connect and Delete are mutually exclusive.
   // When entering one mode, we automatically exit the other and clean up.
   const enterDeleteMode = () => {
-    if (isTraversalRunning) return
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
     setIsConnectMode(false) // Exit connect mode first
     setConnectionSource(null)
     setIsDeleteEdgeMode(false)
@@ -379,8 +492,8 @@ function App() {
 
   // Switch into delete-edge mode (turns off other modes first).
   const enterDeleteEdgeMode = () => {
-    if (isTraversalRunning) return
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
     setIsConnectMode(false)
     setConnectionSource(null)
     setIsDeleteMode(false)
@@ -392,8 +505,8 @@ function App() {
 
   // Switch into connect mode (turns off other modes first).
   const enterConnectMode = () => {
-    if (isTraversalRunning) return
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
     setIsDeleteMode(false) // Exit delete mode first
     setIsDeleteEdgeMode(false)
     clearSelection()
@@ -406,14 +519,14 @@ function App() {
 
   // Leave delete-node mode and clear its selection.
   const exitDeleteMode = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     setIsDeleteMode(false)
     clearSelection()
   }
 
   // Leave delete-edge mode and clear its selection.
   const exitDeleteEdgeMode = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     setIsDeleteEdgeMode(false)
     clearEdgeSelection()
   }
@@ -423,7 +536,7 @@ function App() {
   // straight from one node into another would otherwise silently drop the typed value
   // (the input unmounts before React fires onBlur).
   const beginEditingNode = (node: GraphNode) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (editingNodeId === node.id) {
       return
     }
@@ -446,7 +559,7 @@ function App() {
   // Skipped if any mode is active (connect/delete) or if this click came
   // immediately after a drag (the suppress flag is set in handleMouseUp).
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (suppressCanvasClickRef.current) {
       suppressCanvasClickRef.current = false
       return
@@ -487,14 +600,14 @@ function App() {
 
   // Block the browser's default right-click menu and close any open custom menus.
   const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     event.preventDefault()
     closeContextMenu()
   }
 
   // Start editing a node when clicked (unless in delete mode).
   const startEditingNode = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (isDeleteMode) {
       return
     }
@@ -570,7 +683,7 @@ function App() {
     event: React.MouseEvent<HTMLDivElement>,
     node: GraphNode,
   ) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     event.preventDefault()
     event.stopPropagation()
 
@@ -698,7 +811,7 @@ function App() {
 
   // Filter input to an optional leading minus sign and digits only.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     setDraftValue(sanitizeNumericInput(event.target.value))
   }
 
@@ -733,7 +846,7 @@ function App() {
 
   // Finalize node value from the latest input value to avoid stale state during fast typing.
   const commitNodeValue = (nodeId: string, rawValue: string) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     const normalizedValue = parseNumberInput(rawValue)
 
     setNodes((prev) =>
@@ -763,8 +876,8 @@ function App() {
 
   // Replace empty node values with inclusive random integers in the provided range.
   const fillEmptyValues = () => {
-    if (isTraversalRunning) return
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
     const minValue = parseNumberInput(fillMin)
     const maxValue = parseNumberInput(fillMax)
 
@@ -791,8 +904,8 @@ function App() {
   // Convert every empty node to null. No confirmation — this leaves user-entered
   // numbers untouched, so it's non-destructive.
   const nullifyEmptyValues = () => {
-    if (isTraversalRunning) return
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
     const nullifiedNodeIds = nodes
       .filter((node) => node.value === 'empty')
       .map((node) => node.id)
@@ -812,7 +925,7 @@ function App() {
 
   // Ask before resetting every node back to empty — this *can* wipe user-entered numbers.
   const handleEmptyAllClick = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (nodes.every((node) => node.value === 'empty')) {
       return
     }
@@ -822,8 +935,8 @@ function App() {
 
   // Reset every node to the 'empty' state.
   const confirmEmptyAll = () => {
-    if (isTraversalRunning) return
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
     setNodes((prev) =>
      prev.map((node): GraphNode => ({
         ...node,
@@ -856,7 +969,7 @@ function App() {
 
   // Show confirmation dialog before clearing the entire canvas (only if there are nodes).
   const handleClearCanvas = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (nodes.length === 0) {
       return
     }
@@ -866,8 +979,8 @@ function App() {
 
   // Confirm clearing: reset everything to initial state and clean up all UI.
   const confirmClearCanvas = () => {
-    if (isTraversalRunning) return
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
     nextId.current = 1 // Reset ID counter for future node creation
     setNodes([])
     setEdges([])
@@ -889,7 +1002,7 @@ function App() {
 
   // Load a preset, but ask first if there's already a graph on the canvas.
   const handlePresetClick = (preset: GraphPreset) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     // If there's already a graph, confirm before replacing it.
     if (nodes.length === 0) {
       applyPreset(preset)
@@ -902,14 +1015,14 @@ function App() {
 
   // Apply the pending preset and close the confirmation.
   const confirmPresetReplace = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     // Apply the pending preset and close the confirmation modal.
     if (!pendingPreset) {
       setShowPresetConfirm(false)
       return
     }
 
-    resetTraversalVisualization()
+    resetAllGraphAlgorithmVisualizations()
     applyPreset(pendingPreset)
     setPendingPreset(null)
     setShowPresetConfirm(false)
@@ -924,12 +1037,12 @@ function App() {
 
   // Create an edge between two nodes with validation to prevent duplicates and self-loops.
   const createEdge = (fromId: string, toId: string, direction: GraphEdge['direction']) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (!canCreateEdge(nodes, edges, fromId, toId, direction)) {
       return
     }
 
-    resetTraversalVisualization()
+    resetAllGraphAlgorithmVisualizations()
     const newEdge: GraphEdge = {
       id: `edge-${nextId.current}`,
       fromNodeId: fromId,
@@ -943,8 +1056,8 @@ function App() {
 
   // Cycle through edge directions: both-ways → one-way → reverse → both-ways (repeat)
   const toggleEdgeDirection = (edgeId: string) => {
-    if (isTraversalRunning) return
-    resetTraversalVisualization()
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
     setEdges((prev) =>
       prev.map((edge) => {
         if (edge.id !== edgeId) return edge
@@ -960,7 +1073,7 @@ function App() {
 
   // Two-stage connection: first click selects source, second click selects target and creates edge.
   const handleConnectNodeClick = (nodeId: string) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (!connectionSource) {
       // First click: remember which node we're connecting from
       setConnectionSource(nodeId)
@@ -973,14 +1086,14 @@ function App() {
 
   // Leave connect mode and forget the chosen source node.
   const cancelConnection = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     setIsConnectMode(false)
     setConnectionSource(null)
   }
 
   // Delete button behavior: if already in delete mode with selections, delete them; otherwise toggle the mode.
   const handleDeleteModeToggle = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (isDeleteMode) {
       if (selectedNodeIds.length > 0) {
         // Delete the selected nodes and exit delete mode
@@ -1001,7 +1114,7 @@ function App() {
 
   // Edge-delete button: delete the selection if any, otherwise toggle the mode.
   const handleDeleteEdgeModeToggle = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (isDeleteEdgeMode) {
       if (selectedEdgeIds.length > 0) {
         deleteSelectedEdges(selectedEdgeIds)
@@ -1019,7 +1132,7 @@ function App() {
 
   // Connect button behavior: toggle connect mode on/off.
   const handleConnectModeToggle = () => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     if (isConnectMode) {
       // Already connecting, so cancel and reset
       cancelConnection()
@@ -1032,13 +1145,13 @@ function App() {
 
   // Set the direction used for new edges created in connect mode.
   const handleNewEdgeDirectionChange = (direction: GraphEdge['direction']) => {
-    if (isTraversalRunning) return
+    if (blockGraphInteraction) return
     setNewEdgeDirection(direction)
   }
 
   // Normalize goal-dependent inputs whenever the goal mode changes.
   const handleGoalTypeChange = (type: GoalType) => {
-    resetTraversalVisualization()
+    resetAllGraphAlgorithmVisualizations()
     setGoalType(type)
     setGoalNodeLabel('')
     setGoalValueInput('')
@@ -1046,19 +1159,19 @@ function App() {
 
   // Clear old traversal highlights when the user starts changing algorithm inputs.
   const handleStartNodeLabelChange = (value: string) => {
-    resetTraversalVisualization()
+    resetAllGraphAlgorithmVisualizations()
     setStartNodeLabel(value.toUpperCase())
   }
 
   // Clear old traversal highlights when the user edits target-node input.
   const handleGoalNodeLabelChange = (value: string) => {
-    resetTraversalVisualization()
+    resetAllGraphAlgorithmVisualizations()
     setGoalNodeLabel(value.toUpperCase())
   }
 
   // Clear old traversal highlights when the user edits target-value input.
   const handleGoalValueInputChange = (value: string) => {
-    resetTraversalVisualization()
+    resetAllGraphAlgorithmVisualizations()
     setGoalValueInput(sanitizeNumericInput(value))
   }
 
@@ -1097,26 +1210,23 @@ function App() {
   const runTraversalFromSidebar = () => {
     if (traversalPlayback.isPlaying) return
     traversalPlaybackStopRef.current()
+    clearConnectedComponentsAlgorithmStateOnly()
     setTraversalVisitedNodeIds([])
     setTraversalCurrentNodeId(null)
     setTraversalGoalNodeIds([])
 
+    const traversalSidebarInputs = {
+      nodes,
+      goalType,
+      startNodeLabel,
+      goalNodeLabel,
+      goalValueInput,
+    }
+
     const preparation =
       algorithmTab === 'dfs'
-        ? prepareDfsRunInputs({
-          nodes,
-          goalType,
-          startNodeLabel,
-          goalNodeLabel,
-          goalValueInput,
-        })
-        : prepareBfsRunInputs({
-          nodes,
-          goalType,
-          startNodeLabel,
-          goalNodeLabel,
-          goalValueInput,
-        })
+        ? prepareDfsRunInputs(traversalSidebarInputs)
+        : prepareBfsRunInputs(traversalSidebarInputs)
 
     if (preparation.ok === false) {
       setTraversalStatusText(preparation.error)
@@ -1131,10 +1241,10 @@ function App() {
       startNodeLabel: preparation.startNode.label,
       goal: preparation.goal,
     }
+    const algoName = bfsDfsLabel(algorithmTab)
     const result = algorithmTab === 'dfs' ? runDfs(runInput) : runBfs(runInput)
 
     if (result.steps.length === 0) {
-      const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
       setTraversalStatusText(`${algoName} could not start with the current graph and inputs.`)
       return
     }
@@ -1142,7 +1252,6 @@ function App() {
     setTraversalResult(result)
     setTraversalPlaybackSession((s) => s + 1)
     setIsTraversalRunning(true)
-    const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
     setTraversalStatusText(`${algoName} ready. Press Play or step through manually.`)
   }
 
@@ -1160,6 +1269,7 @@ function App() {
     startNodeLabel.trim() !== '' &&
     (goalType !== 'target-node' || goalNodeLabel.trim() !== '') &&
     (goalType !== 'target-value' || parseNumberInput(goalValueInput) !== null)
+  const canRunConnectedComponents = nodes.length > 0 && !hasEmptyNodes
   const canStepBackward = traversalResult !== null && traversalPlayback.canStepBackward
   const canStepForward = traversalResult !== null && traversalPlayback.canStepForward
   const canTogglePlay = traversalResult !== null && traversalPlayback.canTogglePlay
@@ -1180,9 +1290,123 @@ function App() {
   } else if (goalValueMissing) {
     sidebarTraversalStatusText = 'Warning: Goal value is a required field.'
   } else if (hasEmptyNodes) {
-    const algoName = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
+    const algoName = bfsDfsLabel(algorithmTab)
     sidebarTraversalStatusText = `Warning: fill or nullify all empty nodes before running ${algoName}.`
   }
+
+  const handleSidebarSectionChange = useCallback(
+    ({ from, to }: { from: SidebarPage; to: SidebarPage }) => {
+      if (from === 'traversal' && to !== 'traversal') {
+        resetTraversalVisualization()
+      }
+      if (from === 'algorithms' && to !== 'algorithms') {
+        resetConnectedComponentsVisualization()
+      }
+    },
+    [resetTraversalVisualization, resetConnectedComponentsVisualization],
+  )
+
+  const handleAlgorithmModeChangeFromSidebar = useCallback(
+    (mode: AlgorithmMode) => {
+      const prev = sidebarAlgorithmModeRef.current
+      sidebarAlgorithmModeRef.current = mode
+      if (prev === mode) return
+      const leavingComponents = prev === 'components' && mode !== 'components'
+      const ccActive =
+        connectedComponentsResult !== null || isConnectedComponentsRunning
+      if (leavingComponents || ccActive) {
+        resetConnectedComponentsVisualization()
+      }
+    },
+    [
+      connectedComponentsResult,
+      isConnectedComponentsRunning,
+      resetConnectedComponentsVisualization,
+    ],
+  )
+
+  const runConnectedComponentsFromSidebar = (strategy: ConnectedComponentsStrategy) => {
+    if (connectedComponentsPlayback.isPlaying) return
+    connectedComponentsPlaybackStopRef.current()
+    resetTraversalVisualization()
+
+    connectedComponentsStrategyRef.current = strategy
+
+    if (nodes.length === 0) {
+      setConnectedComponentsStatusText('Add nodes to the canvas first.')
+      return
+    }
+    if (hasEmptyNodes) {
+      setConnectedComponentsStatusText(
+        'Fill or nullify all empty node values before running weakly connected components.',
+      )
+      return
+    }
+
+    const result = runConnectedComponents(nodes, edges, strategy)
+    if (result.steps.length === 0) {
+      setConnectedComponentsStatusText('Weakly connected components could not run on this graph.')
+      return
+    }
+
+    const strategyLabel = bfsDfsLabel(strategy)
+    setConnectedComponentsResult(result)
+    setWeakCCOutlineHslByNodeId(buildWeakCCOutlineHSLByNodeId(result.components))
+    setConnectedComponentsPlaybackSession((s) => s + 1)
+    setIsConnectedComponentsRunning(true)
+    setConnectedComponentsStatusText(
+      `Weakly connected components (${strategyLabel}) ready. Press Play or step through manually.`,
+    )
+  }
+
+  const stepConnectedComponentsForward = () => {
+    if (!connectedComponentsResult) return
+    connectedComponentsPlayback.stepForward()
+  }
+
+  const stepConnectedComponentsBackward = () => {
+    if (!connectedComponentsResult) return
+    connectedComponentsPlayback.stepBackward()
+    setIsConnectedComponentsRunning(true)
+    setTraversalGoalNodeIds([])
+  }
+
+  const playConnectedComponents = () => {
+    if (!connectedComponentsResult) return
+    const replayFromEnd =
+      connectedComponentsPlayback.stepIndex >= connectedComponentsResult.steps.length - 1
+    connectedComponentsPlayback.togglePlay()
+    if (replayFromEnd) {
+      setTraversalGoalNodeIds([])
+      setIsConnectedComponentsRunning(true)
+    }
+  }
+
+  const pauseConnectedComponents = () => {
+    connectedComponentsPlayback.stopPlayback()
+  }
+
+  const handleConnectedComponentsPlaybackSpeedChange = (value: number) => {
+    connectedComponentsPlayback.setPlaybackSpeed(value)
+  }
+
+  const canCcStepBackward =
+    connectedComponentsResult !== null && connectedComponentsPlayback.canStepBackward
+  const canCcStepForward =
+    connectedComponentsResult !== null && connectedComponentsPlayback.canStepForward
+  const canCcTogglePlay =
+    connectedComponentsResult !== null && connectedComponentsPlayback.canTogglePlay
+  const isCcPlaybackComplete =
+    connectedComponentsResult !== null && connectedComponentsPlayback.isPlaybackComplete
+
+  const ccOutput =
+    connectedComponentsResult !== null
+      ? {
+          componentCount: connectedComponentsResult.componentCount,
+          largestSize: connectedComponentsResult.largestComponentSize,
+          groupsText: formatWeakCCGroupsDisplay(connectedComponentsResult, nodes),
+        }
+      : null
 
   return (
     <div className="app">
@@ -1200,7 +1424,7 @@ function App() {
                 className={`btn btn-pill connect-toggle-btn ${isConnectMode ? 'btn-active' : ''}`}
                 type="button"
                 onClick={handleConnectModeToggle}
-                disabled={isTraversalRunning}
+                disabled={blockGraphInteraction}
               >
                 {isConnectMode ? 'Cancel connect' : 'Connect nodes'}
               </button>
@@ -1208,7 +1432,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'forward' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode || isTraversalRunning}
+                  disabled={!isConnectMode || blockGraphInteraction}
                   aria-pressed={newEdgeDirection === 'forward'}
                   title="Create outbound edge (from selected node)"
                   onClick={() => handleNewEdgeDirectionChange('forward')}
@@ -1218,7 +1442,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'both' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode || isTraversalRunning}
+                  disabled={!isConnectMode || blockGraphInteraction}
                   aria-pressed={newEdgeDirection === 'both'}
                   title="Create bidirectional edge"
                   onClick={() => handleNewEdgeDirectionChange('both')}
@@ -1228,7 +1452,7 @@ function App() {
                 <button
                   className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'backward' ? 'btn-active' : ''}`}
                   type="button"
-                  disabled={!isConnectMode || isTraversalRunning}
+                  disabled={!isConnectMode || blockGraphInteraction}
                   aria-pressed={newEdgeDirection === 'backward'}
                   title="Create inbound edge (toward selected node)"
                   onClick={() => handleNewEdgeDirectionChange('backward')}
@@ -1241,7 +1465,7 @@ function App() {
                   className={`btn delete-stack-btn ${isDeleteMode ? 'btn-active' : ''}`}
                   type="button"
                   onClick={handleDeleteModeToggle}
-                  disabled={isTraversalRunning}
+                  disabled={blockGraphInteraction}
                 >
                   {isDeleteMode
                     ? selectedNodeIds.length > 0
@@ -1253,7 +1477,7 @@ function App() {
                   className={`btn delete-stack-btn ${isDeleteEdgeMode ? 'btn-active' : ''}`}
                   type="button"
                   onClick={handleDeleteEdgeModeToggle}
-                  disabled={isTraversalRunning}
+                  disabled={blockGraphInteraction}
                 >
                   {isDeleteEdgeMode
                     ? selectedEdgeIds.length > 0
@@ -1262,7 +1486,7 @@ function App() {
                     : 'Delete edges'}
                 </button>
               </div>
-              <button className="btn btn-clear" type="button" onClick={handleClearCanvas} disabled={isTraversalRunning}>
+              <button className="btn btn-clear" type="button" onClick={handleClearCanvas} disabled={blockGraphInteraction}>
                 Clear canvas
               </button>
             </div>
@@ -1340,6 +1564,8 @@ function App() {
                 traversalCurrentNodeId={traversalCurrentNodeId}
                 traversalStartNodeId={traversalStartNodeId}
                 traversalGoalNodeIds={traversalGoalNodeIds}
+                weakCCOutlineHslByNodeId={weakCCOutlineHslByNodeId}
+                weakCCOutlineActive={weakCCOutlineActive}
                 onNodeMouseDown={handleNodeMouseDown}
                 onConnectNodeClick={handleConnectNodeClick}
                 onToggleNodeSelection={toggleNodeSelection}
@@ -1369,6 +1595,7 @@ function App() {
           canRunTraversal={canRunTraversal}
           traversalStatusText={sidebarTraversalStatusText}
           isTraversalRunning={isTraversalRunning}
+          blockGraphEdits={blockGraphInteraction}
           isTraversalPlaying={traversalPlayback.isPlaying}
           traversalPlaybackSpeed={traversalPlayback.playbackSpeed}
           onTraversalPlaybackSpeedChange={handleTraversalPlaybackSpeedChange}
@@ -1393,6 +1620,29 @@ function App() {
           onEmptyAllValues={handleEmptyAllClick}
           canEmptyAll={canEmptyAll}
           onPresetClick={handlePresetClick}
+          onSidebarSectionChange={handleSidebarSectionChange}
+          onAlgorithmModeChange={handleAlgorithmModeChangeFromSidebar}
+          onRunConnectedComponents={runConnectedComponentsFromSidebar}
+          onStopConnectedComponents={resetConnectedComponentsVisualization}
+          canRunConnectedComponents={canRunConnectedComponents}
+          connectedComponentsStatusText={connectedComponentsStatusText}
+          isConnectedComponentsPlaybackPlaying={connectedComponentsPlayback.isPlaying}
+          connectedComponentsPlaybackSpeed={connectedComponentsPlayback.playbackSpeed}
+          onConnectedComponentsPlaybackSpeedChange={handleConnectedComponentsPlaybackSpeedChange}
+          onPlayConnectedComponents={playConnectedComponents}
+          onPauseConnectedComponents={pauseConnectedComponents}
+          onNextConnectedComponentsStep={stepConnectedComponentsForward}
+          onPreviousConnectedComponentsStep={stepConnectedComponentsBackward}
+          canConnectedComponentsStepForward={canCcStepForward}
+          canConnectedComponentsStepBackward={canCcStepBackward}
+          canConnectedComponentsTogglePlay={canCcTogglePlay}
+          isConnectedComponentsPlaybackComplete={isCcPlaybackComplete}
+          connectedComponentsOutput={ccOutput}
+          connectedComponentsStepIndex={connectedComponentsPlayback.stepIndex}
+          connectedComponentsStepTotal={connectedComponentsResult?.steps.length ?? 0}
+          isConnectedComponentsSessionActive={
+            connectedComponentsResult !== null || isConnectedComponentsRunning
+          }
         />
       </div>
 

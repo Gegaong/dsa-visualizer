@@ -27,3 +27,16 @@ export type BfsResult = {
   foundValue: number | null
   goalType: GoalType
 }
+
+export type ConnectedComponentsStep = BfsStep & {
+  componentRootNodeId: string
+}
+
+export type ConnectedComponentsResult = {
+  steps: ConnectedComponentsStep[]
+  componentCount: number
+  largestComponentSize: number
+  components: string[][]
+}
+
+export type ConnectedComponentsStrategy = 'bfs' | 'dfs'
