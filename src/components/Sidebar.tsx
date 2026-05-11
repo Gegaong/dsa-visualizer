@@ -102,12 +102,66 @@ export const Sidebar = ({
   const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
   const [shortestPathStart, setShortestPathStart] = useState('')
   const [shortestPathGoal, setShortestPathGoal] = useState('')
+  const algorithmDetails: Record<AlgorithmMode, {
+    label: string
+    description: string
+    runLabel: string
+    outputLabel: string
+    outputHint: string
+    needsInputs: boolean
+    usesTraversal: boolean
+  }> = {
+    components: {
+      label: 'Connected components',
+      description: 'Find every disconnected group of nodes in the graph.',
+      runLabel: 'Run components',
+      outputLabel: 'Components',
+      outputHint: 'Groups are shown here after a run.',
+      needsInputs: false,
+      usesTraversal: true,
+    },
+    cycle: {
+      label: 'Cycle detection',
+      description: 'Detect whether the graph contains a cycle.',
+      runLabel: 'Run cycle check',
+      outputLabel: 'Cycle',
+      outputHint: 'Shows whether a cycle exists once the run finishes.',
+      needsInputs: false,
+      usesTraversal: true,
+    },
+    bipartite: {
+      label: 'Bipartite check',
+      description: 'Try to split nodes into two sets with no internal edges.',
+      runLabel: 'Run bipartite check',
+      outputLabel: 'Bipartite',
+      outputHint: 'Shows whether a valid 2-coloring exists.',
+      needsInputs: false,
+      usesTraversal: true,
+    },
+    'shortest-path': {
+      label: 'Shortest path',
+      description: 'Find the shortest path in an unweighted graph.',
+      runLabel: 'Run shortest path',
+      outputLabel: 'Path',
+      outputHint: 'Path length and nodes are shown here after a run.',
+      needsInputs: true,
+      usesTraversal: false,
+    },
+    'topological-sort': {
+      label: 'Topological sort',
+      description: 'Order nodes so every edge points forward in the list (DAG only).',
+      runLabel: 'Run topo sort',
+      outputLabel: 'Order',
+      outputHint: 'A valid ordering is shown here after a run.',
+      needsInputs: false,
+      usesTraversal: false,
+    },
+  }
+  const selectedAlgorithm = algorithmDetails[algorithmMode]
+  const isComponentsMode = algorithmMode === 'components'
   const algoShort = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
-  const needsTraversalStrategy =
-    algorithmMode === 'components' ||
-    algorithmMode === 'cycle' ||
-    algorithmMode === 'bipartite'
-  const needsAlgorithmInputs = algorithmMode === 'shortest-path'
+  const needsTraversalStrategy = selectedAlgorithm.usesTraversal
+  const needsAlgorithmInputs = selectedAlgorithm.needsInputs
 
   // Enter confirms the field by moving focus away (same idea as “done typing”).
   const confirmNodeLabelFieldOnEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -364,105 +418,148 @@ export const Sidebar = ({
       )}
 
       {activePage === 'algorithms' && (
-        <div className="sidebar-page-body">
+        <div className="sidebar-page-body sidebar-page-body--algorithms">
           <div className="sidebar-section">
             <h3>Algorithm</h3>
-            <div className="pill-group">
-              <button
-                className={`btn btn-pill ${algorithmMode === 'components' ? 'btn-active' : ''}`}
-                type="button"
+            <label className="field algorithm-mode-field">
+              <span>Select algorithm</span>
+              <select
+                value={algorithmMode}
+                onChange={(event) => setAlgorithmMode(event.target.value as AlgorithmMode)}
                 disabled={isTraversalRunning}
-                onClick={() => setAlgorithmMode('components')}
               >
-                Connected components
-              </button>
-              <button
-                className={`btn btn-pill ${algorithmMode === 'cycle' ? 'btn-active' : ''}`}
-                type="button"
-                disabled={isTraversalRunning}
-                onClick={() => setAlgorithmMode('cycle')}
-              >
-                Cycle detection
-              </button>
-              <button
-                className={`btn btn-pill ${algorithmMode === 'bipartite' ? 'btn-active' : ''}`}
-                type="button"
-                disabled={isTraversalRunning}
-                onClick={() => setAlgorithmMode('bipartite')}
-              >
-                Bipartite check
-              </button>
-              <button
-                className={`btn btn-pill ${algorithmMode === 'shortest-path' ? 'btn-active' : ''}`}
-                type="button"
-                disabled={isTraversalRunning}
-                onClick={() => setAlgorithmMode('shortest-path')}
-              >
-                Shortest path
-              </button>
-              <button
-                className={`btn btn-pill ${algorithmMode === 'topological-sort' ? 'btn-active' : ''}`}
-                type="button"
-                disabled={isTraversalRunning}
-                onClick={() => setAlgorithmMode('topological-sort')}
-              >
-                Topological sort
-              </button>
+                <option value="components">Connected components</option>
+                <option value="cycle">Cycle detection</option>
+                <option value="bipartite">Bipartite check</option>
+                <option value="shortest-path">Shortest path</option>
+                <option value="topological-sort">Topological sort</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="sidebar-section algorithm-config-section">
+            <h3>Configuration</h3>
+            <div className="algorithm-config-content">
+              {needsTraversalStrategy && (
+                <div className="pill-group algorithm-traversal-buttons">
+                  <button
+                    className={`btn btn-pill ${algorithmTraversal === 'bfs' ? 'btn-active' : ''}`}
+                    type="button"
+                    disabled={isTraversalRunning}
+                    onClick={() => setAlgorithmTraversal('bfs')}
+                  >
+                    BFS
+                  </button>
+                  <button
+                    className={`btn btn-pill ${algorithmTraversal === 'dfs' ? 'btn-active' : ''}`}
+                    type="button"
+                    disabled={isTraversalRunning}
+                    onClick={() => setAlgorithmTraversal('dfs')}
+                  >
+                    DFS
+                  </button>
+                </div>
+              )}
+
+              {needsAlgorithmInputs && (
+                <div className="algorithm-inputs-section">
+                  <label className="field">
+                    <span>
+                      Start node <span className="required-indicator" aria-hidden="true">*</span>
+                    </span>
+                    <input
+                      type="text"
+                      value={shortestPathStart}
+                      onChange={(event) => setShortestPathStart(event.target.value.toUpperCase())}
+                      onKeyDown={confirmNodeLabelFieldOnEnter}
+                      disabled={isTraversalRunning}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>
+                      Goal node <span className="required-indicator" aria-hidden="true">*</span>
+                    </span>
+                    <input
+                      type="text"
+                      value={shortestPathGoal}
+                      onChange={(event) => setShortestPathGoal(event.target.value.toUpperCase())}
+                      onKeyDown={confirmNodeLabelFieldOnEnter}
+                      disabled={isTraversalRunning}
+                    />
+                  </label>
+                </div>
+              )}
+
+              {!needsTraversalStrategy && !needsAlgorithmInputs && (
+                <p className="hint">No extra setup needed.</p>
+              )}
             </div>
           </div>
 
-          {needsTraversalStrategy && (
-            <div className="sidebar-section">
-              <h3>Traversal strategy</h3>
-              <div className="pill-group">
-                <button
-                  className={`btn btn-pill ${algorithmTraversal === 'bfs' ? 'btn-active' : ''}`}
-                  type="button"
-                  disabled={isTraversalRunning}
-                  onClick={() => setAlgorithmTraversal('bfs')}
-                >
-                  BFS
-                </button>
-                <button
-                  className={`btn btn-pill ${algorithmTraversal === 'dfs' ? 'btn-active' : ''}`}
-                  type="button"
-                  disabled={isTraversalRunning}
-                  onClick={() => setAlgorithmTraversal('dfs')}
-                >
-                  DFS
-                </button>
+          {isComponentsMode ? (
+            <>
+              <div className="sidebar-section">
+                <h3>Run</h3>
+                <div className="algorithm-actions">
+                  <button
+                    className="btn btn-primary algorithm-run-btn"
+                    type="button"
+                    disabled={isTraversalRunning}
+                  >
+                    Run connected components
+                  </button>
+                  <p className="hint algorithm-status">Ready to run connected components.</p>
+                </div>
               </div>
-            </div>
-          )}
 
-          {needsAlgorithmInputs && (
-            <div className="sidebar-section algorithm-inputs-section">
-              <h3>Inputs</h3>
-              <label className="field">
-                <span>
-                  Start node <span className="required-indicator" aria-hidden="true">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={shortestPathStart}
-                  onChange={(event) => setShortestPathStart(event.target.value.toUpperCase())}
-                  onKeyDown={confirmNodeLabelFieldOnEnter}
-                  disabled={isTraversalRunning}
-                />
-              </label>
-              <label className="field">
-                <span>
-                  Goal node <span className="required-indicator" aria-hidden="true">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={shortestPathGoal}
-                  onChange={(event) => setShortestPathGoal(event.target.value.toUpperCase())}
-                  onKeyDown={confirmNodeLabelFieldOnEnter}
-                  disabled={isTraversalRunning}
-                />
-              </label>
-            </div>
+              <div className="sidebar-section">
+                <h3>Output</h3>
+                <div className="algorithm-output">
+                  <div className="output-row">
+                    <span className="output-label">Components found</span>
+                    <span className="output-value">—</span>
+                  </div>
+                  <div className="output-row">
+                    <span className="output-label">Largest size</span>
+                    <span className="output-value">—</span>
+                  </div>
+                  <div className="output-row output-row--stacked">
+                    <span className="output-label">Groups</span>
+                    <div className="output-list">—</div>
+                  </div>
+                  <p className="hint">Components will list node labels once the algorithm is wired.</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="sidebar-section">
+                <h3>Run</h3>
+                <div className="algorithm-actions">
+                  <button
+                    className="btn btn-primary algorithm-run-btn"
+                    type="button"
+                    disabled={isTraversalRunning}
+                  >
+                    {selectedAlgorithm.runLabel}
+                  </button>
+                  <p className="hint algorithm-status">
+                    Ready to run {selectedAlgorithm.label.toLowerCase()}.
+                  </p>
+                </div>
+              </div>
+
+              <div className="sidebar-section">
+                <h3>Output</h3>
+                <div className="algorithm-output">
+                  <div className="output-row">
+                    <span className="output-label">{selectedAlgorithm.outputLabel}</span>
+                    <span className="output-value">—</span>
+                  </div>
+                  <p className="hint">{selectedAlgorithm.outputHint}</p>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}
