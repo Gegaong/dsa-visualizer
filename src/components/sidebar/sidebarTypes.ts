@@ -1,0 +1,99 @@
+import type { GoalType, GraphPreset } from '../../types'
+import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+
+export type SidebarPage = 'canvas' | 'traversal' | 'algorithms'
+
+export type AlgorithmMode =
+  | 'components'
+  | 'cycle'
+  | 'bipartite'
+  | 'shortest-path'
+  | 'topological-sort'
+
+// State shared across pages: the two algorithm families mutually disable each other,
+// and graph edits freeze whenever either is active.
+export type SidebarSharedState = {
+  blockGraphEdits: boolean
+  isTraversalRunning: boolean
+  isConnectedComponentsSessionActive: boolean
+}
+
+export type CanvasSetupPageProps = {
+  blockGraphEdits: boolean
+  fillMin: string
+  fillMax: string
+  onFillMinChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onFillMaxChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onFillRangeBlur: () => void
+  onFillRangeKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void
+  onFillEmptyValues: () => void
+  canFillEmpty: boolean
+  onNullifyEmptyValues: () => void
+  canNullifyEmpty: boolean
+  onEmptyAllValues: () => void
+  canEmptyAll: boolean
+  onPresetClick: (preset: GraphPreset) => void
+}
+
+export type TraversalPageProps = SidebarSharedState & {
+  algorithmTab: TraversalStrategy
+  onAlgorithmTabChange: (tab: TraversalStrategy) => void
+  goalType: GoalType
+  onGoalTypeChange: (type: GoalType) => void
+  startNodeLabel: string
+  onStartNodeLabelChange: (value: string) => void
+  goalNodeLabel: string
+  onGoalNodeLabelChange: (value: string) => void
+  goalValueInput: string
+  onGoalValueInputChange: (value: string) => void
+  onRunTraversal: () => void
+  onStopTraversal: () => void
+  canRunTraversal: boolean
+  traversalStatusText: string
+  isTraversalPlaying: boolean
+  traversalPlaybackSpeed: number
+  onTraversalPlaybackSpeedChange: (value: number) => void
+  onPlayTraversal: () => void
+  onPauseTraversal: () => void
+  onNextTraversalStep: () => void
+  onPreviousTraversalStep: () => void
+  canStepForward: boolean
+  canStepBackward: boolean
+  canTogglePlay: boolean
+  isTraversalPlaybackComplete: boolean
+}
+
+export type ConnectedComponentsOutput = {
+  componentCount: number
+  largestSize: number
+  groupsText: string
+} | null
+
+export type AlgorithmsPageProps = SidebarSharedState & {
+  onAlgorithmModeChange?: (mode: AlgorithmMode) => void
+  onRunConnectedComponents: (strategy: TraversalStrategy) => void
+  onStopConnectedComponents: () => void
+  canRunConnectedComponents: boolean
+  connectedComponentsStatusText: string
+  isConnectedComponentsPlaybackPlaying: boolean
+  connectedComponentsPlaybackSpeed: number
+  onConnectedComponentsPlaybackSpeedChange: (value: number) => void
+  onPlayConnectedComponents: () => void
+  onPauseConnectedComponents: () => void
+  onNextConnectedComponentsStep: () => void
+  onPreviousConnectedComponentsStep: () => void
+  canConnectedComponentsStepForward: boolean
+  canConnectedComponentsStepBackward: boolean
+  canConnectedComponentsTogglePlay: boolean
+  isConnectedComponentsPlaybackComplete: boolean
+  connectedComponentsOutput: ConnectedComponentsOutput
+  connectedComponentsStepIndex: number
+  connectedComponentsStepTotal: number
+}
+
+export type SidebarProps = {
+  onSidebarSectionChange?: (nav: { from: SidebarPage; to: SidebarPage }) => void
+  canvasSetup: CanvasSetupPageProps
+  traversal: TraversalPageProps
+  algorithms: AlgorithmsPageProps
+}

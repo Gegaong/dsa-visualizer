@@ -11,8 +11,8 @@ import type {
 import type {
   ConnectedComponentsResult,
   TraversalStrategy,
-} from '../algorithms/types'
-import type { AlgorithmMode } from '../components/Sidebar'
+} from '../algorithms/algorithmstypes'
+import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 import {
   PLAYBACK_MIN_DELAY_MS,

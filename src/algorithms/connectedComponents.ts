@@ -3,7 +3,7 @@ import type {
   ConnectedComponentsResult,
   ConnectedComponentsStep,
   TraversalStrategy,
-} from './types'
+} from './algorithmstypes'
 import { buildWeaklyConnectedNeighborsMap } from './graphAdjacency'
 import { traverseReachableFrom } from './graphTraversal'
 import { sortIdsByLabel } from './sortIdsByLabel'

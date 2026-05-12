@@ -26,10 +26,8 @@ import { GraphNodeLayer } from './components/NodesLayer'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
 import { NodeContextMenu } from './components/NodeContextMenu'
-import {
-  Sidebar,
-  type SidebarPage,
-} from './components/Sidebar'
+import { Sidebar } from './components/sidebar/Sidebar'
+import type { SidebarPage } from './components/sidebar/sidebarTypes'
 
 import {
   sanitizeNumericInput,
@@ -45,7 +43,7 @@ import {
 import { isOverlapping } from './utils/geometry'
 import { buildPresetGraph } from './utils/presets'
 
-import type { TraversalStrategy } from './algorithms/types'
+import type { TraversalStrategy } from './algorithms/algorithmstypes'
 
 import { useTraversalPlayback } from './hooks/useTraversalPlayback'
 import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPlayback'
@@ -131,6 +129,7 @@ function App() {
   })
 
   const blockGraphInteraction = traversal.isTraversalRunning || cc.isConnectedComponentsRunning
+  const ccSessionActive = cc.connectedComponentsResult !== null || cc.isConnectedComponentsRunning
 
   const resetAllGraphAlgorithmVisualizations = useCallback(
     (idleAlgorithm: TraversalStrategy = algorithmTab) => {
@@ -811,69 +810,77 @@ function App() {
         </section>
 
         <Sidebar
-          algorithmTab={algorithmTab}
-          onAlgorithmTabChange={handleAlgorithmTabChange}
-          goalType={traversal.goalType}
-          onGoalTypeChange={traversal.handleGoalTypeChange}
-          startNodeLabel={traversal.startNodeLabel}
-          onStartNodeLabelChange={traversal.handleStartNodeLabelChange}
-          goalNodeLabel={traversal.goalNodeLabel}
-          onGoalNodeLabelChange={traversal.handleGoalNodeLabelChange}
-          goalValueInput={traversal.goalValueInput}
-          onGoalValueInputChange={traversal.handleGoalValueInputChange}
-          onRunTraversal={traversal.runTraversalFromSidebar}
-          onStopTraversal={traversal.resetTraversalVisualization}
-          canRunTraversal={traversal.canRunTraversal}
-          traversalStatusText={traversal.sidebarTraversalStatusText}
-          isTraversalRunning={traversal.isTraversalRunning}
-          blockGraphEdits={blockGraphInteraction}
-          isTraversalPlaying={traversal.isPlaying}
-          traversalPlaybackSpeed={traversal.playbackSpeed}
-          onTraversalPlaybackSpeedChange={traversal.handleTraversalPlaybackSpeedChange}
-          onPlayTraversal={traversal.playTraversal}
-          onPauseTraversal={traversal.pauseTraversal}
-          onNextTraversalStep={traversal.stepTraversalForward}
-          onPreviousTraversalStep={traversal.stepTraversalBackward}
-          canStepForward={traversal.canStepForward}
-          canStepBackward={traversal.canStepBackward}
-          canTogglePlay={traversal.canTogglePlay}
-          isTraversalPlaybackComplete={traversal.isPlaybackComplete}
-          fillMin={fillMin}
-          fillMax={fillMax}
-          onFillMinChange={handleFillMinChange}
-          onFillMaxChange={handleFillMaxChange}
-          onFillRangeBlur={syncFillRange}
-          onFillRangeKeyDown={handleFillRangeKeyDown}
-          onFillEmptyValues={fillEmptyValues}
-          canFillEmpty={canFillEmpty}
-          onNullifyEmptyValues={nullifyEmptyValues}
-          canNullifyEmpty={canNullifyEmpty}
-          onEmptyAllValues={handleEmptyAllClick}
-          canEmptyAll={canEmptyAll}
-          onPresetClick={handlePresetClick}
           onSidebarSectionChange={handleSidebarSectionChange}
-          onAlgorithmModeChange={cc.handleAlgorithmModeChangeFromSidebar}
-          onRunConnectedComponents={cc.runConnectedComponentsFromSidebar}
-          onStopConnectedComponents={cc.resetConnectedComponentsVisualization}
-          canRunConnectedComponents={cc.canRunConnectedComponents}
-          connectedComponentsStatusText={cc.connectedComponentsStatusText}
-          isConnectedComponentsPlaybackPlaying={cc.isPlaying}
-          connectedComponentsPlaybackSpeed={cc.playbackSpeed}
-          onConnectedComponentsPlaybackSpeedChange={cc.handleConnectedComponentsPlaybackSpeedChange}
-          onPlayConnectedComponents={cc.playConnectedComponents}
-          onPauseConnectedComponents={cc.pauseConnectedComponents}
-          onNextConnectedComponentsStep={cc.stepConnectedComponentsForward}
-          onPreviousConnectedComponentsStep={cc.stepConnectedComponentsBackward}
-          canConnectedComponentsStepForward={cc.canStepForward}
-          canConnectedComponentsStepBackward={cc.canStepBackward}
-          canConnectedComponentsTogglePlay={cc.canTogglePlay}
-          isConnectedComponentsPlaybackComplete={cc.isPlaybackComplete}
-          connectedComponentsOutput={cc.ccOutput}
-          connectedComponentsStepIndex={cc.stepIndex}
-          connectedComponentsStepTotal={cc.connectedComponentsResult?.steps.length ?? 0}
-          isConnectedComponentsSessionActive={
-            cc.connectedComponentsResult !== null || cc.isConnectedComponentsRunning
-          }
+          canvasSetup={{
+            blockGraphEdits: blockGraphInteraction,
+            fillMin,
+            fillMax,
+            onFillMinChange: handleFillMinChange,
+            onFillMaxChange: handleFillMaxChange,
+            onFillRangeBlur: syncFillRange,
+            onFillRangeKeyDown: handleFillRangeKeyDown,
+            onFillEmptyValues: fillEmptyValues,
+            canFillEmpty,
+            onNullifyEmptyValues: nullifyEmptyValues,
+            canNullifyEmpty,
+            onEmptyAllValues: handleEmptyAllClick,
+            canEmptyAll,
+            onPresetClick: handlePresetClick,
+          }}
+          traversal={{
+            blockGraphEdits: blockGraphInteraction,
+            isTraversalRunning: traversal.isTraversalRunning,
+            isConnectedComponentsSessionActive: ccSessionActive,
+            algorithmTab,
+            onAlgorithmTabChange: handleAlgorithmTabChange,
+            goalType: traversal.goalType,
+            onGoalTypeChange: traversal.handleGoalTypeChange,
+            startNodeLabel: traversal.startNodeLabel,
+            onStartNodeLabelChange: traversal.handleStartNodeLabelChange,
+            goalNodeLabel: traversal.goalNodeLabel,
+            onGoalNodeLabelChange: traversal.handleGoalNodeLabelChange,
+            goalValueInput: traversal.goalValueInput,
+            onGoalValueInputChange: traversal.handleGoalValueInputChange,
+            onRunTraversal: traversal.runTraversalFromSidebar,
+            onStopTraversal: traversal.resetTraversalVisualization,
+            canRunTraversal: traversal.canRunTraversal,
+            traversalStatusText: traversal.sidebarTraversalStatusText,
+            isTraversalPlaying: traversal.isPlaying,
+            traversalPlaybackSpeed: traversal.playbackSpeed,
+            onTraversalPlaybackSpeedChange: traversal.handleTraversalPlaybackSpeedChange,
+            onPlayTraversal: traversal.playTraversal,
+            onPauseTraversal: traversal.pauseTraversal,
+            onNextTraversalStep: traversal.stepTraversalForward,
+            onPreviousTraversalStep: traversal.stepTraversalBackward,
+            canStepForward: traversal.canStepForward,
+            canStepBackward: traversal.canStepBackward,
+            canTogglePlay: traversal.canTogglePlay,
+            isTraversalPlaybackComplete: traversal.isPlaybackComplete,
+          }}
+          algorithms={{
+            blockGraphEdits: blockGraphInteraction,
+            isTraversalRunning: traversal.isTraversalRunning,
+            isConnectedComponentsSessionActive: ccSessionActive,
+            onAlgorithmModeChange: cc.handleAlgorithmModeChangeFromSidebar,
+            onRunConnectedComponents: cc.runConnectedComponentsFromSidebar,
+            onStopConnectedComponents: cc.resetConnectedComponentsVisualization,
+            canRunConnectedComponents: cc.canRunConnectedComponents,
+            connectedComponentsStatusText: cc.connectedComponentsStatusText,
+            isConnectedComponentsPlaybackPlaying: cc.isPlaying,
+            connectedComponentsPlaybackSpeed: cc.playbackSpeed,
+            onConnectedComponentsPlaybackSpeedChange: cc.handleConnectedComponentsPlaybackSpeedChange,
+            onPlayConnectedComponents: cc.playConnectedComponents,
+            onPauseConnectedComponents: cc.pauseConnectedComponents,
+            onNextConnectedComponentsStep: cc.stepConnectedComponentsForward,
+            onPreviousConnectedComponentsStep: cc.stepConnectedComponentsBackward,
+            canConnectedComponentsStepForward: cc.canStepForward,
+            canConnectedComponentsStepBackward: cc.canStepBackward,
+            canConnectedComponentsTogglePlay: cc.canTogglePlay,
+            isConnectedComponentsPlaybackComplete: cc.isPlaybackComplete,
+            connectedComponentsOutput: cc.ccOutput,
+            connectedComponentsStepIndex: cc.stepIndex,
+            connectedComponentsStepTotal: cc.connectedComponentsResult?.steps.length ?? 0,
+          }}
         />
       </div>
 

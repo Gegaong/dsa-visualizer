@@ -1,5 +1,5 @@
 import type { GraphNode } from '../types'
-import type { ConnectedComponentsResult } from './types'
+import type { ConnectedComponentsResult } from './algorithmstypes'
 import { sortIdsByLabel } from './sortIdsByLabel'
 
 // One string per component (comma-separated labels), components joined with " | ".

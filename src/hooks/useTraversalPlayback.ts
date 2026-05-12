@@ -12,7 +12,7 @@ import type {
 import type {
   BfsResult,
   TraversalStrategy,
-} from '../algorithms/types'
+} from '../algorithms/algorithmstypes'
 import {
   PLAYBACK_MIN_DELAY_MS,
   PLAYBACK_MAX_DELAY_MS,
