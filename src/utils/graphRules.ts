@@ -11,12 +11,10 @@ export const isEdgeDirectionAllowed = (
   }
 
   if (fromNode.value === null) {
-    if (direction === 'both') return false
     if (direction === 'forward') return false
   }
 
   if (toNode.value === null) {
-    if (direction === 'both') return false
     if (direction === 'backward') return false
   }
 
@@ -47,16 +45,22 @@ export const sanitizeEdgesForNullNodes = (edges: GraphEdge[], nodeIds: string[])
     }
 
     if (fromIsNull) {
+      if (edge.direction === 'forward') return
       if (edge.direction === 'both') {
         nextEdges.push({ ...edge, direction: 'backward' })
+        return
       }
+      nextEdges.push(edge)
       return
     }
 
     if (toIsNull) {
+      if (edge.direction === 'backward') return
       if (edge.direction === 'both') {
         nextEdges.push({ ...edge, direction: 'forward' })
+        return
       }
+      nextEdges.push(edge)
       return
     }
 

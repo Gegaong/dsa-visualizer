@@ -553,7 +553,14 @@ function App() {
       direction,
     }
     nextId.current += 1
-    setEdges((prev) => [...prev, newEdge])
+    const nullNodeIds = [
+      ...(nodes.find((n) => n.id === fromId)?.value === null ? [fromId] : []),
+      ...(nodes.find((n) => n.id === toId)?.value === null ? [toId] : []),
+    ]
+    setEdges((prev) => {
+      const withNew = [...prev, newEdge]
+      return nullNodeIds.length > 0 ? sanitizeEdgesForNullNodes(withNew, nullNodeIds) : withNew
+    })
   }
 
   const toggleEdgeDirection = (edgeId: string) => {
