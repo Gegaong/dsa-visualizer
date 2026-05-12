@@ -40,3 +40,13 @@ export type ConnectedComponentsResult = {
 }
 
 export type TraversalStrategy = 'bfs' | 'dfs'
+
+export type CycleDetectionStep = BfsStep
+
+export type CycleDetectionResult = {
+  steps: CycleDetectionStep[]
+  hasCycle: boolean
+  // Node ids forming one detected directed cycle, in traversal order (consecutive ids,
+  // and the last → first, each have an edge). Empty when no cycle exists.
+  cycleNodeIds: string[]
+}

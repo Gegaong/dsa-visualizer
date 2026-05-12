@@ -36,7 +36,8 @@ type UseTraversalPlaybackParams = {
   nodes: GraphNode[]
   edges: GraphEdge[]
   algorithmTab: TraversalStrategy
-  onClearCC: () => void
+  // Clears any other canvas-algorithm visualizations (weak CC, cycle detection) before a run.
+  onClearOtherGraphAlgorithms: () => void
 }
 
 export type TraversalPlaybackHandle = {
@@ -85,7 +86,7 @@ export function useTraversalPlayback({
   nodes,
   edges,
   algorithmTab,
-  onClearCC,
+  onClearOtherGraphAlgorithms,
 }: UseTraversalPlaybackParams): TraversalPlaybackHandle {
   const [goalType, setGoalType] = useState<GoalType>('target-node')
   const [startNodeLabel, setStartNodeLabel] = useState('')
@@ -185,7 +186,7 @@ export function useTraversalPlayback({
   const runTraversalFromSidebar = () => {
     if (traversalPlayback.isPlaying) return
     traversalPlaybackStopRef.current()
-    onClearCC()
+    onClearOtherGraphAlgorithms()
     setTraversalVisitedNodeIds([])
     setTraversalCurrentNodeId(null)
     setTraversalGoalNodeIds([])

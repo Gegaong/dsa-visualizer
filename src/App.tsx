@@ -47,6 +47,7 @@ import type { TraversalStrategy } from './algorithms/algorithmstypes'
 
 import { useTraversalPlayback } from './hooks/useTraversalPlayback'
 import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPlayback'
+import { useCycleDetectionPlayback } from './hooks/useCycleDetectionPlayback'
 import { useNodeDragging } from './hooks/useNodeDragging'
 
 const CANVAS_ZOOM_MIN = 0.5
@@ -100,7 +101,10 @@ function App() {
     nodes,
     edges,
     algorithmTab,
-    onClearCC: () => cc.clearConnectedComponentsAlgorithmStateOnly(),
+    onClearOtherGraphAlgorithms: () => {
+      cc.clearConnectedComponentsAlgorithmStateOnly()
+      cycleDetection.clearCycleDetectionAlgorithmStateOnly()
+    },
   })
 
   const traversalVisualSetters = {
@@ -111,6 +115,13 @@ function App() {
   }
 
   const cc = useConnectedComponentsPlayback({
+    nodes,
+    edges,
+    traversalVisualSetters,
+    onResetTraversal: () => traversal.resetTraversalVisualization(),
+  })
+
+  const cycleDetection = useCycleDetectionPlayback({
     nodes,
     edges,
     traversalVisualSetters,
@@ -131,15 +142,21 @@ function App() {
     isDeleteEdgeMode,
   })
 
-  const blockGraphInteraction = traversal.isTraversalRunning || cc.isConnectedComponentsRunning
+  const blockGraphInteraction =
+    traversal.isTraversalRunning ||
+    cc.isConnectedComponentsRunning ||
+    cycleDetection.isCycleDetectionRunning
   const ccSessionActive = cc.connectedComponentsResult !== null || cc.isConnectedComponentsRunning
+  const cycleSessionActive =
+    cycleDetection.cycleDetectionResult !== null || cycleDetection.isCycleDetectionRunning
 
   const resetAllGraphAlgorithmVisualizations = useCallback(
     (idleAlgorithm: TraversalStrategy = algorithmTab) => {
       traversal.resetTraversalVisualization(idleAlgorithm)
       cc.resetConnectedComponentsVisualization()
+      cycleDetection.resetCycleDetectionVisualization()
     },
-    [algorithmTab, traversal, cc],
+    [algorithmTab, traversal, cc, cycleDetection],
   )
 
   const closeContextMenu = () => setContextMenu(null)
@@ -641,9 +658,10 @@ function App() {
       }
       if (from === 'algorithms' && to !== 'algorithms') {
         cc.resetConnectedComponentsVisualization()
+        cycleDetection.resetCycleDetectionVisualization()
       }
     },
-    [traversal, cc],
+    [traversal, cc, cycleDetection],
   )
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
@@ -844,6 +862,7 @@ function App() {
             blockGraphEdits: blockGraphInteraction,
             isTraversalRunning: traversal.isTraversalRunning,
             isConnectedComponentsSessionActive: ccSessionActive,
+            isCycleDetectionSessionActive: cycleSessionActive,
             algorithmTab,
             onAlgorithmTabChange: handleAlgorithmTabChange,
             goalType: traversal.goalType,
@@ -874,7 +893,11 @@ function App() {
             blockGraphEdits: blockGraphInteraction,
             isTraversalRunning: traversal.isTraversalRunning,
             isConnectedComponentsSessionActive: ccSessionActive,
-            onAlgorithmModeChange: cc.handleAlgorithmModeChangeFromSidebar,
+            isCycleDetectionSessionActive: cycleSessionActive,
+            onAlgorithmModeChange: (mode) => {
+              cc.handleAlgorithmModeChangeFromSidebar(mode)
+              cycleDetection.handleAlgorithmModeChangeFromSidebar(mode)
+            },
             onRunConnectedComponents: cc.runConnectedComponentsFromSidebar,
             onStopConnectedComponents: cc.resetConnectedComponentsVisualization,
             canRunConnectedComponents: cc.canRunConnectedComponents,
@@ -893,6 +916,24 @@ function App() {
             connectedComponentsOutput: cc.ccOutput,
             connectedComponentsStepIndex: cc.stepIndex,
             connectedComponentsStepTotal: cc.connectedComponentsResult?.steps.length ?? 0,
+            onRunCycleDetection: cycleDetection.runCycleDetectionFromSidebar,
+            onStopCycleDetection: cycleDetection.resetCycleDetectionVisualization,
+            canRunCycleDetection: cycleDetection.canRunCycleDetection,
+            cycleDetectionStatusText: cycleDetection.cycleDetectionStatusText,
+            isCycleDetectionPlaybackPlaying: cycleDetection.isPlaying,
+            cycleDetectionPlaybackSpeed: cycleDetection.playbackSpeed,
+            onCycleDetectionPlaybackSpeedChange: cycleDetection.handleCycleDetectionPlaybackSpeedChange,
+            onPlayCycleDetection: cycleDetection.playCycleDetection,
+            onPauseCycleDetection: cycleDetection.pauseCycleDetection,
+            onNextCycleDetectionStep: cycleDetection.stepCycleDetectionForward,
+            onPreviousCycleDetectionStep: cycleDetection.stepCycleDetectionBackward,
+            canCycleDetectionStepForward: cycleDetection.canStepForward,
+            canCycleDetectionStepBackward: cycleDetection.canStepBackward,
+            canCycleDetectionTogglePlay: cycleDetection.canTogglePlay,
+            isCycleDetectionPlaybackComplete: cycleDetection.isPlaybackComplete,
+            cycleDetectionOutput: cycleDetection.cycleOutput,
+            cycleDetectionStepIndex: cycleDetection.stepIndex,
+            cycleDetectionStepTotal: cycleDetection.cycleDetectionResult?.steps.length ?? 0,
           }}
         />
       </div>

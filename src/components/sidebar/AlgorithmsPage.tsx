@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
 import { useStepPlayback } from '../../hooks/useStepPlayback'
 import { PLAYBACK_MAX_DELAY_MS, PLAYBACK_MIN_DELAY_MS } from '../../utils/constants'
-import type { AlgorithmMode, AlgorithmsPageProps } from './sidebarTypes'
+import type { AlgorithmMode, AlgorithmsPageProps, CycleDetectionOutput } from './sidebarTypes'
 import { PlaybackControls } from './PlaybackControls'
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
@@ -28,10 +28,10 @@ const ALGORITHM_DETAILS: Record<AlgorithmMode, {
   },
   cycle: {
     label: 'Cycle detection',
-    description: 'Detect whether the graph contains a cycle.',
-    runLabel: 'Run cycle check',
+    description: 'Detect whether the directed graph contains a cycle.',
+    runLabel: 'Run cycle detection',
     outputLabel: 'Cycle',
-    outputHint: 'Shows whether a cycle exists once the run finishes.',
+    outputHint: 'Shows whether a directed cycle exists once the run finishes.',
     needsInputs: false,
     usesTraversal: true,
   },
@@ -75,13 +75,44 @@ const GRAPH_ALGO_MOCK_STEPS: Record<AlgorithmMode, number> = {
   'topological-sort': 15,
 }
 
+// "Playback step" output value for the real (canvas-wired) algorithms.
+const formatPlaybackStepDisplay = (sessionActive: boolean, stepIndex: number, stepTotal: number) => {
+  if (!sessionActive || stepTotal === 0) return '—'
+  if (stepIndex >= 0) return `${stepIndex + 1} / ${stepTotal}`
+  return `Ready / ${stepTotal}`
+}
+
+// Output rows for cycle detection: whether a cycle was found and, if so, its node path.
+function CycleOutputRows({ output }: { output: CycleDetectionOutput }) {
+  const cycleFound = output === null ? '—' : output.hasCycle ? 'Yes' : 'No'
+  const cyclePath =
+    output !== null && output.hasCycle && output.cycleNodeLabels.length > 0
+      ? `${output.cycleNodeLabels.join(' → ')} → ${output.cycleNodeLabels[0]}`
+      : null
+  return (
+    <>
+      <div className="output-row">
+        <span className="output-label">Cycle found</span>
+        <span className="output-value">{cycleFound}</span>
+      </div>
+      {cyclePath !== null && (
+        <div className="output-row output-row--stacked">
+          <span className="output-label">Cycle path</span>
+          <div className="output-list">{cyclePath}</div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // Sidebar page: algorithm picker, per-algorithm configuration, playback, and output.
-// Connected-components playback is real (wired to the canvas); the other algorithms
-// currently run a mock playback preview only.
+// Weak connected components and cycle detection are real (wired to the canvas); the
+// remaining algorithms currently run a mock playback preview only.
 export const AlgorithmsPage = ({
   blockGraphEdits,
   isTraversalRunning,
   isConnectedComponentsSessionActive,
+  isCycleDetectionSessionActive,
   onAlgorithmModeChange,
   onRunConnectedComponents,
   onStopConnectedComponents,
@@ -101,6 +132,24 @@ export const AlgorithmsPage = ({
   connectedComponentsOutput,
   connectedComponentsStepIndex,
   connectedComponentsStepTotal,
+  onRunCycleDetection,
+  onStopCycleDetection,
+  canRunCycleDetection,
+  cycleDetectionStatusText,
+  isCycleDetectionPlaybackPlaying,
+  cycleDetectionPlaybackSpeed,
+  onCycleDetectionPlaybackSpeedChange,
+  onPlayCycleDetection,
+  onPauseCycleDetection,
+  onNextCycleDetectionStep,
+  onPreviousCycleDetectionStep,
+  canCycleDetectionStepForward,
+  canCycleDetectionStepBackward,
+  canCycleDetectionTogglePlay,
+  isCycleDetectionPlaybackComplete,
+  cycleDetectionOutput,
+  cycleDetectionStepIndex,
+  cycleDetectionStepTotal,
 }: AlgorithmsPageProps) => {
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>('components')
   const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
@@ -113,6 +162,8 @@ export const AlgorithmsPage = ({
 
   const selectedAlgorithm = ALGORITHM_DETAILS[algorithmMode]
   const isComponentsMode = algorithmMode === 'components'
+  const isCycleMode = algorithmMode === 'cycle'
+  const isRealAlgorithmMode = isComponentsMode || isCycleMode
   const needsTraversalStrategy = selectedAlgorithm.usesTraversal
   const needsAlgorithmInputs = selectedAlgorithm.needsInputs
 
@@ -129,7 +180,7 @@ export const AlgorithmsPage = ({
   }, [algorithmMode])
 
   const mockStepsTotal =
-    graphAlgoArmed && !isComponentsMode ? GRAPH_ALGO_MOCK_STEPS[algorithmMode] : 0
+    graphAlgoArmed && !isRealAlgorithmMode ? GRAPH_ALGO_MOCK_STEPS[algorithmMode] : 0
 
   const graphAlgoPlayback = useStepPlayback({
     stepCount: mockStepsTotal,
@@ -143,11 +194,12 @@ export const AlgorithmsPage = ({
   const algorithmPickerFrozen =
     blockGraphEdits ||
     graphAlgoArmed ||
-    (isComponentsMode && isConnectedComponentsSessionActive)
+    (isComponentsMode && isConnectedComponentsSessionActive) ||
+    (isCycleMode && isCycleDetectionSessionActive)
 
   const toggleGraphAlgoRun = () => {
-    if (isTraversalRunning || isConnectedComponentsSessionActive) return
-    if (isComponentsMode) return
+    if (isTraversalRunning || isConnectedComponentsSessionActive || isCycleDetectionSessionActive) return
+    if (isRealAlgorithmMode) return
     if (graphAlgoArmed) {
       setGraphAlgoArmed(false)
       return
@@ -165,9 +217,20 @@ export const AlgorithmsPage = ({
     onRunConnectedComponents(algorithmTraversal)
   }
 
+  const toggleCycleDetectionRun = () => {
+    if (isTraversalRunning) return
+    if (isCycleDetectionSessionActive) {
+      onStopCycleDetection()
+      return
+    }
+    onRunCycleDetection(algorithmTraversal)
+  }
+
   let graphAlgoPlaybackHint: string
   if (isComponentsMode) {
     graphAlgoPlaybackHint = connectedComponentsStatusText
+  } else if (isCycleMode) {
+    graphAlgoPlaybackHint = cycleDetectionStatusText
   } else if (!graphAlgoArmed) {
     graphAlgoPlaybackHint = `Configure if needed, then press Run to preview ${selectedAlgorithm.label.toLowerCase()} playback.`
   } else if (graphAlgoPlayback.stepIndex < 0) {
@@ -179,16 +242,143 @@ export const AlgorithmsPage = ({
   }
 
   let playbackStepDisplay: string
-  if (!isComponentsMode) {
-    playbackStepDisplay = graphAlgoArmed && graphAlgoPlayback.stepIndex >= 0
-      ? `${graphAlgoPlayback.stepIndex + 1} / ${mockStepsTotal}`
-      : '—'
-  } else if (!isConnectedComponentsSessionActive || connectedComponentsStepTotal === 0) {
-    playbackStepDisplay = '—'
-  } else if (connectedComponentsStepIndex >= 0) {
-    playbackStepDisplay = `${connectedComponentsStepIndex + 1} / ${connectedComponentsStepTotal}`
+  if (isComponentsMode) {
+    playbackStepDisplay = formatPlaybackStepDisplay(
+      isConnectedComponentsSessionActive,
+      connectedComponentsStepIndex,
+      connectedComponentsStepTotal,
+    )
+  } else if (isCycleMode) {
+    playbackStepDisplay = formatPlaybackStepDisplay(
+      isCycleDetectionSessionActive,
+      cycleDetectionStepIndex,
+      cycleDetectionStepTotal,
+    )
+  } else if (graphAlgoArmed && graphAlgoPlayback.stepIndex >= 0) {
+    playbackStepDisplay = `${graphAlgoPlayback.stepIndex + 1} / ${mockStepsTotal}`
   } else {
-    playbackStepDisplay = `Ready / ${connectedComponentsStepTotal}`
+    playbackStepDisplay = '—'
+  }
+
+  let outputRows
+  if (isComponentsMode) {
+    outputRows = (
+      <>
+        <div className="output-row">
+          <span className="output-label">Components found</span>
+          <span className="output-value">
+            {connectedComponentsOutput !== null ? connectedComponentsOutput.componentCount : '—'}
+          </span>
+        </div>
+        <div className="output-row">
+          <span className="output-label">Largest size</span>
+          <span className="output-value">
+            {connectedComponentsOutput !== null ? connectedComponentsOutput.largestSize : '—'}
+          </span>
+        </div>
+        <div className="output-row output-row--stacked">
+          <span className="output-label">Groups</span>
+          <div className="output-list">
+            {connectedComponentsOutput !== null ? connectedComponentsOutput.groupsText : '—'}
+          </div>
+        </div>
+      </>
+    )
+  } else if (isCycleMode) {
+    outputRows = <CycleOutputRows output={cycleDetectionOutput} />
+  } else {
+    outputRows = (
+      <>
+        <div className="output-row">
+          <span className="output-label">{selectedAlgorithm.outputLabel}</span>
+          <span className="output-value">—</span>
+        </div>
+        <p className="hint">{selectedAlgorithm.outputHint}</p>
+      </>
+    )
+  }
+
+  let playbackControls
+  if (isComponentsMode) {
+    playbackControls = (
+      <PlaybackControls
+        runLabel={selectedAlgorithm.runLabel}
+        stopLabel="Stop run"
+        isRunActive={isConnectedComponentsSessionActive}
+        onRunToggle={toggleConnectedComponentsRun}
+        runDisabled={
+          isTraversalRunning ||
+          (!isConnectedComponentsSessionActive && !canRunConnectedComponents)
+        }
+        onPrevious={onPreviousConnectedComponentsStep}
+        onNext={onNextConnectedComponentsStep}
+        onPlayPauseToggle={
+          isConnectedComponentsPlaybackPlaying
+            ? onPauseConnectedComponents
+            : onPlayConnectedComponents
+        }
+        isPlaying={isConnectedComponentsPlaybackPlaying}
+        isPlaybackComplete={isConnectedComponentsPlaybackComplete}
+        canStepBackward={canConnectedComponentsStepBackward}
+        canStepForward={canConnectedComponentsStepForward}
+        canTogglePlay={canConnectedComponentsTogglePlay}
+        stepControlsDisabled={isTraversalRunning}
+        speed={connectedComponentsPlaybackSpeed}
+        onSpeedChange={onConnectedComponentsPlaybackSpeedChange}
+      />
+    )
+  } else if (isCycleMode) {
+    playbackControls = (
+      <PlaybackControls
+        runLabel={selectedAlgorithm.runLabel}
+        stopLabel="Stop run"
+        isRunActive={isCycleDetectionSessionActive}
+        onRunToggle={toggleCycleDetectionRun}
+        runDisabled={
+          isTraversalRunning ||
+          (!isCycleDetectionSessionActive && !canRunCycleDetection)
+        }
+        onPrevious={onPreviousCycleDetectionStep}
+        onNext={onNextCycleDetectionStep}
+        onPlayPauseToggle={
+          isCycleDetectionPlaybackPlaying ? onPauseCycleDetection : onPlayCycleDetection
+        }
+        isPlaying={isCycleDetectionPlaybackPlaying}
+        isPlaybackComplete={isCycleDetectionPlaybackComplete}
+        canStepBackward={canCycleDetectionStepBackward}
+        canStepForward={canCycleDetectionStepForward}
+        canTogglePlay={canCycleDetectionTogglePlay}
+        stepControlsDisabled={isTraversalRunning}
+        speed={cycleDetectionPlaybackSpeed}
+        onSpeedChange={onCycleDetectionPlaybackSpeedChange}
+      />
+    )
+  } else {
+    playbackControls = (
+      <PlaybackControls
+        runLabel={selectedAlgorithm.runLabel}
+        stopLabel="Stop run"
+        isRunActive={graphAlgoArmed}
+        onRunToggle={toggleGraphAlgoRun}
+        runDisabled={
+          !graphAlgoArmed &&
+          (isTraversalRunning || isConnectedComponentsSessionActive || isCycleDetectionSessionActive)
+        }
+        onPrevious={() => graphAlgoPlayback.stepBackward()}
+        onNext={() => graphAlgoPlayback.stepForward()}
+        onPlayPauseToggle={() => graphAlgoPlayback.togglePlay()}
+        isPlaying={graphAlgoPlayback.isPlaying}
+        isPlaybackComplete={graphAlgoPlayback.isPlaybackComplete}
+        canStepBackward={graphAlgoPlayback.canStepBackward}
+        canStepForward={graphAlgoPlayback.canStepForward}
+        canTogglePlay={graphAlgoPlayback.canTogglePlay}
+        stepControlsDisabled={
+          isTraversalRunning || isConnectedComponentsSessionActive || isCycleDetectionSessionActive
+        }
+        speed={graphAlgoPlayback.playbackSpeed}
+        onSpeedChange={(value) => graphAlgoPlayback.setPlaybackSpeed(value)}
+      />
+    )
   }
 
   return (
@@ -272,54 +462,7 @@ export const AlgorithmsPage = ({
 
       <div className="sidebar-section">
         <h3>Playback</h3>
-        {isComponentsMode ? (
-          <PlaybackControls
-            runLabel={selectedAlgorithm.runLabel}
-            stopLabel="Stop run"
-            isRunActive={isConnectedComponentsSessionActive}
-            onRunToggle={toggleConnectedComponentsRun}
-            runDisabled={
-              isTraversalRunning ||
-              (!isConnectedComponentsSessionActive && !canRunConnectedComponents)
-            }
-            onPrevious={onPreviousConnectedComponentsStep}
-            onNext={onNextConnectedComponentsStep}
-            onPlayPauseToggle={
-              isConnectedComponentsPlaybackPlaying
-                ? onPauseConnectedComponents
-                : onPlayConnectedComponents
-            }
-            isPlaying={isConnectedComponentsPlaybackPlaying}
-            isPlaybackComplete={isConnectedComponentsPlaybackComplete}
-            canStepBackward={canConnectedComponentsStepBackward}
-            canStepForward={canConnectedComponentsStepForward}
-            canTogglePlay={canConnectedComponentsTogglePlay}
-            stepControlsDisabled={isTraversalRunning}
-            speed={connectedComponentsPlaybackSpeed}
-            onSpeedChange={onConnectedComponentsPlaybackSpeedChange}
-          />
-        ) : (
-          <PlaybackControls
-            runLabel={selectedAlgorithm.runLabel}
-            stopLabel="Stop run"
-            isRunActive={graphAlgoArmed}
-            onRunToggle={toggleGraphAlgoRun}
-            runDisabled={
-              !graphAlgoArmed && (isTraversalRunning || isConnectedComponentsSessionActive)
-            }
-            onPrevious={() => graphAlgoPlayback.stepBackward()}
-            onNext={() => graphAlgoPlayback.stepForward()}
-            onPlayPauseToggle={() => graphAlgoPlayback.togglePlay()}
-            isPlaying={graphAlgoPlayback.isPlaying}
-            isPlaybackComplete={graphAlgoPlayback.isPlaybackComplete}
-            canStepBackward={graphAlgoPlayback.canStepBackward}
-            canStepForward={graphAlgoPlayback.canStepForward}
-            canTogglePlay={graphAlgoPlayback.canTogglePlay}
-            stepControlsDisabled={isTraversalRunning || isConnectedComponentsSessionActive}
-            speed={graphAlgoPlayback.playbackSpeed}
-            onSpeedChange={(value) => graphAlgoPlayback.setPlaybackSpeed(value)}
-          />
-        )}
+        {playbackControls}
         <p className="hint">{graphAlgoPlaybackHint}</p>
       </div>
 
@@ -330,43 +473,7 @@ export const AlgorithmsPage = ({
             <span className="output-label">Playback step</span>
             <span className="output-value">{playbackStepDisplay}</span>
           </div>
-
-          {isComponentsMode ? (
-            <>
-              <div className="output-row">
-                <span className="output-label">Components found</span>
-                <span className="output-value">
-                  {connectedComponentsOutput !== null
-                    ? connectedComponentsOutput.componentCount
-                    : '—'}
-                </span>
-              </div>
-              <div className="output-row">
-                <span className="output-label">Largest size</span>
-                <span className="output-value">
-                  {connectedComponentsOutput !== null
-                    ? connectedComponentsOutput.largestSize
-                    : '—'}
-                </span>
-              </div>
-              <div className="output-row output-row--stacked">
-                <span className="output-label">Groups</span>
-                <div className="output-list">
-                  {connectedComponentsOutput !== null
-                    ? connectedComponentsOutput.groupsText
-                    : '—'}
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="output-row">
-                <span className="output-label">{selectedAlgorithm.outputLabel}</span>
-                <span className="output-value">—</span>
-              </div>
-              <p className="hint">{selectedAlgorithm.outputHint}</p>
-            </>
-          )}
+          {outputRows}
         </div>
       </div>
     </div>

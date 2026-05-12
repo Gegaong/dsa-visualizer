@@ -10,12 +10,13 @@ export type AlgorithmMode =
   | 'shortest-path'
   | 'topological-sort'
 
-// State shared across pages: the two algorithm families mutually disable each other,
-// and graph edits freeze whenever either is active.
+// State shared across pages: the canvas-algorithm families mutually disable each other,
+// and graph edits freeze whenever any of them is active.
 export type SidebarSharedState = {
   blockGraphEdits: boolean
   isTraversalRunning: boolean
   isConnectedComponentsSessionActive: boolean
+  isCycleDetectionSessionActive: boolean
 }
 
 export type CanvasSetupPageProps = {
@@ -69,8 +70,14 @@ export type ConnectedComponentsOutput = {
   groupsText: string
 } | null
 
+export type CycleDetectionOutput = {
+  hasCycle: boolean
+  cycleNodeLabels: string[]
+} | null
+
 export type AlgorithmsPageProps = SidebarSharedState & {
   onAlgorithmModeChange?: (mode: AlgorithmMode) => void
+
   onRunConnectedComponents: (strategy: TraversalStrategy) => void
   onStopConnectedComponents: () => void
   canRunConnectedComponents: boolean
@@ -89,6 +96,25 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   connectedComponentsOutput: ConnectedComponentsOutput
   connectedComponentsStepIndex: number
   connectedComponentsStepTotal: number
+
+  onRunCycleDetection: (strategy: TraversalStrategy) => void
+  onStopCycleDetection: () => void
+  canRunCycleDetection: boolean
+  cycleDetectionStatusText: string
+  isCycleDetectionPlaybackPlaying: boolean
+  cycleDetectionPlaybackSpeed: number
+  onCycleDetectionPlaybackSpeedChange: (value: number) => void
+  onPlayCycleDetection: () => void
+  onPauseCycleDetection: () => void
+  onNextCycleDetectionStep: () => void
+  onPreviousCycleDetectionStep: () => void
+  canCycleDetectionStepForward: boolean
+  canCycleDetectionStepBackward: boolean
+  canCycleDetectionTogglePlay: boolean
+  isCycleDetectionPlaybackComplete: boolean
+  cycleDetectionOutput: CycleDetectionOutput
+  cycleDetectionStepIndex: number
+  cycleDetectionStepTotal: number
 }
 
 export type SidebarProps = {

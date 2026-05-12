@@ -417,8 +417,8 @@
 .sidebar-page-body--algorithms {
 	overflow-x: hidden;
 	overflow-y: auto;
-	margin-right: -14px;
-	padding-right: 14px;
+	scrollbar-gutter: stable;
+	padding-right: 20px;
 }
 
 .sidebar-page-switch {
@@ -611,6 +611,10 @@
 
 .algorithm-mode-field {
 	width: 100%;
+}
+
+.algorithm-mode-field select {
+	font-size: 12.5px;
 }
 
 .algorithm-config-content {

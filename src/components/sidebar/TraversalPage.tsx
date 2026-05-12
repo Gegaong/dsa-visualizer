@@ -8,6 +8,7 @@ export const TraversalPage = ({
   blockGraphEdits,
   isTraversalRunning,
   isConnectedComponentsSessionActive,
+  isCycleDetectionSessionActive,
   algorithmTab,
   onAlgorithmTabChange,
   goalType,
@@ -128,7 +129,8 @@ export const TraversalPage = ({
           isRunActive={isTraversalRunning}
           onRunToggle={isTraversalRunning ? onStopTraversal : onRunTraversal}
           runDisabled={
-            !isTraversalRunning && (!canRunTraversal || isConnectedComponentsSessionActive)
+            !isTraversalRunning &&
+            (!canRunTraversal || isConnectedComponentsSessionActive || isCycleDetectionSessionActive)
           }
           onPrevious={onPreviousTraversalStep}
           onNext={onNextTraversalStep}
