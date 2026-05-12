@@ -277,7 +277,7 @@ export function useTraversalPlayback({
 
   const canRunTraversal =
     nodes.length > 0 &&
-    !hasEmptyNodes &&
+    (goalType === 'target-node' || !hasEmptyNodes) &&
     startNodeLabel.trim() !== '' &&
     (goalType !== 'target-node' || goalNodeLabel.trim() !== '') &&
     (goalType !== 'target-value' || parseNumberInput(goalValueInput) !== null)
@@ -297,7 +297,7 @@ export function useTraversalPlayback({
     sidebarTraversalStatusText = 'Warning: Goal node is a required field.'
   } else if (goalValueMissing) {
     sidebarTraversalStatusText = 'Warning: Goal value is a required field.'
-  } else if (hasEmptyNodes) {
+  } else if (hasEmptyNodes && goalType !== 'target-node') {
     const algoName = bfsDfsLabel(algorithmTab)
     sidebarTraversalStatusText = `Warning: fill or nullify all empty nodes before running ${algoName}.`
   }

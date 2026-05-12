@@ -33,7 +33,7 @@ export const prepareTraversalRunInputs = (
     return { ok: false, error: `Add nodes before running ${algoLabel}.` }
   }
 
-  if (nodes.some((node) => node.value === 'empty')) {
+  if (goalType !== 'target-node' && nodes.some((node) => node.value === 'empty')) {
     return { ok: false, error: 'Fill or nullify all empty node values first.' }
   }
 

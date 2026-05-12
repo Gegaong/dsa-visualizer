@@ -226,14 +226,6 @@ export function useConnectedComponentsPlayback({
       return
     }
 
-    const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
-    if (hasEmptyNodes) {
-      setConnectedComponentsStatusText(
-        'Fill or nullify all empty node values before running weakly connected components.',
-      )
-      return
-    }
-
     const result = runConnectedComponents(nodes, edges, strategy)
     if (result.steps.length === 0) {
       setConnectedComponentsStatusText('Weakly connected components could not run on this graph.')
@@ -281,8 +273,7 @@ export function useConnectedComponentsPlayback({
     connectedComponentsPlayback.setPlaybackSpeed(value)
   }
 
-  const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
-  const canRunConnectedComponents = nodes.length > 0 && !hasEmptyNodes
+  const canRunConnectedComponents = nodes.length > 0
 
   const ccOutput: CCOutput =
     connectedComponentsResult !== null
