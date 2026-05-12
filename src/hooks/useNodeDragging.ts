@@ -13,12 +13,14 @@ import {
 } from '../utils/constants'
 import {
   clampToRange,
+  getVisibleCanvasRegion,
   resolveDragPosition,
 } from '../utils/geometry'
 import { parseNumberInput } from '../utils/format'
 
 type UseNodeDraggingParams = {
   canvasElement: HTMLDivElement | null
+  canvasZoom: number
   getCanvasPointerPosition: (clientX: number, clientY: number, canvasBounds: DOMRect) => { x: number; y: number }
   setNodes: React.Dispatch<React.SetStateAction<GraphNode[]>>
   editingNodeId: string | null
@@ -41,6 +43,7 @@ export type NodeDraggingHandle = {
 
 export function useNodeDragging({
   canvasElement,
+  canvasZoom,
   getCanvasPointerPosition,
   setNodes,
   editingNodeId,
@@ -118,8 +121,9 @@ export function useNodeDragging({
         dragState.hasMoved = true
       }
 
-      const nextX = clampToRange(pointer.x - dragState.offsetX, 0, canvasBounds.width - NODE_SIZE)
-      const nextY = clampToRange(pointer.y - dragState.offsetY, 0, canvasBounds.height - NODE_SIZE)
+      const region = getVisibleCanvasRegion(canvasBounds.width, canvasBounds.height, canvasZoom)
+      const nextX = clampToRange(pointer.x - dragState.offsetX, region.left, region.right - NODE_SIZE)
+      const nextY = clampToRange(pointer.y - dragState.offsetY, region.top, region.bottom - NODE_SIZE)
 
       setNodes((prev) =>
         prev.map((node) =>
@@ -146,16 +150,10 @@ export function useNodeDragging({
       const pointer = getCanvasPointerPosition(event.clientX, event.clientY, canvasBounds)
       const targetX = pointer.x - dragState.offsetX
       const targetY = pointer.y - dragState.offsetY
+      const region = getVisibleCanvasRegion(canvasBounds.width, canvasBounds.height, canvasZoom)
 
       setNodes((prev) => {
-        const resolved = resolveDragPosition(
-          targetX,
-          targetY,
-          dragState.nodeId,
-          prev,
-          canvasBounds.width,
-          canvasBounds.height,
-        )
+        const resolved = resolveDragPosition(targetX, targetY, dragState.nodeId, prev, region)
         return prev.map((node) =>
           node.id === dragState.nodeId ? { ...node, x: resolved.x, y: resolved.y } : node,
         )
@@ -172,7 +170,7 @@ export function useNodeDragging({
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [canvasElement, getCanvasPointerPosition, setNodes, setEditingNodeId, setDraftValue])
+  }, [canvasElement, canvasZoom, getCanvasPointerPosition, setNodes, setEditingNodeId, setDraftValue])
 
   return {
     draggingNodeId,

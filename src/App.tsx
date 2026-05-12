@@ -40,7 +40,7 @@ import {
   getNextAllowedEdgeDirection,
   sanitizeEdgesForNullNodes,
 } from './utils/graphRules'
-import { isOverlapping } from './utils/geometry'
+import { clampToRange, getVisibleCanvasRegion, isOverlapping } from './utils/geometry'
 import { buildPresetGraph } from './utils/presets'
 
 import type { TraversalStrategy } from './algorithms/algorithmstypes'
@@ -80,6 +80,8 @@ function App() {
   const nextId = useRef(1)
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
 
+  // `.canvas-content` fills the canvas and is scaled by `canvasZoom` about its center,
+  // so converting a screen point back to content space inverts that center-anchored scale.
   const getCanvasPointerPosition = useCallback(
     (clientX: number, clientY: number, canvasBounds: DOMRect) => {
       const centerX = canvasBounds.width / 2
@@ -87,8 +89,8 @@ function App() {
       const pointerX = clientX - canvasBounds.left
       const pointerY = clientY - canvasBounds.top
       return {
-        x: (pointerX - (1 - canvasZoom) * centerX) / canvasZoom,
-        y: (pointerY - (1 - canvasZoom) * centerY) / canvasZoom,
+        x: centerX + (pointerX - centerX) / canvasZoom,
+        y: centerY + (pointerY - centerY) / canvasZoom,
       }
     },
     [canvasZoom],
@@ -117,6 +119,7 @@ function App() {
 
   const nodeDragging = useNodeDragging({
     canvasElement,
+    canvasZoom,
     getCanvasPointerPosition,
     setNodes,
     editingNodeId,
@@ -168,6 +171,8 @@ function App() {
     const { nodes: presetNodes, edges: presetEdges, nextId: nextCounter } =
       buildPresetGraph(preset, canvasWidth, canvasHeight)
 
+    // Presets are laid out for the unzoomed viewport; reset zoom so the whole graph fits.
+    setCanvasZoom(1)
     nextId.current = nextCounter
     setNodes(reindexNodes(presetNodes))
     setEdges(presetEdges)
@@ -325,8 +330,9 @@ function App() {
 
     const rect = event.currentTarget.getBoundingClientRect()
     const pointer = getCanvasPointerPosition(event.clientX, event.clientY, rect)
-    const clampedX = Math.min(Math.max(0, pointer.x - NODE_RADIUS), rect.width - NODE_SIZE)
-    const clampedY = Math.min(Math.max(0, pointer.y - NODE_RADIUS), rect.height - NODE_SIZE)
+    const region = getVisibleCanvasRegion(rect.width, rect.height, canvasZoom)
+    const clampedX = clampToRange(pointer.x - NODE_RADIUS, region.left, region.right - NODE_SIZE)
+    const clampedY = clampToRange(pointer.y - NODE_RADIUS, region.top, region.bottom - NODE_SIZE)
 
     setNodes((prev) => {
       if (isOverlapping(clampedX, clampedY, prev)) return prev

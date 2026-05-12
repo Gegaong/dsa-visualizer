@@ -13,6 +13,30 @@ export const toDegrees = (radians: number) => (radians * 180) / Math.PI
 export const clampToRange = (value: number, min: number, max: number) =>
   Math.min(Math.max(min, value), max)
 
+export type CanvasRegion = { left: number; top: number; right: number; bottom: number }
+
+// The portion of canvas-content coordinate space currently visible in the viewport.
+// `.canvas-content` is the viewport's size and is scaled by `zoom` about its center,
+// so the viewport maps to a window of size (width/zoom × height/zoom) centred on the
+// content midpoint. At zoom < 1 this window extends past the content's natural box;
+// at zoom > 1 it's a sub-rectangle of it.
+export const getVisibleCanvasRegion = (
+  canvasWidth: number,
+  canvasHeight: number,
+  zoom: number,
+): CanvasRegion => {
+  const halfWidth = canvasWidth / 2
+  const halfHeight = canvasHeight / 2
+  const visibleHalfWidth = halfWidth / zoom
+  const visibleHalfHeight = halfHeight / zoom
+  return {
+    left: halfWidth - visibleHalfWidth,
+    top: halfHeight - visibleHalfHeight,
+    right: halfWidth + visibleHalfWidth,
+    bottom: halfHeight + visibleHalfHeight,
+  }
+}
+
 // Check if a new node at (x, y) overlaps with any existing nodes using distance-based collision detection.
 export const isOverlapping = (x: number, y: number, list: GraphNode[]) => {
   const newCenterX = x + NODE_RADIUS
@@ -30,20 +54,20 @@ export const isOverlapping = (x: number, y: number, list: GraphNode[]) => {
   })
 }
 
-// Push a dropped node away from neighbors to preserve the same minimum spacing.
+// Push a dropped node away from neighbors to preserve the same minimum spacing,
+// keeping it within the given region (the currently-visible slice of content space).
 export const resolveDragPosition = (
   x: number,
   y: number,
   nodeId: string,
   list: GraphNode[],
-  canvasWidth: number,
-  canvasHeight: number,
+  region: CanvasRegion,
 ) => {
   const minDistance = NODE_SIZE + NODE_GAP
-  const maxX = canvasWidth - NODE_SIZE
-  const maxY = canvasHeight - NODE_SIZE
-  let resolvedX = clampToRange(x, 0, maxX)
-  let resolvedY = clampToRange(y, 0, maxY)
+  const maxX = region.right - NODE_SIZE
+  const maxY = region.bottom - NODE_SIZE
+  let resolvedX = clampToRange(x, region.left, maxX)
+  let resolvedY = clampToRange(y, region.top, maxY)
 
   for (let pass = 0; pass < 4; pass += 1) {
     let adjusted = false
@@ -63,8 +87,8 @@ export const resolveDragPosition = (
         const push = minDistance - distance
         const dirX = distance === 0 ? 1 : dx / distance
         const dirY = distance === 0 ? 0 : dy / distance
-        resolvedX = clampToRange(resolvedX + dirX * push, 0, maxX)
-        resolvedY = clampToRange(resolvedY + dirY * push, 0, maxY)
+        resolvedX = clampToRange(resolvedX + dirX * push, region.left, maxX)
+        resolvedY = clampToRange(resolvedY + dirY * push, region.top, maxY)
         adjusted = true
       }
     }
