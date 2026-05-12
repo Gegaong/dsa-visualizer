@@ -2,7 +2,7 @@ import type { GraphEdge, GraphNode } from '../types'
 import type {
   ConnectedComponentsResult,
   ConnectedComponentsStep,
-  ConnectedComponentsStrategy,
+  TraversalStrategy,
 } from './types'
 import { buildWeaklyConnectedNeighborsMap } from './graphAdjacency'
 import { traverseReachableFrom } from './graphTraversal'
@@ -12,7 +12,7 @@ import { sortIdsByLabel } from './sortIdsByLabel'
 export function runConnectedComponents(
   nodes: GraphNode[],
   edges: GraphEdge[],
-  strategy: ConnectedComponentsStrategy,
+  strategy: TraversalStrategy,
 ): ConnectedComponentsResult {
   if (nodes.length === 0) {
     return {

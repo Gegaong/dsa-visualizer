@@ -85,10 +85,6 @@ export const EdgesLayer = ({
       // Lets users reliably pick short/stationary edges without changing the
       // visual appearance of the edge itself.
       const handleEdgePick = (event: React.MouseEvent<SVGLineElement>) => {
-        if (!isDeleteEdgeMode) {
-          return
-        }
-
         event.stopPropagation()
         onToggleEdgeSelection(edge.id)
       }

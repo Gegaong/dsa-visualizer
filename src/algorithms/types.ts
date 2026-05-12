@@ -39,4 +39,4 @@ export type ConnectedComponentsResult = {
   components: string[][]
 }
 
-export type ConnectedComponentsStrategy = 'bfs' | 'dfs'
+export type TraversalStrategy = 'bfs' | 'dfs'

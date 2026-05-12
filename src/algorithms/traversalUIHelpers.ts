@@ -1,4 +1,4 @@
-import type { BfsGoal, BfsResult } from './types'
+import type { BfsGoal, BfsResult, TraversalStrategy } from './types'
 import type { GoalType, GraphNode } from '../types'
 import { parseNumberInput } from '../utils/format'
 
@@ -24,7 +24,7 @@ type PrepareResult =
 
 // Validate BFS or DFS inputs and build the goal payload used by runBfs / runDfs.
 export const prepareTraversalRunInputs = (
-  algo: 'bfs' | 'dfs',
+  algo: TraversalStrategy,
   { nodes, goalType, startNodeLabel, goalNodeLabel, goalValueInput }: PrepareArgs,
 ): PrepareResult => {
   const algoLabel = algo === 'bfs' ? 'BFS' : 'DFS'

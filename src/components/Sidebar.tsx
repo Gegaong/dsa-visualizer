@@ -1,11 +1,10 @@
 import type { GoalType, GraphPreset } from '../types'
+import type { TraversalStrategy } from '../algorithms/types'
 import { useEffect, useRef, useState } from 'react'
 import { GRAPH_PRESETS } from '../utils/presets'
 import { useStepPlayback } from '../hooks/useStepPlayback'
 import { PLAYBACK_MAX_DELAY_MS, PLAYBACK_MIN_DELAY_MS } from '../utils/constants'
 
-type GraphAlgorithmTab = 'bfs' | 'dfs'
-type TraversalStrategy = 'bfs' | 'dfs'
 export type AlgorithmMode =
   | 'components'
   | 'cycle'
@@ -22,11 +21,69 @@ const GRAPH_ALGO_MOCK_STEPS: Record<AlgorithmMode, number> = {
   'topological-sort': 15,
 }
 
+// Static metadata for each algorithm option; lives outside the component to avoid re-creation on every render.
+const ALGORITHM_DETAILS: Record<AlgorithmMode, {
+  label: string
+  description: string
+  runLabel: string
+  outputLabel: string
+  outputHint: string
+  needsInputs: boolean
+  usesTraversal: boolean
+}> = {
+  components: {
+    label: 'Weakly connected components',
+    description:
+      'Groups nodes linked when edge direction is ignored (underlying undirected connectivity).',
+    runLabel: 'Run weak CC',
+    outputLabel: 'Components',
+    outputHint: 'Weakly connected groups appear here after a run.',
+    needsInputs: false,
+    usesTraversal: true,
+  },
+  cycle: {
+    label: 'Cycle detection',
+    description: 'Detect whether the graph contains a cycle.',
+    runLabel: 'Run cycle check',
+    outputLabel: 'Cycle',
+    outputHint: 'Shows whether a cycle exists once the run finishes.',
+    needsInputs: false,
+    usesTraversal: true,
+  },
+  bipartite: {
+    label: 'Bipartite check',
+    description: 'Try to split nodes into two sets with no internal edges.',
+    runLabel: 'Run bipartite check',
+    outputLabel: 'Bipartite',
+    outputHint: 'Shows whether a valid 2-coloring exists.',
+    needsInputs: false,
+    usesTraversal: true,
+  },
+  'shortest-path': {
+    label: 'Shortest path',
+    description: 'Find the shortest path in an unweighted graph.',
+    runLabel: 'Run shortest path',
+    outputLabel: 'Path',
+    outputHint: 'Path length and nodes are shown here after a run.',
+    needsInputs: true,
+    usesTraversal: false,
+  },
+  'topological-sort': {
+    label: 'Topological sort',
+    description: 'Order nodes so every edge points forward in the list (DAG only).',
+    runLabel: 'Run topo sort',
+    outputLabel: 'Order',
+    outputHint: 'A valid ordering is shown here after a run.',
+    needsInputs: false,
+    usesTraversal: false,
+  },
+}
+
 export type SidebarPage = 'canvas' | 'traversal' | 'algorithms'
 
 type SidebarProps = {
-  algorithmTab: GraphAlgorithmTab
-  onAlgorithmTabChange: (tab: GraphAlgorithmTab) => void
+  algorithmTab: TraversalStrategy
+  onAlgorithmTabChange: (tab: TraversalStrategy) => void
   goalType: GoalType
   onGoalTypeChange: (type: GoalType) => void
   startNodeLabel: string
@@ -184,63 +241,7 @@ export const Sidebar = ({
   const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
   const [shortestPathStart, setShortestPathStart] = useState('')
   const [shortestPathGoal, setShortestPathGoal] = useState('')
-  const algorithmDetails: Record<AlgorithmMode, {
-    label: string
-    description: string
-    runLabel: string
-    outputLabel: string
-    outputHint: string
-    needsInputs: boolean
-    usesTraversal: boolean
-  }> = {
-    components: {
-      label: 'Weakly connected components',
-      description:
-        'Groups nodes linked when edge direction is ignored (underlying undirected connectivity).',
-      runLabel: 'Run weak CC',
-      outputLabel: 'Components',
-      outputHint: 'Weakly connected groups appear here after a run.',
-      needsInputs: false,
-      usesTraversal: true,
-    },
-    cycle: {
-      label: 'Cycle detection',
-      description: 'Detect whether the graph contains a cycle.',
-      runLabel: 'Run cycle check',
-      outputLabel: 'Cycle',
-      outputHint: 'Shows whether a cycle exists once the run finishes.',
-      needsInputs: false,
-      usesTraversal: true,
-    },
-    bipartite: {
-      label: 'Bipartite check',
-      description: 'Try to split nodes into two sets with no internal edges.',
-      runLabel: 'Run bipartite check',
-      outputLabel: 'Bipartite',
-      outputHint: 'Shows whether a valid 2-coloring exists.',
-      needsInputs: false,
-      usesTraversal: true,
-    },
-    'shortest-path': {
-      label: 'Shortest path',
-      description: 'Find the shortest path in an unweighted graph.',
-      runLabel: 'Run shortest path',
-      outputLabel: 'Path',
-      outputHint: 'Path length and nodes are shown here after a run.',
-      needsInputs: true,
-      usesTraversal: false,
-    },
-    'topological-sort': {
-      label: 'Topological sort',
-      description: 'Order nodes so every edge points forward in the list (DAG only).',
-      runLabel: 'Run topo sort',
-      outputLabel: 'Order',
-      outputHint: 'A valid ordering is shown here after a run.',
-      needsInputs: false,
-      usesTraversal: false,
-    },
-  }
-  const selectedAlgorithm = algorithmDetails[algorithmMode]
+  const selectedAlgorithm = ALGORITHM_DETAILS[algorithmMode]
   const isComponentsMode = algorithmMode === 'components'
   const algoShort = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
   const needsTraversalStrategy = selectedAlgorithm.usesTraversal

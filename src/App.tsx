@@ -60,7 +60,7 @@ import {
 } from './utils/graphRules'
 import { runBfs } from './algorithms/bfs'
 import { runDfs } from './algorithms/dfs'
-import type { BfsResult, ConnectedComponentsResult, ConnectedComponentsStrategy } from './algorithms/types'
+import type { BfsResult, ConnectedComponentsResult, TraversalStrategy } from './algorithms/types'
 import { runConnectedComponents } from './algorithms/connectedComponents'
 import {
   buildConnectedComponentsCompletionStatus,
@@ -68,9 +68,7 @@ import {
 } from './algorithms/connectedComponentsUIHelpers'
 import { buildTraversalCompletionStatus, prepareTraversalRunInputs } from './algorithms/traversalUIHelpers'
 
-type GraphAlgorithmTab = 'bfs' | 'dfs'
-
-function bfsDfsLabel(mode: GraphAlgorithmTab | ConnectedComponentsStrategy): 'DFS' | 'BFS' {
+function bfsDfsLabel(mode: TraversalStrategy): 'DFS' | 'BFS' {
   return mode === 'dfs' ? 'DFS' : 'BFS'
 }
 
@@ -100,7 +98,7 @@ function App() {
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null)
   const [canvasZoom, setCanvasZoom] = useState(1)
-  const [algorithmTab, setAlgorithmTab] = useState<GraphAlgorithmTab>('bfs')
+  const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
   const [traversalVisitedNodeIds, setTraversalVisitedNodeIds] = useState<string[]>([])
   const [traversalCurrentNodeId, setTraversalCurrentNodeId] = useState<string | null>(null)
   const [traversalStartNodeId, setTraversalStartNodeId] = useState<string | null>(null)
@@ -116,7 +114,7 @@ function App() {
   const [connectedComponentsResult, setConnectedComponentsResult] =
     useState<ConnectedComponentsResult | null>(null)
   const connectedComponentsResultRef = useRef<ConnectedComponentsResult | null>(null)
-  const connectedComponentsStrategyRef = useRef<ConnectedComponentsStrategy>('bfs')
+  const connectedComponentsStrategyRef = useRef<TraversalStrategy>('bfs')
   const sidebarAlgorithmModeRef = useRef<AlgorithmMode>('components')
   const finalizeConnectedComponentsRunRef = useRef<(r: ConnectedComponentsResult) => void>(() => {})
   const connectedComponentsPlaybackStopRef = useRef(() => {})
@@ -305,7 +303,7 @@ function App() {
 
   // Stop BFS/DFS playback and clear traversal highlights / traversal-specific UI state only.
   const resetTraversalVisualization = useCallback(
-    (idleAlgorithm: GraphAlgorithmTab = algorithmTab) => {
+    (idleAlgorithm: TraversalStrategy = algorithmTab) => {
       traversalPlaybackStopRef.current()
       setTraversalVisitedNodeIds([])
       setTraversalCurrentNodeId(null)
@@ -339,7 +337,7 @@ function App() {
 
   // Full reset for graph edits / presets: compose traversal + connected-components resets.
   const resetAllGraphAlgorithmVisualizations = useCallback(
-    (idleAlgorithm: GraphAlgorithmTab = algorithmTab) => {
+    (idleAlgorithm: TraversalStrategy = algorithmTab) => {
       resetTraversalVisualization(idleAlgorithm)
       resetConnectedComponentsVisualization()
     },
@@ -353,7 +351,7 @@ function App() {
   }
 
   // Switch BFS/DFS in the sidebar; stops the current traversal run and clears canvas highlights.
-  const handleAlgorithmTabChange = (tab: GraphAlgorithmTab) => {
+  const handleAlgorithmTabChange = (tab: TraversalStrategy) => {
     if (tab === algorithmTab) return
     setAlgorithmTab(tab)
     resetTraversalVisualization(tab)
@@ -1319,7 +1317,7 @@ function App() {
     ],
   )
 
-  const runConnectedComponentsFromSidebar = (strategy: ConnectedComponentsStrategy) => {
+  const runConnectedComponentsFromSidebar = (strategy: TraversalStrategy) => {
     if (connectedComponentsPlayback.isPlaying) return
     connectedComponentsPlaybackStopRef.current()
     resetTraversalVisualization()

@@ -20,6 +20,5 @@ export const Header = () => (
         Maze
       </button>
     </nav>
-    <div className="topbar-spacer" aria-hidden="true" />
   </header>
 )
