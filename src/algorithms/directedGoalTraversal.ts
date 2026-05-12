@@ -1,7 +1,7 @@
 import type { GraphNode } from '../types'
-import type { BfsInput, BfsResult, BfsStep } from './types'
+import type { BfsInput, BfsResult, BfsStep, TraversalStrategy } from './types'
 import { buildNeighborsMap } from './graphAdjacency'
-import { traverseReachableFrom, type GraphTraversalStrategy } from './graphTraversal'
+import { traverseReachableFrom } from './graphTraversal'
 import { sortIdsByLabel } from './sortIdsByLabel'
 
 // True when the node matches a target-label or target-value goal (not max/min extremes).
@@ -20,7 +20,7 @@ const matchesGoal = (node: GraphNode, goal: BfsInput['goal']) => {
 // Directed-graph traversal from the chosen start label: step list + goal outcome; strategy is only visit order (BFS vs DFS).
 export function runDirectedGoalTraversal(
   input: BfsInput,
-  strategy: GraphTraversalStrategy,
+  strategy: TraversalStrategy,
 ): BfsResult {
   const startNode = input.nodes.find(
     (node) => node.label.toUpperCase() === input.startNodeLabel.toUpperCase(),

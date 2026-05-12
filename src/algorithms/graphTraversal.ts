@@ -1,4 +1,4 @@
-export type GraphTraversalStrategy = 'bfs' | 'dfs'
+import type { TraversalStrategy } from './types'
 
 export type VisitOutcome = void | 'stop'
 
@@ -7,7 +7,7 @@ export function traverseReachableFrom(params: {
   neighborsById: Map<string, string[]>
   startId: string
   visited: Set<string>
-  strategy: GraphTraversalStrategy
+  strategy: TraversalStrategy
   onVisit: (nodeId: string) => VisitOutcome
   orderNeighbors?: (rawNeighborIds: string[]) => string[]
 }): void {

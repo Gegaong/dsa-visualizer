@@ -58,8 +58,7 @@ import {
   getNextAllowedEdgeDirection,
   sanitizeEdgesForNullNodes,
 } from './utils/graphRules'
-import { runBfs } from './algorithms/bfs'
-import { runDfs } from './algorithms/dfs'
+import { runDirectedGoalTraversal } from './algorithms/directedGoalTraversal'
 import type { BfsResult, ConnectedComponentsResult, TraversalStrategy } from './algorithms/types'
 import { runConnectedComponents } from './algorithms/connectedComponents'
 import {
@@ -1234,7 +1233,7 @@ function App() {
       goal: preparation.goal,
     }
     const algoName = bfsDfsLabel(algorithmTab)
-    const result = algorithmTab === 'dfs' ? runDfs(runInput) : runBfs(runInput)
+    const result = runDirectedGoalTraversal(runInput, algorithmTab)
 
     if (result.steps.length === 0) {
       setTraversalStatusText(`${algoName} could not start with the current graph and inputs.`)
