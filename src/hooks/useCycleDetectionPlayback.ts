@@ -200,13 +200,11 @@ export function useCycleDetectionPlayback({
       const prev = sidebarAlgorithmModeRef.current
       sidebarAlgorithmModeRef.current = mode
       if (prev === mode) return
-      const leavingCycle = prev === 'cycle' && mode !== 'cycle'
-      const cycleActive = cycleDetectionResult !== null || isCycleDetectionRunning
-      if (leavingCycle || cycleActive) {
+      if (prev === 'cycle' && mode !== 'cycle') {
         resetCycleDetectionVisualization()
       }
     },
-    [cycleDetectionResult, isCycleDetectionRunning, resetCycleDetectionVisualization],
+    [resetCycleDetectionVisualization],
   )
 
   // Runs cycle detection with the given strategy and initialises the playback session.

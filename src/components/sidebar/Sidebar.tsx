@@ -13,7 +13,9 @@ const PAGE_CLASS: Record<SidebarPage, string> = {
 }
 
 // Right-side control panel. A thin shell: owns the page-switch tabs and notifies the
-// parent on page changes; each page is its own component (mounted only while active).
+// parent on page changes. CanvasSetupPage and TraversalPage mount only while active;
+// AlgorithmsPage stays mounted at all times (display:none when inactive) so that
+// algorithmMode state and the hooks' sidebarAlgorithmModeRef stay in sync.
 export const Sidebar = ({
   onSidebarSectionChange,
   canvasSetup,
@@ -59,7 +61,9 @@ export const Sidebar = ({
 
       {activePage === 'canvas' && <CanvasSetupPage {...canvasSetup} />}
       {activePage === 'traversal' && <TraversalPage {...traversal} />}
-      {activePage === 'algorithms' && <AlgorithmsPage {...algorithms} />}
+      <div style={{ display: activePage === 'algorithms' ? undefined : 'none' }}>
+        <AlgorithmsPage {...algorithms} />
+      </div>
     </aside>
   )
 }

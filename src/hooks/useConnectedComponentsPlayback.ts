@@ -205,13 +205,11 @@ export function useConnectedComponentsPlayback({
       const prev = sidebarAlgorithmModeRef.current
       sidebarAlgorithmModeRef.current = mode
       if (prev === mode) return
-      const leavingComponents = prev === 'components' && mode !== 'components'
-      const ccActive = connectedComponentsResult !== null || isConnectedComponentsRunning
-      if (leavingComponents || ccActive) {
+      if (prev === 'components' && mode !== 'components') {
         resetConnectedComponentsVisualization()
       }
     },
-    [connectedComponentsResult, isConnectedComponentsRunning, resetConnectedComponentsVisualization],
+    [resetConnectedComponentsVisualization],
   )
 
   const runConnectedComponentsFromSidebar = (strategy: TraversalStrategy) => {

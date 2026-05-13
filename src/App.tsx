@@ -27,7 +27,7 @@ import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
 import { NodeContextMenu } from './components/NodeContextMenu'
 import { Sidebar } from './components/sidebar/Sidebar'
-import type { SidebarPage } from './components/sidebar/sidebarTypes'
+import type { AlgorithmMode, SidebarPage } from './components/sidebar/sidebarTypes'
 
 import {
   sanitizeNumericInput,
@@ -129,6 +129,11 @@ function App() {
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
+
+  const handleAlgorithmModeChange = useCallback((mode: AlgorithmMode) => {
+    cc.handleAlgorithmModeChangeFromSidebar(mode)
+    cycleDetection.handleAlgorithmModeChangeFromSidebar(mode)
+  }, [cc.handleAlgorithmModeChangeFromSidebar, cycleDetection.handleAlgorithmModeChangeFromSidebar])
 
   const nodeDragging = useNodeDragging({
     canvasElement,
@@ -760,10 +765,7 @@ function App() {
             isTraversalRunning: traversal.isTraversalRunning,
             isConnectedComponentsSessionActive: ccSessionActive,
             isCycleDetectionSessionActive: cycleSessionActive,
-            onAlgorithmModeChange: (mode) => {
-              cc.handleAlgorithmModeChangeFromSidebar(mode)
-              cycleDetection.handleAlgorithmModeChangeFromSidebar(mode)
-            },
+            onAlgorithmModeChange: handleAlgorithmModeChange,
             onRunConnectedComponents: cc.runConnectedComponentsFromSidebar,
             onStopConnectedComponents: cc.resetConnectedComponentsVisualization,
             canRunConnectedComponents: cc.canRunConnectedComponents,
