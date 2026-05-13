@@ -6,6 +6,12 @@ import {
 } from '../utils/constants'
 import { getEdgeGeometry } from '../utils/geometry'
 
+// Short segments at endpoints carry arrowheads on bidirectional edges so the two
+// stroke paths do not paint over each other's markers (full-length overlap).
+const BIDIRECTIONAL_ARROW_STUB_PX = 14
+
+const markerStrokeOrderStyle = { paintOrder: 'stroke markers' as const }
+
 type EdgesLayerProps = {
   nodes: GraphNode[]
   edges: GraphEdge[]
@@ -216,6 +222,17 @@ export const EdgesLayer = ({
         </defs>
       )
 
+      const segDx = endX - startX
+      const segDy = endY - startY
+      const segLen = Math.hypot(segDx, segDy) || 1
+      const ux = segDx / segLen
+      const uy = segDy / segLen
+      const bioStub = Math.min(BIDIRECTIONAL_ARROW_STUB_PX, segLen * 0.48)
+      const bioFwdStubX1 = endX - ux * bioStub
+      const bioFwdStubY1 = endY - uy * bioStub
+      const bioRevStubX1 = startX + ux * bioStub
+      const bioRevStubY1 = startY + uy * bioStub
+
       // In undirected mode draw a single plain line with no arrowheads.
       if (isUndirectedMode) {
         return (
@@ -267,16 +284,42 @@ export const EdgesLayer = ({
               )}
               {renderCcOutline(startX, startY, endX, endY)}
               {renderCurrentOutline(startX, startY, endX, endY)}
-              <line
-                x1={startX}
-                y1={startY}
-                x2={endX}
-                y2={endY}
-                stroke={strokeColor}
-                strokeWidth={strokeWidth}
-                color={strokeColor}
-                markerEnd={markerEnd}
-              />
+              {edge.direction === 'both' ? (
+                <>
+                  <line
+                    x1={startX}
+                    y1={startY}
+                    x2={endX}
+                    y2={endY}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    color={strokeColor}
+                  />
+                  <line
+                    x1={bioFwdStubX1}
+                    y1={bioFwdStubY1}
+                    x2={endX}
+                    y2={endY}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    color={strokeColor}
+                    markerEnd={markerEnd}
+                    style={markerStrokeOrderStyle}
+                  />
+                </>
+              ) : (
+                <line
+                  x1={startX}
+                  y1={startY}
+                  x2={endX}
+                  y2={endY}
+                  stroke={strokeColor}
+                  strokeWidth={strokeWidth}
+                  color={strokeColor}
+                  markerEnd={markerEnd}
+                  style={markerStrokeOrderStyle}
+                />
+              )}
               {isDeleteEdgeMode && (
                 // Invisible but pointer-active strokeline to expand hit area for selection.
                 // Keeps the visible line untouched while improving UX for small/close edges.
@@ -308,14 +351,15 @@ export const EdgesLayer = ({
                 />
               )}
               <line
-                x1={endX}
-                y1={endY}
+                x1={bioRevStubX1}
+                y1={bioRevStubY1}
                 x2={startX}
                 y2={startY}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 color={strokeColor}
                 markerEnd={markerEnd}
+                style={markerStrokeOrderStyle}
               />
               {isDeleteEdgeMode && (
                 // Invisible hit area for the reverse-direction visual line.
@@ -357,6 +401,7 @@ export const EdgesLayer = ({
                 strokeWidth={strokeWidth}
                 color={strokeColor}
                 markerEnd={markerEnd}
+                style={markerStrokeOrderStyle}
               />
               {isDeleteEdgeMode && (
                 <line
