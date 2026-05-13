@@ -8,7 +8,7 @@ import { buildWeaklyConnectedNeighborsMap } from './graphAdjacency'
 import { traverseReachableFrom } from './graphTraversal'
 import { sortIdsByLabel } from './sortIdsByLabel'
 
-// Weakly connected components on undirected adjacency; emits playback steps; strategy only changes visit order inside each component.
+// Connected components on undirected adjacency (direction ignored); emits playback steps; strategy only changes visit order inside each component.
 export function runConnectedComponents(
   nodes: GraphNode[],
   edges: GraphEdge[],

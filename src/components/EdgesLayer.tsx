@@ -141,7 +141,7 @@ export const EdgesLayer = ({
         onToggleEdgeSelection(edge.id)
       }
       // Per-edge markers paint with this stroke so arrowheads match the line in every
-      // state (goal, visited, weak-CC). Global markers + currentColor are unreliable
+      // state (goal, visited, component highlights). Global markers + currentColor are unreliable
       // across browsers for marker context.
       const idSafe = edge.id.replace(/[^a-zA-Z0-9_-]/g, '_')
       const markerIdLg = `arr-${idSafe}-lg`

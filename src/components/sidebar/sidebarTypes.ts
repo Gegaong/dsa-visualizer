@@ -74,6 +74,8 @@ export type CycleDetectionOutput = {
 } | null
 
 export type AlgorithmsPageProps = SidebarSharedState & {
+  /** Matches canvas Directed / Undirected toggle; gates which graph algorithms may run. */
+  isUndirectedMode: boolean
   onAlgorithmModeChange?: (mode: AlgorithmMode) => void
 
   onRunConnectedComponents: (strategy: TraversalStrategy) => void

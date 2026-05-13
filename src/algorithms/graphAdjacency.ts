@@ -27,7 +27,7 @@ export function buildNeighborsMap(nodes: GraphNode[], edges: GraphEdge[]): Map<s
   return neighborsById
 }
 
-// Undirected adjacency for weak connectivity: both endpoints of each edge linked (direction ignored).
+// Undirected adjacency: both endpoints of each edge linked (edge direction ignored).
 export function buildWeaklyConnectedNeighborsMap(
   nodes: GraphNode[],
   edges: GraphEdge[],

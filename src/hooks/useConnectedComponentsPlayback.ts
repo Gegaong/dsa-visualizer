@@ -42,6 +42,8 @@ type TraversalVisualSetters = {
 type UseConnectedComponentsPlaybackParams = {
   nodes: GraphNode[]
   edges: GraphEdge[]
+  /** Connected components run only in undirected canvas mode. */
+  isUndirectedMode: boolean
   traversalVisualSetters: TraversalVisualSetters
   onResetTraversal: () => void
 }
@@ -86,6 +88,7 @@ export type ConnectedComponentsPlaybackHandle = {
 export function useConnectedComponentsPlayback({
   nodes,
   edges,
+  isUndirectedMode,
   traversalVisualSetters,
   onResetTraversal,
 }: UseConnectedComponentsPlaybackParams): ConnectedComponentsPlaybackHandle {
@@ -108,7 +111,7 @@ export function useConnectedComponentsPlayback({
   const [connectedComponentsPlaybackSession, setConnectedComponentsPlaybackSession] = useState(0)
   const [isConnectedComponentsRunning, setIsConnectedComponentsRunning] = useState(false)
   const [connectedComponentsStatusText, setConnectedComponentsStatusText] = useState(
-    'Select BFS or DFS, then run weakly connected components.',
+    'Select BFS or DFS, then run connected components (Undirected canvas).',
   )
   const [weakCCOutlineHslByNodeId, setWeakCCOutlineHslByNodeId] = useState<Map<
     string,
@@ -133,7 +136,7 @@ export function useConnectedComponentsPlayback({
       setWeakCCVisitedNodeIds([])
       setWeakCCVisitedEdgeIds([])
       setConnectedComponentsStatusText(
-        `Weakly connected components (${strategyLabel}) ready. Press Play or step through manually.`,
+        `Connected components (${strategyLabel}) ready. Press Play or step through manually.`,
       )
       return
     }
@@ -218,7 +221,7 @@ export function useConnectedComponentsPlayback({
     setTraversalCurrentEdgeId(null)
     setTraversalStartNodeId(null)
     setTraversalGoalNodeIds([])
-    setConnectedComponentsStatusText('Select BFS or DFS, then run weakly connected components.')
+    setConnectedComponentsStatusText('Select BFS or DFS, then run connected components (Undirected canvas).')
     setIsConnectedComponentsRunning(false)
     setWeakCCOutlineHslByNodeId(null)
     setWeakCCVisitedNodeIds([])
@@ -259,6 +262,13 @@ export function useConnectedComponentsPlayback({
 
     connectedComponentsStrategyRef.current = strategy
 
+    if (!isUndirectedMode) {
+      setConnectedComponentsStatusText(
+        'Switch to Undirected at the top left of the canvas to run connected components.',
+      )
+      return
+    }
+
     if (nodes.length === 0) {
       setConnectedComponentsStatusText('Add nodes to the canvas first.')
       return
@@ -266,7 +276,7 @@ export function useConnectedComponentsPlayback({
 
     const result = runConnectedComponents(nodes, edges, strategy)
     if (result.steps.length === 0) {
-      setConnectedComponentsStatusText('Weakly connected components could not run on this graph.')
+      setConnectedComponentsStatusText('Connected components could not run on this graph.')
       return
     }
 
@@ -276,7 +286,7 @@ export function useConnectedComponentsPlayback({
     setConnectedComponentsPlaybackSession((s) => s + 1)
     setIsConnectedComponentsRunning(true)
     setConnectedComponentsStatusText(
-      `Weakly connected components (${strategyLabel}) ready. Press Play or step through manually.`,
+      `Connected components (${strategyLabel}) ready. Press Play or step through manually.`,
     )
   }
 
@@ -311,7 +321,7 @@ export function useConnectedComponentsPlayback({
     connectedComponentsPlayback.setPlaybackSpeed(value)
   }
 
-  const canRunConnectedComponents = nodes.length > 0
+  const canRunConnectedComponents = nodes.length > 0 && isUndirectedMode
 
   const ccOutput: CCOutput =
     connectedComponentsResult !== null

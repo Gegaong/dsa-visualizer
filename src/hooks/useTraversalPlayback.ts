@@ -36,7 +36,7 @@ type UseTraversalPlaybackParams = {
   nodes: GraphNode[]
   edges: GraphEdge[]
   algorithmTab: TraversalStrategy
-  // Clears any other canvas-algorithm visualizations (weak CC, cycle detection) before a run.
+  // Clears any other canvas-algorithm visualizations (connected components, cycle detection) before a run.
   onClearOtherGraphAlgorithms: () => void
 }
 

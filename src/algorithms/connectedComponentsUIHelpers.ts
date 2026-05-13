@@ -28,5 +28,5 @@ export const buildConnectedComponentsCompletionStatus = (
 
   const groupSummary = formatWeakCCGroupsDisplay(result, nodes)
 
-  return `Done. ${result.componentCount} weakly connected component(s); largest size ${result.largestComponentSize}. Groups: ${groupSummary}`
+  return `Done. ${result.componentCount} connected component(s); largest size ${result.largestComponentSize}. Groups: ${groupSummary}`
 }

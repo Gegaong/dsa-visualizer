@@ -17,21 +17,22 @@ const ALGORITHM_DETAILS: Record<AlgorithmMode, {
   usesTraversal: boolean
 }> = {
   components: {
-    label: 'Weakly connected components',
+    label: 'Connected components',
     description:
-      'Groups nodes linked when edge direction is ignored (underlying undirected connectivity).',
-    runLabel: 'Run weak CC',
+      'Undirected-only: groups nodes that are linked when every edge is treated as a link between its two endpoints.',
+    runLabel: 'Run connected components',
     outputLabel: 'Components',
-    outputHint: 'Weakly connected groups appear here after a run.',
+    outputHint: 'Component groups appear here after a run (Undirected canvas).',
     needsInputs: false,
     usesTraversal: true,
   },
   cycle: {
     label: 'Cycle detection',
-    description: 'Detect whether the directed graph contains a cycle.',
+    description:
+      'Directed-only: searches for a directed cycle by following edge arrows (forward, backward, or both).',
     runLabel: 'Run cycle detection',
     outputLabel: 'Cycle',
-    outputHint: 'Shows whether a directed cycle exists once the run finishes.',
+    outputHint: 'Shows whether a directed cycle exists once the run finishes (Directed canvas).',
     needsInputs: false,
     usesTraversal: true,
   },
@@ -106,13 +107,14 @@ function CycleOutputRows({ output }: { output: CycleDetectionOutput }) {
 }
 
 // Sidebar page: algorithm picker, per-algorithm configuration, playback, and output.
-// Weak connected components and cycle detection are real (wired to the canvas); the
+// Connected components and cycle detection are wired to the canvas; the
 // remaining algorithms currently run a mock playback preview only.
 export const AlgorithmsPage = ({
   blockGraphEdits,
   isTraversalRunning,
   isConnectedComponentsSessionActive,
   isCycleDetectionSessionActive,
+  isUndirectedMode,
   onAlgorithmModeChange,
   onRunConnectedComponents,
   onStopConnectedComponents,
@@ -228,9 +230,13 @@ export const AlgorithmsPage = ({
 
   let graphAlgoPlaybackHint: string
   if (isComponentsMode) {
-    graphAlgoPlaybackHint = connectedComponentsStatusText
+    graphAlgoPlaybackHint = !isUndirectedMode
+      ? 'Connected components run only on an undirected graph. Switch to Undirected at the top left of the canvas, then press Run.'
+      : connectedComponentsStatusText
   } else if (isCycleMode) {
-    graphAlgoPlaybackHint = cycleDetectionStatusText
+    graphAlgoPlaybackHint = isUndirectedMode
+      ? 'Cycle detection is for directed graphs only. Switch to Directed at the top left of the canvas, then press Run.'
+      : cycleDetectionStatusText
   } else if (!graphAlgoArmed) {
     graphAlgoPlaybackHint = `Configure if needed, then press Run to preview ${selectedAlgorithm.label.toLowerCase()} playback.`
   } else if (graphAlgoPlayback.stepIndex < 0) {
@@ -392,7 +398,7 @@ export const AlgorithmsPage = ({
             onChange={(event) => setAlgorithmMode(event.target.value as AlgorithmMode)}
             disabled={algorithmPickerFrozen}
           >
-            <option value="components">Weakly connected components</option>
+            <option value="components">Connected components</option>
             <option value="cycle">Cycle detection</option>
             <option value="bipartite">Bipartite check</option>
             <option value="shortest-path">Shortest path</option>

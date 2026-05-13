@@ -41,6 +41,8 @@ type TraversalVisualSetters = {
 type UseCycleDetectionPlaybackParams = {
   nodes: GraphNode[]
   edges: GraphEdge[]
+  /** Cycle detection uses directed semantics; runs only when the canvas is in Directed mode. */
+  isUndirectedMode: boolean
   traversalVisualSetters: TraversalVisualSetters
   onResetTraversal: () => void
 }
@@ -82,6 +84,7 @@ export type CycleDetectionPlaybackHandle = {
 export function useCycleDetectionPlayback({
   nodes,
   edges,
+  isUndirectedMode,
   traversalVisualSetters,
   onResetTraversal,
 }: UseCycleDetectionPlaybackParams): CycleDetectionPlaybackHandle {
@@ -104,7 +107,7 @@ export function useCycleDetectionPlayback({
   const [cycleDetectionPlaybackSession, setCycleDetectionPlaybackSession] = useState(0)
   const [isCycleDetectionRunning, setIsCycleDetectionRunning] = useState(false)
   const [cycleDetectionStatusText, setCycleDetectionStatusText] = useState(
-    'Select BFS or DFS, then run cycle detection.',
+    'Select BFS or DFS, then run cycle detection (Directed canvas).',
   )
   const [cycleGoalEdgeIds, setCycleGoalEdgeIds] = useState<string[]>([])
 
@@ -231,7 +234,7 @@ export function useCycleDetectionPlayback({
     setTraversalStartNodeId(null)
     setTraversalGoalNodeIds([])
     setCycleGoalEdgeIds([])
-    setCycleDetectionStatusText('Select BFS or DFS, then run cycle detection.')
+    setCycleDetectionStatusText('Select BFS or DFS, then run cycle detection (Directed canvas).')
     setIsCycleDetectionRunning(false)
   }, [
     clearCycleDetectionPlaybackAndResult,
@@ -270,6 +273,13 @@ export function useCycleDetectionPlayback({
     setCycleGoalEdgeIds([])
 
     cycleDetectionStrategyRef.current = strategy
+
+    if (isUndirectedMode) {
+      setCycleDetectionStatusText(
+        'Switch to Directed at the top left of the canvas to run cycle detection.',
+      )
+      return
+    }
 
     if (nodes.length === 0) {
       setCycleDetectionStatusText('Add nodes to the canvas first.')
@@ -325,7 +335,7 @@ export function useCycleDetectionPlayback({
     cycleDetectionPlayback.setPlaybackSpeed(value)
   }
 
-  const canRunCycleDetection = nodes.length > 0
+  const canRunCycleDetection = nodes.length > 0 && !isUndirectedMode
 
   const cycleOutput: CycleOutput =
     cycleDetectionResult !== null

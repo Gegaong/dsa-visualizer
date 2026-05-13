@@ -693,10 +693,6 @@
 	width: 100%;
 }
 
-.algorithm-mode-field select {
-	font-size: 12.5px;
-}
-
 .algorithm-config-content {
 	display: grid;
 	gap: 10px;

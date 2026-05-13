@@ -36,7 +36,7 @@ type GraphNodeLayerProps = {
   traversalCurrentNodeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
-  // Full weak-CC outline color (HSL per component); applied when enabled and visited.
+  // Full connected-component outline color (HSL per component); applied when enabled and visited.
   weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
   weakCCOutlineActive: boolean
   weakCCVisitedNodeIds: string[]

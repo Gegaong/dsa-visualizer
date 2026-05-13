@@ -121,6 +121,7 @@ function App() {
   const cc = useConnectedComponentsPlayback({
     nodes,
     edges: effectiveEdges,
+    isUndirectedMode,
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
@@ -128,6 +129,7 @@ function App() {
   const cycleDetection = useCycleDetectionPlayback({
     nodes,
     edges: effectiveEdges,
+    isUndirectedMode,
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
@@ -772,6 +774,7 @@ function App() {
             isTraversalRunning: traversal.isTraversalRunning,
             isConnectedComponentsSessionActive: ccSessionActive,
             isCycleDetectionSessionActive: cycleSessionActive,
+            isUndirectedMode,
             onAlgorithmModeChange: handleAlgorithmModeChange,
             onRunConnectedComponents: cc.runConnectedComponentsFromSidebar,
             onStopConnectedComponents: cc.resetConnectedComponentsVisualization,
