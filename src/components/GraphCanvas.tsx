@@ -48,6 +48,8 @@ type GraphCanvasProps = {
   onCommitNodeValue: (nodeId: string, rawValue: string) => void
   onToggleEdgeSelection: (edgeId: string) => void
   onToggleEdgeDirection: (edgeId: string) => void
+  isUndirectedMode: boolean
+  onUndirectedModeToggle: () => void
 }
 
 // Canvas panel: header with graph editing actions, zoom controls, and all rendering layers.
@@ -92,6 +94,8 @@ export function GraphCanvas({
   onCommitNodeValue,
   onToggleEdgeSelection,
   onToggleEdgeDirection,
+  isUndirectedMode,
+  onUndirectedModeToggle,
 }: GraphCanvasProps) {
   return (
     <section className="canvas-panel">
@@ -113,7 +117,7 @@ export function GraphCanvas({
             <button
               className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'forward' ? 'btn-active' : ''}`}
               type="button"
-              disabled={!isConnectMode || blockGraphInteraction}
+              disabled={isUndirectedMode || !isConnectMode || blockGraphInteraction}
               aria-pressed={newEdgeDirection === 'forward'}
               title="Create outbound edge (from selected node)"
               onClick={() => onNewEdgeDirectionChange('forward')}
@@ -123,7 +127,7 @@ export function GraphCanvas({
             <button
               className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'both' ? 'btn-active' : ''}`}
               type="button"
-              disabled={!isConnectMode || blockGraphInteraction}
+              disabled={isUndirectedMode || !isConnectMode || blockGraphInteraction}
               aria-pressed={newEdgeDirection === 'both'}
               title="Create bidirectional edge"
               onClick={() => onNewEdgeDirectionChange('both')}
@@ -133,7 +137,7 @@ export function GraphCanvas({
             <button
               className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'backward' ? 'btn-active' : ''}`}
               type="button"
-              disabled={!isConnectMode || blockGraphInteraction}
+              disabled={isUndirectedMode || !isConnectMode || blockGraphInteraction}
               aria-pressed={newEdgeDirection === 'backward'}
               title="Create inbound edge (toward selected node)"
               onClick={() => onNewEdgeDirectionChange('backward')}
@@ -190,6 +194,18 @@ export function GraphCanvas({
         onClick={onCanvasClick}
         onContextMenu={onCanvasContextMenu}
       >
+        <div className="canvas-mode-toggle" onClick={(event) => event.stopPropagation()}>
+          <button
+            className={`canvas-mode-toggle-btn ${isUndirectedMode ? 'is-active' : ''}`}
+            type="button"
+            onClick={onUndirectedModeToggle}
+            disabled={blockGraphInteraction}
+            title={isUndirectedMode ? 'Switch to directed graph' : 'Switch to undirected graph'}
+          >
+            {isUndirectedMode ? 'Undirected' : 'Directed'}
+          </button>
+        </div>
+
         <div className="canvas-zoom-controls" onClick={(event) => event.stopPropagation()}>
           <button
             className="canvas-zoom-btn"
@@ -221,6 +237,7 @@ export function GraphCanvas({
             edges={edges}
             isDeleteEdgeMode={isDeleteEdgeMode}
             selectedEdgeIds={selectedEdgeIds}
+            isUndirectedMode={isUndirectedMode}
             onToggleEdgeSelection={onToggleEdgeSelection}
           />
 
@@ -229,6 +246,7 @@ export function GraphCanvas({
             edges={edges}
             isDeleteEdgeMode={isDeleteEdgeMode}
             selectedEdgeIds={selectedEdgeIds}
+            isUndirectedMode={isUndirectedMode}
             onToggleEdgeDirection={onToggleEdgeDirection}
             onToggleEdgeSelection={onToggleEdgeSelection}
           />

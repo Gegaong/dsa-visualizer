@@ -8,6 +8,7 @@ type EdgeTogglesProps = {
   edges: GraphEdge[]
   isDeleteEdgeMode: boolean
   selectedEdgeIds: string[]
+  isUndirectedMode: boolean
   onToggleEdgeDirection: (edgeId: string) => void
   onToggleEdgeSelection: (edgeId: string) => void
 }
@@ -17,11 +18,13 @@ type EdgeTogglesProps = {
 // In delete-edge mode: it becomes an × badge that toggles deletion-selection,
 // and we render it even on very short edges (where it would otherwise be hidden)
 // so the user always has a clickable target for selection.
+// In undirected mode the direction pill is hidden; the × badge still shows for deletion.
 export const EdgeToggles = ({
   nodes,
   edges,
   isDeleteEdgeMode,
   selectedEdgeIds,
+  isUndirectedMode,
   onToggleEdgeDirection,
   onToggleEdgeSelection,
 }: EdgeTogglesProps) => (
@@ -36,9 +39,11 @@ export const EdgeToggles = ({
       const isSelected = selectedEdgeIds.includes(edge.id)
 
       // Hide the pill on tiny edges in normal mode, but always show in delete mode.
+      // In undirected mode also hide the pill unless in delete-edge mode.
       if (!geometry || (!isDeleteEdgeMode && geometry.edgeLength < MIN_TOGGLE_EDGE_LENGTH)) {
         return null
       }
+      if (isUndirectedMode && !isDeleteEdgeMode) return null
 
       const { x1, y1, x2, y2 } = geometry
       const midX = (x1 + x2) / 2

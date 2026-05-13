@@ -3,15 +3,10 @@ import type { GraphNode } from '../types'
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 
 // Pick the right text + size class for a node's value.
-// 'empty' renders as a blank circle, null renders as the word "null",
-// and numbers shrink (or get truncated to "...") so they fit inside the circle.
-const formatNodeValue = (value: number | null | 'empty') => {
+// 'empty' renders as a blank circle; numbers shrink (or get truncated to "...") to fit.
+const formatNodeValue = (value: number | 'empty') => {
   if (value === 'empty') {
     return { text: '', sizeClass: '' }
-  }
-
-  if (value === null) {
-    return { text: 'null', sizeClass: 'node-value--small' }
   }
 
   const text = String(value)

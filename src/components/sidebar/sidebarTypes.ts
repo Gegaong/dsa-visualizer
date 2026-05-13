@@ -29,8 +29,6 @@ export type CanvasSetupPageProps = {
   onFillRangeKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void
   onFillEmptyValues: () => void
   canFillEmpty: boolean
-  onNullifyEmptyValues: () => void
-  canNullifyEmpty: boolean
   onEmptyAllValues: () => void
   canEmptyAll: boolean
   onPresetClick: (preset: GraphPreset) => void

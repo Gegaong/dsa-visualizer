@@ -16,7 +16,7 @@ export const parseNumberInput = (value: string) => {
   return Number.isNaN(numberValue) ? null : numberValue
 }
 
-// Inclusive integer RNG used when filling null node values.
+// Inclusive integer RNG used when filling empty node values.
 export const getRandomIntInclusive = (min: number, max: number) => {
   const low = Math.ceil(min)
   const high = Math.floor(max)

@@ -38,7 +38,6 @@ import {
 import {
   canCreateEdge,
   getNextAllowedEdgeDirection,
-  sanitizeEdgesForNullNodes,
 } from './utils/graphRules'
 import { clampToRange, getVisibleCanvasRegion, isOverlapping } from './utils/geometry'
 import { buildPresetGraph } from './utils/presets'
@@ -71,6 +70,7 @@ function App() {
   const [connectionSource, setConnectionSource] = useState<string | null>(null)
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   const [canvasZoom, setCanvasZoom] = useState(1)
+  const [isUndirectedMode, setIsUndirectedMode] = useState(false)
   const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
 
   // useRef instead of useState: changing nextId doesn't trigger a re-render
@@ -93,9 +93,15 @@ function App() {
     [canvasZoom],
   )
 
+  // Edges used by algorithms: all directions overridden to 'both' in undirected mode.
+  // The real edges state is never mutated so directions survive toggling back to directed.
+  const effectiveEdges = isUndirectedMode
+    ? edges.map((edge) => ({ ...edge, direction: 'both' as const }))
+    : edges
+
   const traversal = useTraversalPlayback({
     nodes,
-    edges,
+    edges: effectiveEdges,
     algorithmTab,
     onClearOtherGraphAlgorithms: () => {
       cc.clearConnectedComponentsAlgorithmStateOnly()
@@ -112,14 +118,14 @@ function App() {
 
   const cc = useConnectedComponentsPlayback({
     nodes,
-    edges,
+    edges: effectiveEdges,
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
 
   const cycleDetection = useCycleDetectionPlayback({
     nodes,
-    edges,
+    edges: effectiveEdges,
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
@@ -142,6 +148,7 @@ function App() {
     traversal.isTraversalRunning ||
     cc.isConnectedComponentsRunning ||
     cycleDetection.isCycleDetectionRunning
+
   const ccSessionActive = cc.connectedComponentsResult !== null || cc.isConnectedComponentsRunning
   const cycleSessionActive =
     cycleDetection.cycleDetectionResult !== null || cycleDetection.isCycleDetectionRunning
@@ -154,6 +161,13 @@ function App() {
     },
     [algorithmTab, traversal, cc, cycleDetection],
   )
+
+  // Toggles undirected mode; resets any active algorithm since the graph semantics change.
+  const handleUndirectedModeToggle = () => {
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
+    setIsUndirectedMode((prev) => !prev)
+  }
 
   const closeContextMenu = () => setContextMenu(null)
 
@@ -424,20 +438,17 @@ function App() {
 
   const commitNodeValue = (nodeId: string, rawValue: string) => {
     if (blockGraphInteraction) return
-    const normalizedValue = parseNumberInput(rawValue)
+    const parsed = parseNumberInput(rawValue)
+    const newValue: number | 'empty' = parsed !== null ? parsed : 'empty'
 
     setNodes((prev) =>
       prev.map((node) =>
-        node.id === nodeId ? { ...node, value: normalizedValue } : node,
+        node.id === nodeId ? { ...node, value: newValue } : node,
       ),
     )
 
     setEditingNodeId(null)
     setDraftValue('')
-
-    if (normalizedValue === null) {
-      setEdges((prev) => sanitizeEdgesForNullNodes(prev, [nodeId]))
-    }
   }
 
   const cancelEditing = () => {
@@ -461,20 +472,6 @@ function App() {
       ),
     )
     cancelEditing()
-  }
-
-  const nullifyEmptyValues = () => {
-    if (blockGraphInteraction) return
-    resetAllGraphAlgorithmVisualizations()
-    const nullifiedNodeIds = nodes.filter((node) => node.value === 'empty').map((node) => node.id)
-
-    setNodes((prev) =>
-      prev.map((node) => (node.value === 'empty' ? { ...node, value: null } : node)),
-    )
-
-    if (nullifiedNodeIds.length > 0) {
-      setEdges((prev) => sanitizeEdgesForNullNodes(prev, nullifiedNodeIds))
-    }
   }
 
   const handleEmptyAllClick = () => {
@@ -557,7 +554,7 @@ function App() {
 
   const createEdge = (fromId: string, toId: string, direction: GraphEdge['direction']) => {
     if (blockGraphInteraction) return
-    if (!canCreateEdge(nodes, edges, fromId, toId, direction)) return
+    if (!canCreateEdge(edges, fromId, toId)) return
 
     resetAllGraphAlgorithmVisualizations()
     const newEdge: GraphEdge = {
@@ -567,14 +564,7 @@ function App() {
       direction,
     }
     nextId.current += 1
-    const nullNodeIds = [
-      ...(nodes.find((n) => n.id === fromId)?.value === null ? [fromId] : []),
-      ...(nodes.find((n) => n.id === toId)?.value === null ? [toId] : []),
-    ]
-    setEdges((prev) => {
-      const withNew = [...prev, newEdge]
-      return nullNodeIds.length > 0 ? sanitizeEdgesForNullNodes(withNew, nullNodeIds) : withNew
-    })
+    setEdges((prev) => [...prev, newEdge])
   }
 
   const toggleEdgeDirection = (edgeId: string) => {
@@ -583,7 +573,7 @@ function App() {
     setEdges((prev) =>
       prev.map((edge) => {
         if (edge.id !== edgeId) return edge
-        return { ...edge, direction: getNextAllowedEdgeDirection(edge, nodes) }
+        return { ...edge, direction: getNextAllowedEdgeDirection(edge) }
       }),
     )
   }
@@ -665,7 +655,6 @@ function App() {
   const hasNonEmptyNodes = nodes.some((node) => node.value !== 'empty')
   const fillRangeReady = parseNumberInput(fillMin) !== null && parseNumberInput(fillMax) !== null
   const canFillEmpty = hasEmptyNodes && fillRangeReady
-  const canNullifyEmpty = hasEmptyNodes
   const canEmptyAll = hasNonEmptyNodes
 
   return (
@@ -714,6 +703,8 @@ function App() {
           onCommitNodeValue={commitNodeValue}
           onToggleEdgeSelection={toggleEdgeSelection}
           onToggleEdgeDirection={toggleEdgeDirection}
+          isUndirectedMode={isUndirectedMode}
+          onUndirectedModeToggle={handleUndirectedModeToggle}
         />
 
         <Sidebar
@@ -728,8 +719,7 @@ function App() {
             onFillRangeKeyDown: handleFillRangeKeyDown,
             onFillEmptyValues: fillEmptyValues,
             canFillEmpty,
-            onNullifyEmptyValues: nullifyEmptyValues,
-            canNullifyEmpty,
+
             onEmptyAllValues: handleEmptyAllClick,
             canEmptyAll,
             onPresetClick: handlePresetClick,

@@ -10,6 +10,7 @@ type EdgesLayerProps = {
   edges: GraphEdge[]
   isDeleteEdgeMode: boolean
   selectedEdgeIds: string[]
+  isUndirectedMode: boolean
   onToggleEdgeSelection: (edgeId: string) => void
 }
 
@@ -22,6 +23,7 @@ export const EdgesLayer = ({
   edges,
   isDeleteEdgeMode,
   selectedEdgeIds,
+  isUndirectedMode,
   onToggleEdgeSelection,
 }: EdgesLayerProps) => (
   <svg
@@ -94,6 +96,28 @@ export const EdgesLayer = ({
           : geometry.edgeLength < SHORT_EDGE_MARKER_EDGE_LENGTH
             ? 'arrowhead-small'
             : 'arrowhead'
+
+      // In undirected mode draw a single plain line with no arrowheads.
+      if (isUndirectedMode) {
+        return (
+          <g key={edge.id}>
+            {isDeleteEdgeMode && isSelected && (
+              <line
+                x1={startX} y1={startY} x2={endX} y2={endY}
+                stroke="#2a4f9c" strokeWidth="12" strokeLinecap="round" opacity="0.22"
+              />
+            )}
+            <line x1={startX} y1={startY} x2={endX} y2={endY} stroke={strokeColor} strokeWidth={strokeWidth} />
+            {isDeleteEdgeMode && (
+              <line
+                x1={startX} y1={startY} x2={endX} y2={endY}
+                stroke="transparent" strokeWidth="12" pointerEvents="stroke"
+                onClick={handleEdgePick}
+              />
+            )}
+          </g>
+        )
+      }
 
       return (
         <g key={edge.id}>

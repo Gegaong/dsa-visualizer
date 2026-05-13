@@ -1,7 +1,7 @@
 import { GRAPH_PRESETS } from '../../utils/presets'
 import type { CanvasSetupPageProps } from './sidebarTypes'
 
-// Sidebar page: bulk node-value tools (fill / nullify / empty-all) and graph presets.
+// Sidebar page: bulk node-value tools (fill / empty-all) and graph presets.
 export const CanvasSetupPage = ({
   blockGraphEdits,
   fillMin,
@@ -12,8 +12,6 @@ export const CanvasSetupPage = ({
   onFillRangeKeyDown,
   onFillEmptyValues,
   canFillEmpty,
-  onNullifyEmptyValues,
-  canNullifyEmpty,
   onEmptyAllValues,
   canEmptyAll,
   onPresetClick,
@@ -53,14 +51,6 @@ export const CanvasSetupPage = ({
           disabled={!canFillEmpty || blockGraphEdits}
         >
           Fill empty values
-        </button>
-        <button
-          className="btn"
-          type="button"
-          onClick={onNullifyEmptyValues}
-          disabled={!canNullifyEmpty || blockGraphEdits}
-        >
-          Nullify all empty values
         </button>
         <button
           className="btn"

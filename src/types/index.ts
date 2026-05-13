@@ -1,10 +1,8 @@
 export type GraphNode = {
   id: string
   label: string
-  // 'empty' = never touched by the user (default for new/preset nodes).
-  // null = user explicitly cleared the value (typed nothing and exited).
-  // number = user-entered or fill-generated value.
-  value: number | null | 'empty'
+  // 'empty' = blank (default for new/preset nodes); number = user-entered or fill-generated value.
+  value: number | 'empty'
   x: number
   y: number
 }

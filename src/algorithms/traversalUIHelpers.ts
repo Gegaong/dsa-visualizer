@@ -34,7 +34,7 @@ export const prepareTraversalRunInputs = (
   }
 
   if (goalType !== 'target-node' && nodes.some((node) => node.value === 'empty')) {
-    return { ok: false, error: 'Fill or nullify all empty node values first.' }
+    return { ok: false, error: 'Fill all empty node values first.' }
   }
 
   const normalizedStart = startNodeLabel.trim().toUpperCase()
