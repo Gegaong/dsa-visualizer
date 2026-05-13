@@ -12,6 +12,11 @@
 
 * {
 	box-sizing: border-box;
+	user-select: none;
+}
+
+input, textarea {
+	user-select: text;
 }
 
 body {
