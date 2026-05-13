@@ -134,6 +134,7 @@ function App() {
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
 
+  // Forwards the sidebar algorithm picker to both canvas-algorithm hooks so their refs stay in sync.
   const handleAlgorithmModeChange = useCallback((mode: AlgorithmMode) => {
     cc.handleAlgorithmModeChangeFromSidebar(mode)
     cycleDetection.handleAlgorithmModeChangeFromSidebar(mode)
@@ -162,6 +163,7 @@ function App() {
   const cycleSessionActive =
     cycleDetection.cycleDetectionResult !== null || cycleDetection.isCycleDetectionRunning
 
+  // Clears traversal, connected-components, and cycle-detection playback and canvas highlights.
   const resetAllGraphAlgorithmVisualizations = useCallback(
     (idleAlgorithm: TraversalStrategy = algorithmTab) => {
       traversal.resetTraversalVisualization(idleAlgorithm)
@@ -178,27 +180,33 @@ function App() {
     setIsUndirectedMode((prev) => !prev)
   }
 
+  // Dismisses the node context menu without changing graph state.
   const closeContextMenu = () => setContextMenu(null)
 
+  // Clamps a zoom level to the configured min/max range.
   const clampCanvasZoom = (value: number) =>
     Math.min(CANVAS_ZOOM_MAX, Math.max(CANVAS_ZOOM_MIN, value))
 
+  // Zooms the canvas in one step (toolbar control).
   const handleZoomIn = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     setCanvasZoom((prev) => clampCanvasZoom(prev + CANVAS_ZOOM_STEP))
   }
 
+  // Zooms the canvas out one step (toolbar control).
   const handleZoomOut = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     setCanvasZoom((prev) => clampCanvasZoom(prev - CANVAS_ZOOM_STEP))
   }
 
+  // Switches BFS/DFS traversal tab and resets traversal playback for the new strategy.
   const handleAlgorithmTabChange = (tab: TraversalStrategy) => {
     if (tab === algorithmTab) return
     setAlgorithmTab(tab)
     traversal.resetTraversalVisualization(tab)
   }
 
+  // Replaces the graph with a preset layout and resets zoom, modes, and selection.
   const applyPreset = (preset: GraphPreset) => {
     const canvasBounds = canvasElement?.getBoundingClientRect()
     const canvasWidth = canvasBounds?.width ?? DEFAULT_CANVAS_WIDTH
@@ -222,6 +230,7 @@ function App() {
     closeContextMenu()
   }
 
+  // Removes one node, its incident edges, and any stale edge selection entries.
   const deleteNode = (nodeId: string) => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
@@ -241,6 +250,7 @@ function App() {
     )
   }
 
+  // Deletes every selected node and edges touching those nodes, then reindexes labels.
   const deleteSelectedNodes = (nodeIds: string[]) => {
     if (blockGraphInteraction) return
     if (nodeIds.length === 0) return
@@ -263,6 +273,7 @@ function App() {
     )
   }
 
+  // Deletes every edge whose id is in the given list.
   const deleteSelectedEdges = (edgeIds: string[]) => {
     if (blockGraphInteraction) return
     if (edgeIds.length === 0) return
@@ -272,6 +283,7 @@ function App() {
     setEdges((prev) => prev.filter((edge) => !idSet.has(edge.id)))
   }
 
+  // Toggles whether a node is in the multi-select set used by delete-node mode.
   const toggleNodeSelection = (nodeId: string) => {
     if (blockGraphInteraction) return
     setSelectedNodeIds((prev) =>
@@ -279,8 +291,10 @@ function App() {
     )
   }
 
+  // Clears the node multi-selection.
   const clearSelection = () => setSelectedNodeIds([])
 
+  // Toggles whether an edge is selected for delete-edge mode.
   const toggleEdgeSelection = (edgeId: string) => {
     if (blockGraphInteraction) return
     setSelectedEdgeIds((prev) =>
@@ -288,8 +302,38 @@ function App() {
     )
   }
 
+  // Clears edge selection used by delete-edge mode.
   const clearEdgeSelection = () => setSelectedEdgeIds([])
 
+  // Turns off connect/delete modes and clears selections (e.g. before starting an algorithm run).
+  const exitCanvasInteractionModes = () => {
+    setIsDeleteMode(false)
+    setIsDeleteEdgeMode(false)
+    setIsConnectMode(false)
+    setConnectionSource(null)
+    clearSelection()
+    clearEdgeSelection()
+  }
+
+  // Runs BFS/DFS goal traversal after leaving canvas edit modes.
+  const handleRunTraversalFromSidebar = () => {
+    exitCanvasInteractionModes()
+    traversal.runTraversalFromSidebar()
+  }
+
+  // Runs connected-components after leaving canvas edit modes.
+  const handleRunConnectedComponentsFromSidebar = (strategy: TraversalStrategy) => {
+    exitCanvasInteractionModes()
+    cc.runConnectedComponentsFromSidebar(strategy)
+  }
+
+  // Runs cycle detection after leaving canvas edit modes.
+  const handleRunCycleDetectionFromSidebar = (strategy: TraversalStrategy) => {
+    exitCanvasInteractionModes()
+    cycleDetection.runCycleDetectionFromSidebar(strategy)
+  }
+
+  // Activates delete-node mode and clears conflicting modes and menus.
   const enterDeleteMode = () => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
@@ -302,6 +346,7 @@ function App() {
     closeContextMenu()
   }
 
+  // Activates delete-edge mode and clears conflicting modes and menus.
   const enterDeleteEdgeMode = () => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
@@ -314,6 +359,7 @@ function App() {
     closeContextMenu()
   }
 
+  // Activates connect mode so the user can click two nodes to create an edge.
   const enterConnectMode = () => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
@@ -327,18 +373,21 @@ function App() {
     closeContextMenu()
   }
 
+  // Leaves delete-node mode and clears the node selection.
   const exitDeleteMode = () => {
     if (blockGraphInteraction) return
     setIsDeleteMode(false)
     clearSelection()
   }
 
+  // Leaves delete-edge mode and clears edge selection.
   const exitDeleteEdgeMode = () => {
     if (blockGraphInteraction) return
     setIsDeleteEdgeMode(false)
     clearEdgeSelection()
   }
 
+  // Opens inline value editing for a node and exits canvas modes that conflict with typing.
   const beginEditingNode = (node: GraphNode) => {
     if (blockGraphInteraction) return
     if (editingNodeId === node.id) return
@@ -357,6 +406,7 @@ function App() {
     setDraftValue(typeof node.value === 'number' ? String(node.value) : '')
   }
 
+  // Places a new node on the canvas when clicking empty space in place mode.
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (isConnectMode) return
     if (blockGraphInteraction) return
@@ -387,12 +437,14 @@ function App() {
     })
   }
 
+  // Suppresses the default context menu on the canvas background.
   const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     if (blockGraphInteraction) return
     event.preventDefault()
     closeContextMenu()
   }
 
+  // Starts inline value editing for a node from the canvas (not used while delete-node mode is on).
   const startEditingNode = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
     if (blockGraphInteraction) return
     if (isDeleteMode) return
@@ -402,6 +454,7 @@ function App() {
     beginEditingNode(node)
   }
 
+  // Opens the node context menu at a clamped screen position.
   const handleNodeContextMenu = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
     if (blockGraphInteraction) return
     event.preventDefault()
@@ -416,19 +469,23 @@ function App() {
     setContextMenu({ nodeId: node.id, x, y })
   }
 
+  // Updates the draft string while editing a node value in the floating input.
   const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (blockGraphInteraction) return
     setDraftValue(sanitizeNumericInput(event.target.value))
   }
 
+  // Sidebar: updates the fill-range minimum (digits only).
   const handleFillMinChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFillMin(sanitizeNumericInput(event.target.value))
   }
 
+  // Sidebar: updates the fill-range maximum (digits only).
   const handleFillMaxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFillMax(sanitizeNumericInput(event.target.value))
   }
 
+  // If min exceeds max after parsing, snaps max up to min so the fill range stays valid.
   const syncFillRange = () => {
     const minValue = parseNumberInput(fillMin)
     const maxValue = parseNumberInput(fillMax)
@@ -437,6 +494,7 @@ function App() {
     }
   }
 
+  // Sidebar: on Enter in fill min/max fields, normalizes order and blurs the active input.
   const handleFillRangeKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault()
@@ -445,6 +503,7 @@ function App() {
     }
   }
 
+  // Writes a parsed numeric value (or empty) to a node and closes the inline editor.
   const commitNodeValue = (nodeId: string, rawValue: string) => {
     if (blockGraphInteraction) return
     const parsed = parseNumberInput(rawValue)
@@ -460,11 +519,13 @@ function App() {
     setDraftValue('')
   }
 
+  // Closes inline editing without saving the draft.
   const cancelEditing = () => {
     setEditingNodeId(null)
     setDraftValue('')
   }
 
+  // Sidebar: assigns random integers in the fill range to every node that is still empty.
   const fillEmptyValues = () => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
@@ -483,12 +544,14 @@ function App() {
     cancelEditing()
   }
 
+  // Sidebar: opens the confirm dialog before emptying every node's value.
   const handleEmptyAllClick = () => {
     if (blockGraphInteraction) return
     if (nodes.every((node) => node.value === 'empty')) return
     setShowEmptyAllConfirm(true)
   }
 
+  // Confirms empty-all: sets every node's value to empty and closes the modal.
   const confirmEmptyAll = () => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
@@ -497,8 +560,10 @@ function App() {
     setShowEmptyAllConfirm(false)
   }
 
+  // Cancels the empty-all confirmation without changing nodes.
   const cancelEmptyAll = () => setShowEmptyAllConfirm(false)
 
+  // Inline editor: Enter commits; Escape cancels without saving.
   const handleValueKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, nodeId: string) => {
     if (event.key === 'Enter') {
       event.preventDefault()
@@ -509,12 +574,14 @@ function App() {
     }
   }
 
+  // Toolbar: asks for confirmation before clearing every node and edge.
   const handleClearCanvas = () => {
     if (blockGraphInteraction) return
     if (nodes.length === 0) return
     setShowClearConfirm(true)
   }
 
+  // Confirms clear-canvas: wipes graph state, resets id counter, and exits edit modes.
   const confirmClearCanvas = () => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
@@ -532,8 +599,10 @@ function App() {
     clearEdgeSelection()
   }
 
+  // Cancels clear-canvas confirmation without removing nodes.
   const cancelClearCanvas = () => setShowClearConfirm(false)
 
+  // Sidebar: loads a preset immediately if the canvas is empty; otherwise asks to replace.
   const handlePresetClick = (preset: GraphPreset) => {
     if (blockGraphInteraction) return
     if (nodes.length === 0) {
@@ -544,6 +613,7 @@ function App() {
     setShowPresetConfirm(true)
   }
 
+  // Confirms preset replace: applies the pending preset and closes the modal.
   const confirmPresetReplace = () => {
     if (blockGraphInteraction) return
     if (!pendingPreset) {
@@ -556,11 +626,13 @@ function App() {
     setShowPresetConfirm(false)
   }
 
+  // Cancels preset replace and discards the pending preset choice.
   const cancelPresetReplace = () => {
     setPendingPreset(null)
     setShowPresetConfirm(false)
   }
 
+  // Connect mode: creates a new edge if the pair is allowed, otherwise no-ops.
   const createEdge = (fromId: string, toId: string, direction: GraphEdge['direction']) => {
     if (blockGraphInteraction) return
     if (!canCreateEdge(edges, fromId, toId)) return
@@ -576,6 +648,7 @@ function App() {
     setEdges((prev) => [...prev, newEdge])
   }
 
+  // Cycles an edge's direction state (forward / both / backward) on the canvas pill.
   const toggleEdgeDirection = (edgeId: string) => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
@@ -587,6 +660,7 @@ function App() {
     )
   }
 
+  // Connect mode: picks the first endpoint, then creates an edge on the second click.
   const handleConnectNodeClick = (nodeId: string) => {
     if (blockGraphInteraction) return
     if (!connectionSource) {
@@ -597,12 +671,14 @@ function App() {
     }
   }
 
+  // Exits connect mode and clears the in-progress connection source.
   const cancelConnection = () => {
     if (blockGraphInteraction) return
     setIsConnectMode(false)
     setConnectionSource(null)
   }
 
+  // Toolbar: toggles delete-node mode; when turning off, deletes selected nodes if any.
   const handleDeleteModeToggle = () => {
     if (blockGraphInteraction) return
     if (isDeleteMode) {
@@ -618,6 +694,7 @@ function App() {
     enterDeleteMode()
   }
 
+  // Toolbar: toggles delete-edge mode; when turning off, deletes selected edges if any.
   const handleDeleteEdgeModeToggle = () => {
     if (blockGraphInteraction) return
     if (isDeleteEdgeMode) {
@@ -633,6 +710,7 @@ function App() {
     enterDeleteEdgeMode()
   }
 
+  // Toolbar: toggles connect mode on or off (off uses cancelConnection).
   const handleConnectModeToggle = () => {
     if (blockGraphInteraction) return
     if (isConnectMode) {
@@ -642,11 +720,13 @@ function App() {
     enterConnectMode()
   }
 
+  // Toolbar: updates the direction used for the next edge created in connect mode.
   const handleNewEdgeDirectionChange = (direction: GraphEdge['direction']) => {
     if (blockGraphInteraction) return
     setNewEdgeDirection(direction)
   }
 
+  // When leaving Traversal or Algorithms sidebar tabs, resets the corresponding canvas algorithms.
   const handleSidebarSectionChange = useCallback(
     ({ from, to }: { from: SidebarPage; to: SidebarPage }) => {
       if (from === 'traversal' && to !== 'traversal') {
@@ -753,7 +833,7 @@ function App() {
             onGoalNodeLabelChange: traversal.handleGoalNodeLabelChange,
             goalValueInput: traversal.goalValueInput,
             onGoalValueInputChange: traversal.handleGoalValueInputChange,
-            onRunTraversal: traversal.runTraversalFromSidebar,
+            onRunTraversal: handleRunTraversalFromSidebar,
             onStopTraversal: traversal.resetTraversalVisualization,
             canRunTraversal: traversal.canRunTraversal,
             traversalStatusText: traversal.sidebarTraversalStatusText,
@@ -776,7 +856,7 @@ function App() {
             isCycleDetectionSessionActive: cycleSessionActive,
             isUndirectedMode,
             onAlgorithmModeChange: handleAlgorithmModeChange,
-            onRunConnectedComponents: cc.runConnectedComponentsFromSidebar,
+            onRunConnectedComponents: handleRunConnectedComponentsFromSidebar,
             onStopConnectedComponents: cc.resetConnectedComponentsVisualization,
             canRunConnectedComponents: cc.canRunConnectedComponents,
             connectedComponentsStatusText: cc.connectedComponentsStatusText,
@@ -794,7 +874,7 @@ function App() {
             connectedComponentsOutput: cc.ccOutput,
             connectedComponentsStepIndex: cc.stepIndex,
             connectedComponentsStepTotal: cc.connectedComponentsResult?.steps.length ?? 0,
-            onRunCycleDetection: cycleDetection.runCycleDetectionFromSidebar,
+            onRunCycleDetection: handleRunCycleDetectionFromSidebar,
             onStopCycleDetection: cycleDetection.resetCycleDetectionVisualization,
             canRunCycleDetection: cycleDetection.canRunCycleDetection,
             cycleDetectionStatusText: cycleDetection.cycleDetectionStatusText,
