@@ -17,6 +17,7 @@ export type BfsStep = {
   nodeId: string
   nodeLabel: string
   order: number
+  fromNodeId: string | null
 }
 
 export type BfsResult = {

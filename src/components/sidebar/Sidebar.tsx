@@ -61,7 +61,10 @@ export const Sidebar = ({
 
       {activePage === 'canvas' && <CanvasSetupPage {...canvasSetup} />}
       {activePage === 'traversal' && <TraversalPage {...traversal} />}
-      <div style={{ display: activePage === 'algorithms' ? undefined : 'none' }}>
+      <div
+        className="sidebar-page-root"
+        style={{ display: activePage === 'algorithms' ? undefined : 'none' }}
+      >
         <AlgorithmsPage {...algorithms} />
       </div>
     </aside>

@@ -80,10 +80,11 @@ export function useNodeDragging({
 
     if (editingNodeId !== null && editingNodeId !== node.id) {
       const nodeId = editingNodeId
-      const normalizedValue = parseNumberInput(draftValue)
+      const parsed = parseNumberInput(draftValue)
+      const value: GraphNode['value'] = parsed !== null ? parsed : 'empty'
       setNodes((prev) =>
         prev.map((currentNode) =>
-          currentNode.id === nodeId ? { ...currentNode, value: normalizedValue } : currentNode,
+          currentNode.id === nodeId ? { ...currentNode, value } : currentNode,
         ),
       )
       setEditingNodeId(null)

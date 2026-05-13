@@ -32,7 +32,9 @@ function bfsDfsLabel(mode: TraversalStrategy): 'DFS' | 'BFS' {
 
 type TraversalVisualSetters = {
   setTraversalVisitedNodeIds: (ids: string[]) => void
+  setTraversalVisitedEdgeIds: (ids: string[]) => void
   setTraversalCurrentNodeId: (id: string | null) => void
+  setTraversalCurrentEdgeId: (id: string | null) => void
   setTraversalStartNodeId: (id: string | null) => void
   setTraversalGoalNodeIds: (ids: string[]) => void
 }
@@ -56,6 +58,8 @@ export type ConnectedComponentsPlaybackHandle = {
   connectedComponentsStatusText: string
   weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
   weakCCOutlineActive: boolean
+  weakCCVisitedNodeIds: string[]
+  weakCCVisitedEdgeIds: string[]
 
   isPlaying: boolean
   playbackSpeed: number
@@ -87,7 +91,9 @@ export function useConnectedComponentsPlayback({
 }: UseConnectedComponentsPlaybackParams): ConnectedComponentsPlaybackHandle {
   const {
     setTraversalVisitedNodeIds,
+    setTraversalVisitedEdgeIds,
     setTraversalCurrentNodeId,
+    setTraversalCurrentEdgeId,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
   } = traversalVisualSetters
@@ -108,6 +114,8 @@ export function useConnectedComponentsPlayback({
     string,
     WeakCCOutlineHSL
   > | null>(null)
+  const [weakCCVisitedNodeIds, setWeakCCVisitedNodeIds] = useState<string[]>([])
+  const [weakCCVisitedEdgeIds, setWeakCCVisitedEdgeIds] = useState<string[]>([])
 
   useEffect(() => {
     connectedComponentsResultRef.current = connectedComponentsResult
@@ -117,9 +125,13 @@ export function useConnectedComponentsPlayback({
     const strategyLabel = bfsDfsLabel(connectedComponentsStrategyRef.current)
     if (index < 0) {
       setTraversalCurrentNodeId(null)
+      setTraversalCurrentEdgeId(null)
       setTraversalVisitedNodeIds([])
+      setTraversalVisitedEdgeIds([])
       setTraversalStartNodeId(null)
       setTraversalGoalNodeIds([])
+      setWeakCCVisitedNodeIds([])
+      setWeakCCVisitedEdgeIds([])
       setConnectedComponentsStatusText(
         `Weakly connected components (${strategyLabel}) ready. Press Play or step through manually.`,
       )
@@ -129,9 +141,29 @@ export function useConnectedComponentsPlayback({
     const boundedIndex = Math.min(index, result.steps.length - 1)
     const currentStep = result.steps[boundedIndex]
     const visitedIds = result.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
+    const findEdgeId = (fromId: string, toId: string) =>
+      edges.find(
+        (edge) =>
+          (edge.fromNodeId === fromId && edge.toNodeId === toId) ||
+          (edge.fromNodeId === toId && edge.toNodeId === fromId),
+      )?.id ?? null
+    const visitedEdgeIds = new Set<string>()
+    result.steps.slice(0, boundedIndex + 1).forEach((step) => {
+      if (step.fromNodeId === null) return
+      const edgeId = findEdgeId(step.fromNodeId, step.nodeId)
+      if (edgeId) visitedEdgeIds.add(edgeId)
+    })
+    const currentEdgeId =
+      currentStep.fromNodeId !== null
+        ? findEdgeId(currentStep.fromNodeId, currentStep.nodeId)
+        : null
 
     setTraversalCurrentNodeId(currentStep.nodeId)
+    setTraversalCurrentEdgeId(currentEdgeId)
     setTraversalVisitedNodeIds(visitedIds)
+    setTraversalVisitedEdgeIds([...visitedEdgeIds])
+    setWeakCCVisitedNodeIds(visitedIds)
+    setWeakCCVisitedEdgeIds([...visitedEdgeIds])
     setTraversalStartNodeId(currentStep.componentRootNodeId)
     setConnectedComponentsStatusText(
       `Visiting ${currentStep.nodeLabel} (step ${currentStep.order}/${result.steps.length}) · ${strategyLabel}`,
@@ -161,11 +193,12 @@ export function useConnectedComponentsPlayback({
     finalizeConnectedComponentsRunRef.current = (result: ConnectedComponentsResult) => {
       connectedComponentsPlayback.stopPlayback()
       setTraversalCurrentNodeId(null)
+      setTraversalCurrentEdgeId(null)
       setTraversalStartNodeId(null)
       setTraversalGoalNodeIds([])
       setConnectedComponentsStatusText(buildConnectedComponentsCompletionStatus(result, nodes))
     }
-  }, [connectedComponentsPlayback, nodes, setTraversalCurrentNodeId, setTraversalStartNodeId, setTraversalGoalNodeIds])
+  }, [connectedComponentsPlayback, nodes, setTraversalCurrentNodeId, setTraversalCurrentEdgeId, setTraversalStartNodeId, setTraversalGoalNodeIds])
 
   useEffect(() => {
     connectedComponentsPlaybackStopRef.current = () => connectedComponentsPlayback.stopPlayback()
@@ -180,16 +213,21 @@ export function useConnectedComponentsPlayback({
   const resetConnectedComponentsVisualization = useCallback(() => {
     clearConnectedComponentsPlaybackAndResult()
     setTraversalVisitedNodeIds([])
+    setTraversalVisitedEdgeIds([])
     setTraversalCurrentNodeId(null)
+    setTraversalCurrentEdgeId(null)
     setTraversalStartNodeId(null)
     setTraversalGoalNodeIds([])
     setConnectedComponentsStatusText('Select BFS or DFS, then run weakly connected components.')
     setIsConnectedComponentsRunning(false)
     setWeakCCOutlineHslByNodeId(null)
+    setWeakCCVisitedNodeIds([])
+    setWeakCCVisitedEdgeIds([])
   }, [
     clearConnectedComponentsPlaybackAndResult,
     setTraversalVisitedNodeIds,
     setTraversalCurrentNodeId,
+    setTraversalCurrentEdgeId,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
   ])
@@ -198,6 +236,8 @@ export function useConnectedComponentsPlayback({
     clearConnectedComponentsPlaybackAndResult()
     setIsConnectedComponentsRunning(false)
     setWeakCCOutlineHslByNodeId(null)
+    setWeakCCVisitedNodeIds([])
+    setWeakCCVisitedEdgeIds([])
   }, [clearConnectedComponentsPlaybackAndResult])
 
   const handleAlgorithmModeChangeFromSidebar = useCallback(
@@ -288,6 +328,8 @@ export function useConnectedComponentsPlayback({
     connectedComponentsStatusText,
     weakCCOutlineHslByNodeId,
     weakCCOutlineActive,
+    weakCCVisitedNodeIds,
+    weakCCVisitedEdgeIds,
 
     isPlaying: connectedComponentsPlayback.isPlaying,
     playbackSpeed: connectedComponentsPlayback.playbackSpeed,

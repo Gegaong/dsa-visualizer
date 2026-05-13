@@ -23,11 +23,16 @@ type GraphCanvasProps = {
   draftValue: string
   draggingNodeId: string | null
   traversalVisitedNodeIds: string[]
+  traversalVisitedEdgeIds: string[]
   traversalCurrentNodeId: string | null
+  traversalCurrentEdgeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
   weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
   weakCCOutlineActive: boolean
+  weakCCVisitedNodeIds: string[]
+  weakCCVisitedEdgeIds: string[]
+  cycleGoalEdgeIds: string[]
   onCanvasRef: (el: HTMLDivElement | null) => void
   onCanvasClick: (event: MouseEvent<HTMLDivElement>) => void
   onCanvasContextMenu: (event: MouseEvent<HTMLDivElement>) => void
@@ -69,11 +74,16 @@ export function GraphCanvas({
   draftValue,
   draggingNodeId,
   traversalVisitedNodeIds,
+  traversalVisitedEdgeIds,
   traversalCurrentNodeId,
+  traversalCurrentEdgeId,
   traversalStartNodeId,
   traversalGoalNodeIds,
   weakCCOutlineHslByNodeId,
   weakCCOutlineActive,
+  weakCCVisitedNodeIds,
+  weakCCVisitedEdgeIds,
+  cycleGoalEdgeIds,
   onCanvasRef,
   onCanvasClick,
   onCanvasContextMenu,
@@ -183,13 +193,12 @@ export function GraphCanvas({
       </div>
 
       <div
-        className={`canvas ${
-          isConnectMode
-            ? 'is-connect'
-            : isDeleteMode || isDeleteEdgeMode
-              ? 'is-select'
-              : 'is-place'
-        }`}
+        className={`canvas ${isConnectMode
+          ? 'is-connect'
+          : isDeleteMode || isDeleteEdgeMode
+            ? 'is-select'
+            : 'is-place'
+          }`}
         ref={onCanvasRef}
         onClick={onCanvasClick}
         onContextMenu={onCanvasContextMenu}
@@ -238,6 +247,12 @@ export function GraphCanvas({
             isDeleteEdgeMode={isDeleteEdgeMode}
             selectedEdgeIds={selectedEdgeIds}
             isUndirectedMode={isUndirectedMode}
+            traversalVisitedEdgeIds={traversalVisitedEdgeIds}
+            traversalCurrentEdgeId={traversalCurrentEdgeId}
+            weakCCOutlineHslByNodeId={weakCCOutlineHslByNodeId}
+            weakCCOutlineActive={weakCCOutlineActive}
+            weakCCVisitedEdgeIds={weakCCVisitedEdgeIds}
+            cycleGoalEdgeIds={cycleGoalEdgeIds}
             onToggleEdgeSelection={onToggleEdgeSelection}
           />
 
@@ -267,6 +282,7 @@ export function GraphCanvas({
             traversalGoalNodeIds={traversalGoalNodeIds}
             weakCCOutlineHslByNodeId={weakCCOutlineHslByNodeId}
             weakCCOutlineActive={weakCCOutlineActive}
+            weakCCVisitedNodeIds={weakCCVisitedNodeIds}
             onNodeMouseDown={onNodeMouseDown}
             onConnectNodeClick={onConnectNodeClick}
             onToggleNodeSelection={onToggleNodeSelection}

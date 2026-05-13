@@ -31,7 +31,9 @@ function bfsDfsLabel(mode: TraversalStrategy): 'DFS' | 'BFS' {
 
 type TraversalVisualSetters = {
   setTraversalVisitedNodeIds: (ids: string[]) => void
+  setTraversalVisitedEdgeIds: (ids: string[]) => void
   setTraversalCurrentNodeId: (id: string | null) => void
+  setTraversalCurrentEdgeId: (id: string | null) => void
   setTraversalStartNodeId: (id: string | null) => void
   setTraversalGoalNodeIds: (ids: string[]) => void
 }
@@ -52,6 +54,7 @@ export type CycleDetectionPlaybackHandle = {
   cycleDetectionResult: CycleDetectionResult | null
   isCycleDetectionRunning: boolean
   cycleDetectionStatusText: string
+  cycleGoalEdgeIds: string[]
 
   isPlaying: boolean
   playbackSpeed: number
@@ -84,7 +87,9 @@ export function useCycleDetectionPlayback({
 }: UseCycleDetectionPlaybackParams): CycleDetectionPlaybackHandle {
   const {
     setTraversalVisitedNodeIds,
+    setTraversalVisitedEdgeIds,
     setTraversalCurrentNodeId,
+    setTraversalCurrentEdgeId,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
   } = traversalVisualSetters
@@ -101,6 +106,7 @@ export function useCycleDetectionPlayback({
   const [cycleDetectionStatusText, setCycleDetectionStatusText] = useState(
     'Select BFS or DFS, then run cycle detection.',
   )
+  const [cycleGoalEdgeIds, setCycleGoalEdgeIds] = useState<string[]>([])
 
   useEffect(() => {
     cycleDetectionResultRef.current = cycleDetectionResult
@@ -111,9 +117,12 @@ export function useCycleDetectionPlayback({
     const strategyLabel = bfsDfsLabel(cycleDetectionStrategyRef.current)
     if (index < 0) {
       setTraversalCurrentNodeId(null)
+      setTraversalCurrentEdgeId(null)
       setTraversalVisitedNodeIds([])
+      setTraversalVisitedEdgeIds([])
       setTraversalStartNodeId(null)
       setTraversalGoalNodeIds([])
+      setCycleGoalEdgeIds([])
       setCycleDetectionStatusText(
         `Cycle detection (${strategyLabel}) ready. Press Play or step through manually.`,
       )
@@ -123,9 +132,27 @@ export function useCycleDetectionPlayback({
     const boundedIndex = Math.min(index, result.steps.length - 1)
     const currentStep = result.steps[boundedIndex]
     const visitedIds = result.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
+    const findEdgeId = (fromId: string, toId: string) =>
+      edges.find(
+        (edge) =>
+          (edge.fromNodeId === fromId && edge.toNodeId === toId) ||
+          (edge.fromNodeId === toId && edge.toNodeId === fromId),
+      )?.id ?? null
+    const visitedEdgeIds = new Set<string>()
+    result.steps.slice(0, boundedIndex + 1).forEach((step) => {
+      if (step.fromNodeId === null) return
+      const edgeId = findEdgeId(step.fromNodeId, step.nodeId)
+      if (edgeId) visitedEdgeIds.add(edgeId)
+    })
+    const currentEdgeId =
+      currentStep.fromNodeId !== null
+        ? findEdgeId(currentStep.fromNodeId, currentStep.nodeId)
+        : null
 
     setTraversalCurrentNodeId(currentStep.nodeId)
+    setTraversalCurrentEdgeId(currentEdgeId)
     setTraversalVisitedNodeIds(visitedIds)
+    setTraversalVisitedEdgeIds([...visitedEdgeIds])
     setTraversalStartNodeId(null)
     setTraversalGoalNodeIds([])
     setCycleDetectionStatusText(
@@ -149,16 +176,39 @@ export function useCycleDetectionPlayback({
     },
   })
 
+  const buildCycleGoalEdgeIds = (cycleNodeIds: string[]) => {
+    if (cycleNodeIds.length < 2) return []
+    const ids = new Set<string>()
+    const isDirectedMatch = (edge: GraphEdge, fromId: string, toId: string) => {
+      if (edge.fromNodeId === fromId && edge.toNodeId === toId) {
+        return edge.direction === 'forward' || edge.direction === 'both'
+      }
+      if (edge.fromNodeId === toId && edge.toNodeId === fromId) {
+        return edge.direction === 'backward' || edge.direction === 'both'
+      }
+      return false
+    }
+    for (let i = 0; i < cycleNodeIds.length; i += 1) {
+      const fromId = cycleNodeIds[i]
+      const toId = cycleNodeIds[(i + 1) % cycleNodeIds.length]
+      const edgeId = edges.find((edge) => isDirectedMatch(edge, fromId, toId))?.id
+      if (edgeId) ids.add(edgeId)
+    }
+    return [...ids]
+  }
+
   useEffect(() => {
     finalizeCycleDetectionRunRef.current = (result: CycleDetectionResult) => {
       cycleDetectionPlayback.stopPlayback()
       setTraversalCurrentNodeId(null)
+      setTraversalCurrentEdgeId(null)
       setTraversalStartNodeId(null)
       // Reveal the detected cycle with the same blue "goal" highlight used by traversals.
       setTraversalGoalNodeIds(result.hasCycle ? result.cycleNodeIds : [])
+      setCycleGoalEdgeIds(result.hasCycle ? buildCycleGoalEdgeIds(result.cycleNodeIds) : [])
       setCycleDetectionStatusText(buildCycleDetectionCompletionStatus(result, nodes))
     }
-  }, [cycleDetectionPlayback, nodes, setTraversalCurrentNodeId, setTraversalStartNodeId, setTraversalGoalNodeIds])
+  }, [cycleDetectionPlayback, edges, nodes, setTraversalCurrentNodeId, setTraversalCurrentEdgeId, setTraversalStartNodeId, setTraversalGoalNodeIds])
 
   useEffect(() => {
     cycleDetectionPlaybackStopRef.current = () => cycleDetectionPlayback.stopPlayback()
@@ -175,15 +225,19 @@ export function useCycleDetectionPlayback({
   const resetCycleDetectionVisualization = useCallback(() => {
     clearCycleDetectionPlaybackAndResult()
     setTraversalVisitedNodeIds([])
+    setTraversalVisitedEdgeIds([])
     setTraversalCurrentNodeId(null)
+    setTraversalCurrentEdgeId(null)
     setTraversalStartNodeId(null)
     setTraversalGoalNodeIds([])
+    setCycleGoalEdgeIds([])
     setCycleDetectionStatusText('Select BFS or DFS, then run cycle detection.')
     setIsCycleDetectionRunning(false)
   }, [
     clearCycleDetectionPlaybackAndResult,
     setTraversalVisitedNodeIds,
     setTraversalCurrentNodeId,
+    setTraversalCurrentEdgeId,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
   ])
@@ -192,6 +246,7 @@ export function useCycleDetectionPlayback({
   const clearCycleDetectionAlgorithmStateOnly = useCallback(() => {
     clearCycleDetectionPlaybackAndResult()
     setIsCycleDetectionRunning(false)
+    setCycleGoalEdgeIds([])
   }, [clearCycleDetectionPlaybackAndResult])
 
   // Resets cycle detection when switching away from the cycle mode tab.
@@ -212,6 +267,7 @@ export function useCycleDetectionPlayback({
     if (cycleDetectionPlayback.isPlaying) return
     cycleDetectionPlaybackStopRef.current()
     onResetTraversal()
+    setCycleGoalEdgeIds([])
 
     cycleDetectionStrategyRef.current = strategy
 
@@ -283,6 +339,7 @@ export function useCycleDetectionPlayback({
     cycleDetectionResult,
     isCycleDetectionRunning,
     cycleDetectionStatusText,
+    cycleGoalEdgeIds,
 
     isPlaying: cycleDetectionPlayback.isPlaying,
     playbackSpeed: cycleDetectionPlayback.playbackSpeed,

@@ -69,11 +69,11 @@ export function runDirectedGoalTraversal(
     visited,
     strategy,
     orderNeighbors: (raw) => sortIdsByLabel(raw, nodeById),
-    onVisit: (currentId) => {
+    onVisit: (currentId, parentId) => {
       const currentNode = nodeById.get(currentId)
       if (!currentNode) return
 
-      steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order })
+      steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId })
       order += 1
 
       if (input.goal.type === 'max-value' || input.goal.type === 'min-value') {

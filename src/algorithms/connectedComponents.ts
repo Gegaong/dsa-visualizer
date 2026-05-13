@@ -36,7 +36,7 @@ export function runConnectedComponents(
   let order = 1
 
   // Appends one CC step (with component root) and bumps global step order.
-  const emitVisit = (nodeId: string, componentRootId: string) => {
+  const emitVisit = (nodeId: string, componentRootId: string, fromNodeId: string | null) => {
     const node = nodeById.get(nodeId)
     if (!node) return
     steps.push({
@@ -44,6 +44,7 @@ export function runConnectedComponents(
       nodeLabel: node.label,
       order,
       componentRootNodeId: componentRootId,
+      fromNodeId,
     })
     order += 1
   }
@@ -61,8 +62,8 @@ export function runConnectedComponents(
       visited: globalVisited,
       strategy,
       orderNeighbors,
-      onVisit: (nodeId) => {
-        emitVisit(nodeId, rootId)
+      onVisit: (nodeId, parentId) => {
+        emitVisit(nodeId, rootId, parentId)
         componentNodes.push(nodeId)
       },
     })

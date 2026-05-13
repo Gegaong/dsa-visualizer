@@ -111,7 +111,9 @@ function App() {
 
   const traversalVisualSetters = {
     setTraversalVisitedNodeIds: traversal.setTraversalVisitedNodeIds,
+    setTraversalVisitedEdgeIds: traversal.setTraversalVisitedEdgeIds,
     setTraversalCurrentNodeId: traversal.setTraversalCurrentNodeId,
+    setTraversalCurrentEdgeId: traversal.setTraversalCurrentEdgeId,
     setTraversalStartNodeId: traversal.setTraversalStartNodeId,
     setTraversalGoalNodeIds: traversal.setTraversalGoalNodeIds,
   }
@@ -683,11 +685,16 @@ function App() {
           draftValue={draftValue}
           draggingNodeId={nodeDragging.draggingNodeId}
           traversalVisitedNodeIds={traversal.traversalVisitedNodeIds}
+          traversalVisitedEdgeIds={traversal.traversalVisitedEdgeIds}
           traversalCurrentNodeId={traversal.traversalCurrentNodeId}
+          traversalCurrentEdgeId={traversal.traversalCurrentEdgeId}
           traversalStartNodeId={traversal.traversalStartNodeId}
           traversalGoalNodeIds={traversal.traversalGoalNodeIds}
           weakCCOutlineHslByNodeId={cc.weakCCOutlineHslByNodeId}
           weakCCOutlineActive={cc.weakCCOutlineActive}
+          weakCCVisitedNodeIds={cc.weakCCVisitedNodeIds}
+          weakCCVisitedEdgeIds={cc.weakCCVisitedEdgeIds}
+          cycleGoalEdgeIds={cycleDetection.cycleGoalEdgeIds}
           onCanvasRef={setCanvasElement}
           onCanvasClick={handleCanvasClick}
           onCanvasContextMenu={handleCanvasContextMenu}

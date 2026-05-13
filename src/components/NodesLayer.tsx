@@ -39,6 +39,7 @@ type GraphNodeLayerProps = {
   // Full weak-CC outline color (HSL per component); applied when enabled and visited.
   weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
   weakCCOutlineActive: boolean
+  weakCCVisitedNodeIds: string[]
   onNodeMouseDown: (event: MouseEvent<HTMLDivElement>, node: GraphNode) => void
   onConnectNodeClick: (nodeId: string) => void
   onToggleNodeSelection: (nodeId: string) => void
@@ -68,6 +69,7 @@ export const GraphNodeLayer = ({
   traversalGoalNodeIds,
   weakCCOutlineHslByNodeId,
   weakCCOutlineActive,
+  weakCCVisitedNodeIds,
   onNodeMouseDown,
   onConnectNodeClick,
   onToggleNodeSelection,
@@ -90,15 +92,12 @@ export const GraphNodeLayer = ({
       const isStart = traversalStartNodeId === node.id
       const isGoal = traversalGoalNodeIds.includes(node.id)
       const weakCcColored =
-        weakCCOutlineHslByNodeId !== null && weakCCOutlineHslByNodeId.has(node.id)
-      const ccHsl = weakCCOutlineHslByNodeId?.get(node.id)
-      const ccOutline =
         weakCCOutlineActive &&
-        ccHsl !== undefined &&
-        isVisited &&
-        !isConnectMode &&
-        !isDeleteMode &&
-        !isDeleteEdgeMode
+        weakCCOutlineHslByNodeId !== null &&
+        weakCCOutlineHslByNodeId.has(node.id)
+      const ccHsl = weakCCOutlineHslByNodeId?.get(node.id)
+      const ccVisited = weakCCVisitedNodeIds.includes(node.id)
+      const ccOutline = weakCCOutlineActive && ccHsl !== undefined && ccVisited
       const isCcCurrent = ccOutline && isCurrent
       // Long values are truncated inside the circle; reveal the full value on hover.
       const showHoverValue = typeof node.value === 'number' && String(node.value).length > 5
@@ -106,14 +105,14 @@ export const GraphNodeLayer = ({
       const ccNodeStyle: CSSProperties | undefined =
         ccOutline && ccHsl
           ? {
-              borderColor: `hsl(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}%)`,
-              borderWidth: isCcCurrent ? 3 : 2,
-              background: `hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.22)`,
-              boxShadow: isCcCurrent
-                ? `0 0 0 6px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.3), 0 0 0 12px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.14), 0 14px 24px rgba(46, 32, 23, 0.2)`
-                : `0 0 0 4px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.26), 0 12px 22px rgba(46, 32, 23, 0.2)`,
-              transform: isCcCurrent ? 'scale(1.06)' : undefined,
-            }
+            borderColor: `hsl(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}%)`,
+            borderWidth: isCcCurrent ? 3 : 2,
+            background: `hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.22)`,
+            boxShadow: isCcCurrent
+              ? `0 0 0 6px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.3), 0 0 0 12px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.14), 0 14px 24px rgba(46, 32, 23, 0.2)`
+              : `0 0 0 4px hsla(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}% / 0.26), 0 12px 22px rgba(46, 32, 23, 0.2)`,
+            transform: isCcCurrent ? 'scale(1.06)' : undefined,
+          }
           : undefined
 
       return (

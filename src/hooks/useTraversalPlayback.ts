@@ -48,11 +48,15 @@ export type TraversalPlaybackHandle = {
   goalValueInput: string
 
   traversalVisitedNodeIds: string[]
+  traversalVisitedEdgeIds: string[]
   traversalCurrentNodeId: string | null
+  traversalCurrentEdgeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
   setTraversalVisitedNodeIds: (ids: string[]) => void
+  setTraversalVisitedEdgeIds: (ids: string[]) => void
   setTraversalCurrentNodeId: (id: string | null) => void
+  setTraversalCurrentEdgeId: (id: string | null) => void
   setTraversalStartNodeId: (id: string | null) => void
   setTraversalGoalNodeIds: (ids: string[]) => void
 
@@ -93,7 +97,9 @@ export function useTraversalPlayback({
   const [goalNodeLabel, setGoalNodeLabel] = useState('')
   const [goalValueInput, setGoalValueInput] = useState('')
   const [traversalVisitedNodeIds, setTraversalVisitedNodeIds] = useState<string[]>([])
+  const [traversalVisitedEdgeIds, setTraversalVisitedEdgeIds] = useState<string[]>([])
   const [traversalCurrentNodeId, setTraversalCurrentNodeId] = useState<string | null>(null)
+  const [traversalCurrentEdgeId, setTraversalCurrentEdgeId] = useState<string | null>(null)
   const [traversalStartNodeId, setTraversalStartNodeId] = useState<string | null>(null)
   const [traversalGoalNodeIds, setTraversalGoalNodeIds] = useState<string[]>([])
   const [traversalStatusText, setTraversalStatusText] = useState(
@@ -114,7 +120,9 @@ export function useTraversalPlayback({
     const algoName = bfsDfsLabel(algorithmTab)
     if (index < 0) {
       setTraversalCurrentNodeId(null)
+      setTraversalCurrentEdgeId(null)
       setTraversalVisitedNodeIds([])
+      setTraversalVisitedEdgeIds([])
       setTraversalStatusText(`${algoName} ready. Press Play or step through manually.`)
       return
     }
@@ -122,9 +130,27 @@ export function useTraversalPlayback({
     const boundedIndex = Math.min(index, result.steps.length - 1)
     const currentStep = result.steps[boundedIndex]
     const visitedIds = result.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
+    const findEdgeId = (fromId: string, toId: string) =>
+      edges.find(
+        (edge) =>
+          (edge.fromNodeId === fromId && edge.toNodeId === toId) ||
+          (edge.fromNodeId === toId && edge.toNodeId === fromId),
+      )?.id ?? null
+    const visitedEdgeIds = new Set<string>()
+    result.steps.slice(0, boundedIndex + 1).forEach((step) => {
+      if (step.fromNodeId === null) return
+      const edgeId = findEdgeId(step.fromNodeId, step.nodeId)
+      if (edgeId) visitedEdgeIds.add(edgeId)
+    })
+    const currentEdgeId =
+      currentStep.fromNodeId !== null
+        ? findEdgeId(currentStep.fromNodeId, currentStep.nodeId)
+        : null
 
     setTraversalCurrentNodeId(currentStep.nodeId)
+    setTraversalCurrentEdgeId(currentEdgeId)
     setTraversalVisitedNodeIds(visitedIds)
+    setTraversalVisitedEdgeIds([...visitedEdgeIds])
     setTraversalStatusText(
       `Visiting ${currentStep.nodeLabel} (step ${currentStep.order}/${result.steps.length})`,
     )
@@ -150,6 +176,7 @@ export function useTraversalPlayback({
     finalizeTraversalRunRef.current = (result: BfsResult) => {
       traversalPlayback.stopPlayback()
       setTraversalCurrentNodeId(null)
+      setTraversalCurrentEdgeId(null)
 
       if (!result.foundNodeLabel) {
         setTraversalStatusText('Done. Goal not found in reachable nodes.')
@@ -171,7 +198,9 @@ export function useTraversalPlayback({
     (idleAlgorithm: TraversalStrategy = algorithmTab) => {
       traversalPlaybackStopRef.current()
       setTraversalVisitedNodeIds([])
+      setTraversalVisitedEdgeIds([])
       setTraversalCurrentNodeId(null)
+      setTraversalCurrentEdgeId(null)
       setTraversalStartNodeId(null)
       setTraversalGoalNodeIds([])
       setTraversalResult(null)
@@ -188,6 +217,7 @@ export function useTraversalPlayback({
     traversalPlaybackStopRef.current()
     onClearOtherGraphAlgorithms()
     setTraversalVisitedNodeIds([])
+    setTraversalVisitedEdgeIds([])
     setTraversalCurrentNodeId(null)
     setTraversalGoalNodeIds([])
 
@@ -311,11 +341,15 @@ export function useTraversalPlayback({
     goalValueInput,
 
     traversalVisitedNodeIds,
+    traversalVisitedEdgeIds,
     traversalCurrentNodeId,
+    traversalCurrentEdgeId,
     traversalStartNodeId,
     traversalGoalNodeIds,
     setTraversalVisitedNodeIds,
+    setTraversalVisitedEdgeIds,
     setTraversalCurrentNodeId,
+    setTraversalCurrentEdgeId,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
 

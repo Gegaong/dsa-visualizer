@@ -1,4 +1,5 @@
 import type { GraphNode, GraphEdge } from '../types'
+import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 import {
   TINY_EDGE_MARKER_EDGE_LENGTH,
   SHORT_EDGE_MARKER_EDGE_LENGTH,
@@ -11,6 +12,12 @@ type EdgesLayerProps = {
   isDeleteEdgeMode: boolean
   selectedEdgeIds: string[]
   isUndirectedMode: boolean
+  traversalVisitedEdgeIds: string[]
+  traversalCurrentEdgeId: string | null
+  weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
+  weakCCOutlineActive: boolean
+  weakCCVisitedEdgeIds: string[]
+  cycleGoalEdgeIds: string[]
   onToggleEdgeSelection: (edgeId: string) => void
 }
 
@@ -24,6 +31,12 @@ export const EdgesLayer = ({
   isDeleteEdgeMode,
   selectedEdgeIds,
   isUndirectedMode,
+  traversalVisitedEdgeIds,
+  traversalCurrentEdgeId,
+  weakCCOutlineHslByNodeId,
+  weakCCOutlineActive,
+  weakCCVisitedEdgeIds,
+  cycleGoalEdgeIds,
   onToggleEdgeSelection,
 }: EdgesLayerProps) => (
   <svg
@@ -37,38 +50,6 @@ export const EdgesLayer = ({
       pointerEvents: isDeleteEdgeMode ? 'auto' : 'none',
     }}
   >
-    <defs>
-      <marker
-        id="arrowhead"
-        markerWidth="7"
-        markerHeight="7"
-        refX="6.2"
-        refY="2.1"
-        orient="auto"
-      >
-        <polygon points="0 0, 7 2.1, 0 4.2" fill="#4a7c59" />
-      </marker>
-      <marker
-        id="arrowhead-small"
-        markerWidth="5"
-        markerHeight="5"
-        refX="4.4"
-        refY="1.5"
-        orient="auto"
-      >
-        <polygon points="0 0, 5 1.5, 0 3" fill="#4a7c59" />
-      </marker>
-      <marker
-        id="arrowhead-tiny"
-        markerWidth="3.8"
-        markerHeight="3.8"
-        refX="3.35"
-        refY="1.14"
-        orient="auto"
-      >
-        <polygon points="0 0, 3.8 1.14, 0 2.28" fill="#4a7c59" />
-      </marker>
-    </defs>
     {edges.map((edge) => {
       const fromNode = nodes.find((n) => n.id === edge.fromNodeId)
       const toNode = nodes.find((n) => n.id === edge.toNodeId)
@@ -81,8 +62,77 @@ export const EdgesLayer = ({
 
       const { startX, startY, endX, endY } = geometry
       const isSelected = selectedEdgeIds.includes(edge.id)
-      const strokeColor = '#4a7c59'
+      const isTraversalActive = traversalCurrentEdgeId === edge.id
+      const isTraversalVisitedPast =
+        traversalVisitedEdgeIds.includes(edge.id) && !isTraversalActive
+      const ccHsl = weakCCOutlineHslByNodeId?.get(fromNode.id)
+        ?? weakCCOutlineHslByNodeId?.get(toNode.id)
+      const ccStroke = ccHsl ? `hsl(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}%)` : null
+      const isCcEdge =
+        weakCCOutlineActive &&
+        ccStroke !== null &&
+        weakCCVisitedEdgeIds.includes(edge.id)
+      const isGoalEdge = cycleGoalEdgeIds.includes(edge.id)
+      const strokeColor = isGoalEdge
+        ? '#2a4f9c'
+        : isCcEdge
+          ? ccStroke
+          : isTraversalVisitedPast
+            ? '#e07b39'
+            : '#4a7c59'
       const strokeWidth = 2
+      const showTraversalOutline = isTraversalActive && !isCcEdge && !isGoalEdge
+      const renderCurrentOutline = (x1: number, y1: number, x2: number, y2: number) =>
+        showTraversalOutline ? (
+          <>
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#3a6f5a"
+              strokeWidth="14"
+              strokeLinecap="round"
+              opacity="0.12"
+            />
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#3a6f5a"
+              strokeWidth="8"
+              strokeLinecap="round"
+              opacity="0.26"
+            />
+          </>
+        ) : null
+      const renderCcOutline = (x1: number, y1: number, x2: number, y2: number) =>
+        isCcEdge && ccStroke ? (
+          <>
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={ccStroke}
+              strokeWidth="14"
+              strokeLinecap="round"
+              opacity="0.12"
+            />
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={ccStroke}
+              strokeWidth="8"
+              strokeLinecap="round"
+              opacity="0.26"
+            />
+          </>
+        ) : null
+        
       // Click handler for the invisible hit-line placed over the visual line.
       // Lets users reliably pick short/stationary edges without changing the
       // visual appearance of the edge itself.
@@ -90,12 +140,81 @@ export const EdgesLayer = ({
         event.stopPropagation()
         onToggleEdgeSelection(edge.id)
       }
-      const markerId =
+      // Per-edge markers paint with this stroke so arrowheads match the line in every
+      // state (goal, visited, weak-CC). Global markers + currentColor are unreliable
+      // across browsers for marker context.
+      const idSafe = edge.id.replace(/[^a-zA-Z0-9_-]/g, '_')
+      const markerIdLg = `arr-${idSafe}-lg`
+      const markerIdSm = `arr-${idSafe}-sm`
+      const markerIdTi = `arr-${idSafe}-ti`
+      const markerEndId =
         geometry.edgeLength < TINY_EDGE_MARKER_EDGE_LENGTH
-          ? 'arrowhead-tiny'
+          ? markerIdTi
           : geometry.edgeLength < SHORT_EDGE_MARKER_EDGE_LENGTH
-            ? 'arrowhead-small'
-            : 'arrowhead'
+            ? markerIdSm
+            : markerIdLg
+      const markerEnd = `url(#${markerEndId})`
+      const edgeArrowMarkers = (
+        <defs>
+          <marker
+            id={markerIdLg}
+            markerWidth="6"
+            markerHeight="6"
+            refX="5.5"
+            refY="3"
+            orient="auto"
+            markerUnits="strokeWidth"
+            viewBox="0 0 6 6"
+          >
+            <path
+              d="M0.5 0.5 L5.5 3 L0.5 5.5"
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth="1"
+              strokeLinecap="square"
+              strokeLinejoin="miter"
+            />
+          </marker>
+          <marker
+            id={markerIdSm}
+            markerWidth="4.8"
+            markerHeight="4.8"
+            refX="4.4"
+            refY="2.4"
+            orient="auto"
+            markerUnits="strokeWidth"
+            viewBox="0 0 4.8 4.8"
+          >
+            <path
+              d="M0.4 0.4 L4.4 2.4 L0.4 4.4"
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth="0.9"
+              strokeLinecap="square"
+              strokeLinejoin="miter"
+            />
+          </marker>
+          <marker
+            id={markerIdTi}
+            markerWidth="3.6"
+            markerHeight="3.6"
+            refX="3.3"
+            refY="1.8"
+            orient="auto"
+            markerUnits="strokeWidth"
+            viewBox="0 0 3.6 3.6"
+          >
+            <path
+              d="M0.3 0.3 L3.3 1.8 L0.3 3.3"
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth="0.8"
+              strokeLinecap="square"
+              strokeLinejoin="miter"
+            />
+          </marker>
+        </defs>
+      )
 
       // In undirected mode draw a single plain line with no arrowheads.
       if (isUndirectedMode) {
@@ -107,7 +226,17 @@ export const EdgesLayer = ({
                 stroke="#2a4f9c" strokeWidth="12" strokeLinecap="round" opacity="0.22"
               />
             )}
-            <line x1={startX} y1={startY} x2={endX} y2={endY} stroke={strokeColor} strokeWidth={strokeWidth} />
+            {renderCcOutline(startX, startY, endX, endY)}
+            {renderCurrentOutline(startX, startY, endX, endY)}
+            <line
+              x1={startX}
+              y1={startY}
+              x2={endX}
+              y2={endY}
+              stroke={strokeColor}
+              strokeWidth={strokeWidth}
+              color={strokeColor}
+            />
             {isDeleteEdgeMode && (
               <line
                 x1={startX} y1={startY} x2={endX} y2={endY}
@@ -121,6 +250,7 @@ export const EdgesLayer = ({
 
       return (
         <g key={edge.id}>
+          {edgeArrowMarkers}
           {(edge.direction === 'both' || edge.direction === 'forward') && (
             <>
               {isDeleteEdgeMode && isSelected && (
@@ -135,6 +265,8 @@ export const EdgesLayer = ({
                   opacity="0.22"
                 />
               )}
+              {renderCcOutline(startX, startY, endX, endY)}
+              {renderCurrentOutline(startX, startY, endX, endY)}
               <line
                 x1={startX}
                 y1={startY}
@@ -142,7 +274,8 @@ export const EdgesLayer = ({
                 y2={endY}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
-                markerEnd={`url(#${markerId})`}
+                color={strokeColor}
+                markerEnd={markerEnd}
               />
               {isDeleteEdgeMode && (
                 // Invisible but pointer-active strokeline to expand hit area for selection.
@@ -181,7 +314,8 @@ export const EdgesLayer = ({
                 y2={startY}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
-                markerEnd={`url(#${markerId})`}
+                color={strokeColor}
+                markerEnd={markerEnd}
               />
               {isDeleteEdgeMode && (
                 // Invisible hit area for the reverse-direction visual line.
@@ -212,6 +346,8 @@ export const EdgesLayer = ({
                   opacity="0.22"
                 />
               )}
+              {renderCcOutline(endX, endY, startX, startY)}
+              {renderCurrentOutline(endX, endY, startX, startY)}
               <line
                 x1={endX}
                 y1={endY}
@@ -219,7 +355,8 @@ export const EdgesLayer = ({
                 y2={startY}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
-                markerEnd={`url(#${markerId})`}
+                color={strokeColor}
+                markerEnd={markerEnd}
               />
               {isDeleteEdgeMode && (
                 <line

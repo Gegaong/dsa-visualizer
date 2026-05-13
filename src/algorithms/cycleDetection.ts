@@ -43,10 +43,10 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
   const steps: CycleDetectionStep[] = []
   let order = 1
 
-  const emitVisit = (nodeId: string) => {
+  const emitVisit = (nodeId: string, fromNodeId: string | null) => {
     const node = nodeById.get(nodeId)
     if (!node) return
-    steps.push({ nodeId: node.id, nodeLabel: node.label, order })
+    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId })
     order += 1
   }
 
@@ -56,7 +56,9 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
     const inStack = new Set<string>()
     const pathStack: string[] = []
     // Each frame is either an "enter" (descend into a node) or an "exit" (pop it back off the path).
-    const frames: Array<{ id: string; phase: 'enter' | 'exit' }> = [{ id: rootId, phase: 'enter' }]
+    const frames: Array<{ id: string; phase: 'enter' | 'exit'; parentId: string | null }> = [
+      { id: rootId, phase: 'enter', parentId: null },
+    ]
 
     while (frames.length > 0) {
       const frame = frames.pop()
@@ -73,8 +75,8 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
       globalVisited.add(id)
       inStack.add(id)
       pathStack.push(id)
-      emitVisit(id)
-      frames.push({ id, phase: 'exit' })
+      emitVisit(id, frame.parentId)
+      frames.push({ id, phase: 'exit', parentId: null })
 
       const neighbors = outNeighborsById.get(id) ?? []
       const backEdgeTarget = neighbors.find((neighborId) => inStack.has(neighborId))
@@ -85,7 +87,7 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
       for (let i = neighbors.length - 1; i >= 0; i -= 1) {
         const neighborId = neighbors[i]
         if (!globalVisited.has(neighborId)) {
-          frames.push({ id: neighborId, phase: 'enter' })
+          frames.push({ id: neighborId, phase: 'enter', parentId: id })
         }
       }
     }
@@ -149,14 +151,15 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
   })
 
   const queue: string[] = sortedNodeIds.filter((id) => (inDegree.get(id) ?? 0) === 0)
+  const parentById = new Map<string, string | null>()
   const removed = new Set<string>()
   const steps: CycleDetectionStep[] = []
   let order = 1
 
-  const emitVisit = (nodeId: string) => {
+  const emitVisit = (nodeId: string, fromNodeId: string | null) => {
     const node = nodeById.get(nodeId)
     if (!node) return
-    steps.push({ nodeId: node.id, nodeLabel: node.label, order })
+    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId })
     order += 1
   }
 
@@ -164,11 +167,16 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
     const id = queue.shift()
     if (id === undefined) continue
     removed.add(id)
-    emitVisit(id)
+    emitVisit(id, parentById.get(id) ?? null)
     for (const neighborId of outNeighborsById.get(id) ?? []) {
       const next = (inDegree.get(neighborId) ?? 0) - 1
       inDegree.set(neighborId, next)
-      if (next === 0) queue.push(neighborId)
+      if (next === 0) {
+        if (!parentById.has(neighborId)) {
+          parentById.set(neighborId, id)
+        }
+        queue.push(neighborId)
+      }
     }
   }
 
@@ -178,7 +186,12 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
 
   const leftover = new Set(sortedNodeIds.filter((id) => !removed.has(id)))
   const cycleNodeIds = extractCycleFromLeftovers(leftover, outNeighborsById, nodeById)
-  cycleNodeIds.forEach((id) => emitVisit(id))
+  if (cycleNodeIds.length > 0) {
+    cycleNodeIds.forEach((id, index) => {
+      const parentIndex = (index - 1 + cycleNodeIds.length) % cycleNodeIds.length
+      emitVisit(id, cycleNodeIds[parentIndex])
+    })
+  }
   return { steps, cycleNodeIds }
 }
 
