@@ -17,12 +17,12 @@ import {
   NODE_RADIUS,
   DEFAULT_CANVAS_WIDTH,
   DEFAULT_CANVAS_HEIGHT,
+  CANVAS_ZOOM_MIN,
+  CANVAS_ZOOM_MAX,
+  CANVAS_ZOOM_STEP,
 } from './utils/constants'
 
-import { DirectionIcon } from './components/DirectionIcon'
-import { EdgesLayer } from './components/EdgesLayer'
-import { EdgeToggles } from './components/EdgeToggles'
-import { GraphNodeLayer } from './components/NodesLayer'
+import { GraphCanvas } from './components/GraphCanvas'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
 import { NodeContextMenu } from './components/NodeContextMenu'
@@ -50,11 +50,7 @@ import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPl
 import { useCycleDetectionPlayback } from './hooks/useCycleDetectionPlayback'
 import { useNodeDragging } from './hooks/useNodeDragging'
 
-const CANVAS_ZOOM_MIN = 0.5
-const CANVAS_ZOOM_MAX = 2
-const CANVAS_ZOOM_STEP = 0.1
-
-// Root component for the DSA visualizer workspace.
+// Root component: owns all graph and algorithm state, wires hooks, renders layout.
 function App() {
   const [nodes, setNodes] = useState<GraphNode[]>([])
   const [edges, setEdges] = useState<GraphEdge[]>([])
@@ -339,6 +335,7 @@ function App() {
   }
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isConnectMode) return
     if (blockGraphInteraction) return
     if (nodeDragging.consumeSuppressedCanvasClick()) return
 
@@ -676,169 +673,48 @@ function App() {
       <Header />
 
       <div className="workspace">
-        <section className="canvas-panel">
-          <div className="canvas-header">
-            <div className="canvas-copy">
-              <h2>Graph Canvas</h2>
-              <p>Place nodes and edges, then pick an algorithm on the right.</p>
-            </div>
-            <div className="canvas-actions">
-              <button
-                className={`btn btn-pill connect-toggle-btn ${isConnectMode ? 'btn-active' : ''}`}
-                type="button"
-                onClick={handleConnectModeToggle}
-                disabled={blockGraphInteraction}
-              >
-                {isConnectMode ? 'Cancel connect' : 'Connect nodes'}
-              </button>
-              <div className="edge-direction-picker" aria-label="New edge direction">
-                <button
-                  className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'forward' ? 'btn-active' : ''}`}
-                  type="button"
-                  disabled={!isConnectMode || blockGraphInteraction}
-                  aria-pressed={newEdgeDirection === 'forward'}
-                  title="Create outbound edge (from selected node)"
-                  onClick={() => handleNewEdgeDirectionChange('forward')}
-                >
-                  <DirectionIcon direction="forward" />
-                </button>
-                <button
-                  className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'both' ? 'btn-active' : ''}`}
-                  type="button"
-                  disabled={!isConnectMode || blockGraphInteraction}
-                  aria-pressed={newEdgeDirection === 'both'}
-                  title="Create bidirectional edge"
-                  onClick={() => handleNewEdgeDirectionChange('both')}
-                >
-                  <DirectionIcon direction="both" />
-                </button>
-                <button
-                  className={`btn btn-pill edge-direction-option ${newEdgeDirection === 'backward' ? 'btn-active' : ''}`}
-                  type="button"
-                  disabled={!isConnectMode || blockGraphInteraction}
-                  aria-pressed={newEdgeDirection === 'backward'}
-                  title="Create inbound edge (toward selected node)"
-                  onClick={() => handleNewEdgeDirectionChange('backward')}
-                >
-                  <DirectionIcon direction="backward" />
-                </button>
-              </div>
-              <div className="delete-stack" role="group" aria-label="Delete controls">
-                <button
-                  className={`btn delete-stack-btn ${isDeleteMode ? 'btn-active' : ''}`}
-                  type="button"
-                  onClick={handleDeleteModeToggle}
-                  disabled={blockGraphInteraction}
-                >
-                  {isDeleteMode
-                    ? selectedNodeIds.length > 0
-                      ? 'Delete selected nodes'
-                      : 'Cancel node delete'
-                    : 'Delete nodes'}
-                </button>
-                <button
-                  className={`btn delete-stack-btn ${isDeleteEdgeMode ? 'btn-active' : ''}`}
-                  type="button"
-                  onClick={handleDeleteEdgeModeToggle}
-                  disabled={blockGraphInteraction}
-                >
-                  {isDeleteEdgeMode
-                    ? selectedEdgeIds.length > 0
-                      ? 'Delete selected edges'
-                      : 'Cancel edge delete'
-                    : 'Delete edges'}
-                </button>
-              </div>
-              <button className="btn btn-clear" type="button" onClick={handleClearCanvas} disabled={blockGraphInteraction}>
-                Clear canvas
-              </button>
-            </div>
-          </div>
-
-          <div
-            className={`canvas ${isConnectMode
-              ? 'is-connect'
-              : isDeleteMode || isDeleteEdgeMode
-                ? 'is-select'
-                : 'is-place'
-              }`}
-            ref={setCanvasElement}
-            onClick={(e) => {
-              if (!isConnectMode) handleCanvasClick(e)
-            }}
-            onContextMenu={handleCanvasContextMenu}
-          >
-            <div className="canvas-zoom-controls" onClick={(event) => event.stopPropagation()}>
-              <button
-                className="canvas-zoom-btn"
-                type="button"
-                onClick={handleZoomOut}
-                disabled={canvasZoom <= CANVAS_ZOOM_MIN}
-                aria-label="Zoom out"
-              >
-                -
-              </button>
-              <span className="canvas-zoom-value">{Math.round(canvasZoom * 100)}%</span>
-              <button
-                className="canvas-zoom-btn"
-                type="button"
-                onClick={handleZoomIn}
-                disabled={canvasZoom >= CANVAS_ZOOM_MAX}
-                aria-label="Zoom in"
-              >
-                +
-              </button>
-            </div>
-
-            <div
-              className="canvas-content"
-              style={{ transform: `scale(${canvasZoom})`, transformOrigin: 'center center' }}
-            >
-              <EdgesLayer
-                nodes={nodes}
-                edges={edges}
-                isDeleteEdgeMode={isDeleteEdgeMode}
-                selectedEdgeIds={selectedEdgeIds}
-                onToggleEdgeSelection={toggleEdgeSelection}
-              />
-
-              <EdgeToggles
-                nodes={nodes}
-                edges={edges}
-                isDeleteEdgeMode={isDeleteEdgeMode}
-                selectedEdgeIds={selectedEdgeIds}
-                onToggleEdgeDirection={toggleEdgeDirection}
-                onToggleEdgeSelection={toggleEdgeSelection}
-              />
-
-              <GraphNodeLayer
-                nodes={nodes}
-                isConnectMode={isConnectMode}
-                isDeleteMode={isDeleteMode}
-                isDeleteEdgeMode={isDeleteEdgeMode}
-                selectedNodeIds={selectedNodeIds}
-                connectionSource={connectionSource}
-                draggingNodeId={nodeDragging.draggingNodeId}
-                editingNodeId={editingNodeId}
-                draftValue={draftValue}
-                traversalVisitedNodeIds={traversal.traversalVisitedNodeIds}
-                traversalCurrentNodeId={traversal.traversalCurrentNodeId}
-                traversalStartNodeId={traversal.traversalStartNodeId}
-                traversalGoalNodeIds={traversal.traversalGoalNodeIds}
-                weakCCOutlineHslByNodeId={cc.weakCCOutlineHslByNodeId}
-                weakCCOutlineActive={cc.weakCCOutlineActive}
-                onNodeMouseDown={nodeDragging.handleNodeMouseDown}
-                onConnectNodeClick={handleConnectNodeClick}
-                onToggleNodeSelection={toggleNodeSelection}
-                onStartEditingNode={startEditingNode}
-                onNodeContextMenu={handleNodeContextMenu}
-                onValueChange={handleValueChange}
-                onValueKeyDown={handleValueKeyDown}
-                onCommitNodeValue={commitNodeValue}
-              />
-            </div>
-          </div>
-        </section>
+        <GraphCanvas
+          nodes={nodes}
+          edges={edges}
+          isConnectMode={isConnectMode}
+          isDeleteMode={isDeleteMode}
+          isDeleteEdgeMode={isDeleteEdgeMode}
+          blockGraphInteraction={blockGraphInteraction}
+          selectedNodeIds={selectedNodeIds}
+          selectedEdgeIds={selectedEdgeIds}
+          connectionSource={connectionSource}
+          newEdgeDirection={newEdgeDirection}
+          canvasZoom={canvasZoom}
+          editingNodeId={editingNodeId}
+          draftValue={draftValue}
+          draggingNodeId={nodeDragging.draggingNodeId}
+          traversalVisitedNodeIds={traversal.traversalVisitedNodeIds}
+          traversalCurrentNodeId={traversal.traversalCurrentNodeId}
+          traversalStartNodeId={traversal.traversalStartNodeId}
+          traversalGoalNodeIds={traversal.traversalGoalNodeIds}
+          weakCCOutlineHslByNodeId={cc.weakCCOutlineHslByNodeId}
+          weakCCOutlineActive={cc.weakCCOutlineActive}
+          onCanvasRef={setCanvasElement}
+          onCanvasClick={handleCanvasClick}
+          onCanvasContextMenu={handleCanvasContextMenu}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onConnectModeToggle={handleConnectModeToggle}
+          onDeleteModeToggle={handleDeleteModeToggle}
+          onDeleteEdgeModeToggle={handleDeleteEdgeModeToggle}
+          onClearCanvas={handleClearCanvas}
+          onNewEdgeDirectionChange={handleNewEdgeDirectionChange}
+          onNodeMouseDown={nodeDragging.handleNodeMouseDown}
+          onConnectNodeClick={handleConnectNodeClick}
+          onToggleNodeSelection={toggleNodeSelection}
+          onStartEditingNode={startEditingNode}
+          onNodeContextMenu={handleNodeContextMenu}
+          onValueChange={handleValueChange}
+          onValueKeyDown={handleValueKeyDown}
+          onCommitNodeValue={commitNodeValue}
+          onToggleEdgeSelection={toggleEdgeSelection}
+          onToggleEdgeDirection={toggleEdgeDirection}
+        />
 
         <Sidebar
           onSidebarSectionChange={handleSidebarSectionChange}
