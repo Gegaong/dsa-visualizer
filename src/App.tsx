@@ -47,6 +47,7 @@ import type { TraversalStrategy } from './algorithms/algorithmstypes'
 import { useTraversalPlayback } from './hooks/useTraversalPlayback'
 import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPlayback'
 import { useCycleDetectionPlayback } from './hooks/useCycleDetectionPlayback'
+import { useShortestPathPlayback } from './hooks/useShortestPathPlayback'
 import { useNodeDragging } from './hooks/useNodeDragging'
 
 // Root component: owns all graph and algorithm state, wires hooks, renders layout.
@@ -134,11 +135,19 @@ function App() {
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
 
-  // Forwards the sidebar algorithm picker to both canvas-algorithm hooks so their refs stay in sync.
+  const shortestPath = useShortestPathPlayback({
+    nodes,
+    edges: effectiveEdges,
+    traversalVisualSetters,
+    onResetTraversal: () => traversal.resetTraversalVisualization(),
+  })
+
+  // Forwards the sidebar algorithm picker to all canvas-algorithm hooks so their refs stay in sync.
   const handleAlgorithmModeChange = useCallback((mode: AlgorithmMode) => {
     cc.handleAlgorithmModeChangeFromSidebar(mode)
     cycleDetection.handleAlgorithmModeChangeFromSidebar(mode)
-  }, [cc.handleAlgorithmModeChangeFromSidebar, cycleDetection.handleAlgorithmModeChangeFromSidebar])
+    shortestPath.handleAlgorithmModeChangeFromSidebar(mode)
+  }, [cc.handleAlgorithmModeChangeFromSidebar, cycleDetection.handleAlgorithmModeChangeFromSidebar, shortestPath.handleAlgorithmModeChangeFromSidebar])
 
   const nodeDragging = useNodeDragging({
     canvasElement,
@@ -157,20 +166,24 @@ function App() {
   const blockGraphInteraction =
     traversal.isTraversalRunning ||
     cc.isConnectedComponentsRunning ||
-    cycleDetection.isCycleDetectionRunning
+    cycleDetection.isCycleDetectionRunning ||
+    shortestPath.isShortestPathRunning
 
   const ccSessionActive = cc.connectedComponentsResult !== null || cc.isConnectedComponentsRunning
   const cycleSessionActive =
     cycleDetection.cycleDetectionResult !== null || cycleDetection.isCycleDetectionRunning
+  const shortestPathSessionActive =
+    shortestPath.shortestPathResult !== null || shortestPath.isShortestPathRunning
 
-  // Clears traversal, connected-components, and cycle-detection playback and canvas highlights.
+  // Clears traversal, connected-components, cycle-detection, and shortest-path playback and canvas highlights.
   const resetAllGraphAlgorithmVisualizations = useCallback(
     (idleAlgorithm: TraversalStrategy = algorithmTab) => {
       traversal.resetTraversalVisualization(idleAlgorithm)
       cc.resetConnectedComponentsVisualization()
       cycleDetection.resetCycleDetectionVisualization()
+      shortestPath.resetShortestPathVisualization()
     },
-    [algorithmTab, traversal, cc, cycleDetection],
+    [algorithmTab, traversal, cc, cycleDetection, shortestPath],
   )
 
   // Toggles undirected mode; resets any active algorithm since the graph semantics change.
@@ -331,6 +344,12 @@ function App() {
   const handleRunCycleDetectionFromSidebar = (strategy: TraversalStrategy) => {
     exitCanvasInteractionModes()
     cycleDetection.runCycleDetectionFromSidebar(strategy)
+  }
+
+  // Runs shortest path after leaving canvas edit modes.
+  const handleRunShortestPathFromSidebar = (strategy: TraversalStrategy) => {
+    exitCanvasInteractionModes()
+    shortestPath.runShortestPathFromSidebar(strategy)
   }
 
   // Activates delete-node mode and clears conflicting modes and menus.
@@ -735,9 +754,10 @@ function App() {
       if (from === 'algorithms' && to !== 'algorithms') {
         cc.resetConnectedComponentsVisualization()
         cycleDetection.resetCycleDetectionVisualization()
+        shortestPath.resetShortestPathVisualization()
       }
     },
-    [traversal, cc, cycleDetection],
+    [traversal, cc, cycleDetection, shortestPath],
   )
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
@@ -777,6 +797,8 @@ function App() {
           weakCCVisitedNodeIds={cc.weakCCVisitedNodeIds}
           weakCCVisitedEdgeIds={cc.weakCCVisitedEdgeIds}
           cycleGoalEdgeIds={cycleDetection.cycleGoalEdgeIds}
+          shortestPathEdgeIds={shortestPath.shortestPathEdgeIds}
+          shortestPathNodeIds={shortestPath.shortestPathNodeIds}
           onCanvasRef={setCanvasElement}
           onCanvasClick={handleCanvasClick}
           onCanvasContextMenu={handleCanvasContextMenu}
@@ -823,6 +845,7 @@ function App() {
             isTraversalRunning: traversal.isTraversalRunning,
             isConnectedComponentsSessionActive: ccSessionActive,
             isCycleDetectionSessionActive: cycleSessionActive,
+            isShortestPathSessionActive: shortestPathSessionActive,
             algorithmTab,
             onAlgorithmTabChange: handleAlgorithmTabChange,
             goalType: traversal.goalType,
@@ -854,6 +877,7 @@ function App() {
             isTraversalRunning: traversal.isTraversalRunning,
             isConnectedComponentsSessionActive: ccSessionActive,
             isCycleDetectionSessionActive: cycleSessionActive,
+            isShortestPathSessionActive: shortestPathSessionActive,
             isUndirectedMode,
             onAlgorithmModeChange: handleAlgorithmModeChange,
             onRunConnectedComponents: handleRunConnectedComponentsFromSidebar,
@@ -892,6 +916,28 @@ function App() {
             cycleDetectionOutput: cycleDetection.cycleOutput,
             cycleDetectionStepIndex: cycleDetection.stepIndex,
             cycleDetectionStepTotal: cycleDetection.cycleDetectionResult?.steps.length ?? 0,
+            onRunShortestPath: handleRunShortestPathFromSidebar,
+            onStopShortestPath: shortestPath.resetShortestPathVisualization,
+            canRunShortestPath: shortestPath.canRunShortestPath,
+            shortestPathStatusText: shortestPath.shortestPathStatusText,
+            isShortestPathPlaybackPlaying: shortestPath.isPlaying,
+            shortestPathPlaybackSpeed: shortestPath.playbackSpeed,
+            onShortestPathPlaybackSpeedChange: shortestPath.handleShortestPathPlaybackSpeedChange,
+            onPlayShortestPath: shortestPath.playShortestPath,
+            onPauseShortestPath: shortestPath.pauseShortestPath,
+            onNextShortestPathStep: shortestPath.stepShortestPathForward,
+            onPreviousShortestPathStep: shortestPath.stepShortestPathBackward,
+            canShortestPathStepForward: shortestPath.canStepForward,
+            canShortestPathStepBackward: shortestPath.canStepBackward,
+            canShortestPathTogglePlay: shortestPath.canTogglePlay,
+            isShortestPathPlaybackComplete: shortestPath.isPlaybackComplete,
+            shortestPathOutput: shortestPath.shortestPathOutput,
+            shortestPathStepIndex: shortestPath.stepIndex,
+            shortestPathStepTotal: shortestPath.shortestPathResult?.steps.length ?? 0,
+            shortestPathStartNodeLabel: shortestPath.startNodeLabel,
+            shortestPathGoalNodeLabel: shortestPath.goalNodeLabel,
+            onShortestPathStartNodeLabelChange: shortestPath.handleStartNodeLabelChange,
+            onShortestPathGoalNodeLabelChange: shortestPath.handleGoalNodeLabelChange,
           }}
         />
       </div>

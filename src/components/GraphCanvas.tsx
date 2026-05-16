@@ -33,6 +33,8 @@ type GraphCanvasProps = {
   weakCCVisitedNodeIds: string[]
   weakCCVisitedEdgeIds: string[]
   cycleGoalEdgeIds: string[]
+  shortestPathEdgeIds: string[]
+  shortestPathNodeIds: string[]
   onCanvasRef: (el: HTMLDivElement | null) => void
   onCanvasClick: (event: MouseEvent<HTMLDivElement>) => void
   onCanvasContextMenu: (event: MouseEvent<HTMLDivElement>) => void
@@ -84,6 +86,8 @@ export function GraphCanvas({
   weakCCVisitedNodeIds,
   weakCCVisitedEdgeIds,
   cycleGoalEdgeIds,
+  shortestPathEdgeIds,
+  shortestPathNodeIds,
   onCanvasRef,
   onCanvasClick,
   onCanvasContextMenu,
@@ -253,6 +257,7 @@ export function GraphCanvas({
             weakCCOutlineActive={weakCCOutlineActive}
             weakCCVisitedEdgeIds={weakCCVisitedEdgeIds}
             cycleGoalEdgeIds={cycleGoalEdgeIds}
+            shortestPathEdgeIds={shortestPathEdgeIds}
             onToggleEdgeSelection={onToggleEdgeSelection}
           />
 
@@ -280,6 +285,7 @@ export function GraphCanvas({
             traversalCurrentNodeId={traversalCurrentNodeId}
             traversalStartNodeId={traversalStartNodeId}
             traversalGoalNodeIds={traversalGoalNodeIds}
+            shortestPathNodeIds={shortestPathNodeIds}
             weakCCOutlineHslByNodeId={weakCCOutlineHslByNodeId}
             weakCCOutlineActive={weakCCOutlineActive}
             weakCCVisitedNodeIds={weakCCVisitedNodeIds}

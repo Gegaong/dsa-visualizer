@@ -36,6 +36,8 @@ type GraphNodeLayerProps = {
   traversalCurrentNodeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
+  // Intermediate nodes on the shortest path (excludes start and goal); styled with lighter blue.
+  shortestPathNodeIds: string[]
   // Full connected-component outline color (HSL per component); applied when enabled and visited.
   weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
   weakCCOutlineActive: boolean
@@ -67,6 +69,7 @@ export const GraphNodeLayer = ({
   traversalCurrentNodeId,
   traversalStartNodeId,
   traversalGoalNodeIds,
+  shortestPathNodeIds,
   weakCCOutlineHslByNodeId,
   weakCCOutlineActive,
   weakCCVisitedNodeIds,
@@ -91,6 +94,7 @@ export const GraphNodeLayer = ({
       const isCurrent = traversalCurrentNodeId === node.id
       const isStart = traversalStartNodeId === node.id
       const isGoal = traversalGoalNodeIds.includes(node.id)
+      const isShortestPath = shortestPathNodeIds.includes(node.id)
       const weakCcColored =
         weakCCOutlineActive &&
         weakCCOutlineHslByNodeId !== null &&
@@ -118,7 +122,7 @@ export const GraphNodeLayer = ({
       return (
         <div
           key={node.id}
-          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''}`}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''}`}
           style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
         >
           <div

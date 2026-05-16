@@ -940,6 +940,14 @@
 	}
 }
 
+.node-wrap.is-shortest-path .node {
+	background: rgba(42, 79, 156, 0.22);
+	border-color: #2a4f9c;
+	border-width: 2px;
+	box-shadow: 0 0 0 4px rgba(42, 79, 156, 0.24), 0 12px 22px rgba(46, 32, 23, 0.2);
+	transform: scale(1.1);
+}
+
 .node-wrap.is-select .node,
 .node-wrap.is-connect .node {
 	cursor: inherit;

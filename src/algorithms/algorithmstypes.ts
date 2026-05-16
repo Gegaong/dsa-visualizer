@@ -51,3 +51,14 @@ export type CycleDetectionResult = {
   // and the last → first, each have an edge). Empty when no cycle exists.
   cycleNodeIds: string[]
 }
+
+export type ShortestPathStep = BfsStep
+
+export type ShortestPathResult = {
+  steps: ShortestPathStep[]
+  // Ordered node ids from start to goal; empty when goal is unreachable.
+  pathNodeIds: string[]
+  startNodeId: string
+  goalNodeId: string
+  pathFound: boolean
+}

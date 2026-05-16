@@ -24,6 +24,7 @@ type EdgesLayerProps = {
   weakCCOutlineActive: boolean
   weakCCVisitedEdgeIds: string[]
   cycleGoalEdgeIds: string[]
+  shortestPathEdgeIds: string[]
   onToggleEdgeSelection: (edgeId: string) => void
 }
 
@@ -43,6 +44,7 @@ export const EdgesLayer = ({
   weakCCOutlineActive,
   weakCCVisitedEdgeIds,
   cycleGoalEdgeIds,
+  shortestPathEdgeIds,
   onToggleEdgeSelection,
 }: EdgesLayerProps) => (
   <svg
@@ -79,7 +81,8 @@ export const EdgesLayer = ({
         ccStroke !== null &&
         weakCCVisitedEdgeIds.includes(edge.id)
       const isGoalEdge = cycleGoalEdgeIds.includes(edge.id)
-      const strokeColor = isGoalEdge
+      const isShortestPathEdge = shortestPathEdgeIds.includes(edge.id)
+      const strokeColor = isGoalEdge || isShortestPathEdge
         ? '#2a4f9c'
         : isCcEdge
           ? ccStroke
@@ -87,7 +90,7 @@ export const EdgesLayer = ({
             ? '#e07b39'
             : '#4a7c59'
       const strokeWidth = 2
-      const showTraversalOutline = isTraversalActive && !isCcEdge && !isGoalEdge
+      const showTraversalOutline = isTraversalActive && !isCcEdge && !isGoalEdge && !isShortestPathEdge
       // Glow outline for the edge currently being traversed by the algorithm.
       const renderCurrentOutline = (x1: number, y1: number, x2: number, y2: number) =>
         showTraversalOutline ? (
@@ -166,7 +169,33 @@ export const EdgesLayer = ({
             />
           </>
         ) : null
-        
+      // Glow outline for edges forming the shortest path.
+      const renderShortestPathEdgeOutline = (x1: number, y1: number, x2: number, y2: number) =>
+        isShortestPathEdge ? (
+          <>
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#2a4f9c"
+              strokeWidth="14"
+              strokeLinecap="round"
+              opacity="0.12"
+            />
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#2a4f9c"
+              strokeWidth="8"
+              strokeLinecap="round"
+              opacity="0.26"
+            />
+          </>
+        ) : null
+
       // Click handler for the invisible hit-line placed over the visual line.
       // Lets users reliably pick short/stationary edges without changing the
       // visual appearance of the edge itself.
@@ -273,6 +302,7 @@ export const EdgesLayer = ({
             )}
             {renderCcOutline(startX, startY, endX, endY)}
             {renderGoalEdgeOutline(startX, startY, endX, endY)}
+            {renderShortestPathEdgeOutline(startX, startY, endX, endY)}
             {renderCurrentOutline(startX, startY, endX, endY)}
             <line
               x1={startX}
@@ -313,6 +343,7 @@ export const EdgesLayer = ({
               )}
               {renderCcOutline(startX, startY, endX, endY)}
               {renderGoalEdgeOutline(startX, startY, endX, endY)}
+              {renderShortestPathEdgeOutline(startX, startY, endX, endY)}
               {renderCurrentOutline(startX, startY, endX, endY)}
               {edge.direction === 'both' ? (
                 <>
@@ -422,6 +453,7 @@ export const EdgesLayer = ({
               )}
               {renderCcOutline(endX, endY, startX, startY)}
               {renderGoalEdgeOutline(endX, endY, startX, startY)}
+              {renderShortestPathEdgeOutline(endX, endY, startX, startY)}
               {renderCurrentOutline(endX, endY, startX, startY)}
               <line
                 x1={endX}

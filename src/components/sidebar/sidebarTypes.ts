@@ -17,6 +17,7 @@ export type SidebarSharedState = {
   isTraversalRunning: boolean
   isConnectedComponentsSessionActive: boolean
   isCycleDetectionSessionActive: boolean
+  isShortestPathSessionActive: boolean
 }
 
 export type CanvasSetupPageProps = {
@@ -73,6 +74,12 @@ export type CycleDetectionOutput = {
   cycleNodeLabels: string[]
 } | null
 
+export type ShortestPathOutput = {
+  pathFound: boolean
+  pathLength: number
+  pathNodeLabels: string[]
+} | null
+
 export type AlgorithmsPageProps = SidebarSharedState & {
   /** Matches canvas Directed / Undirected toggle; gates which graph algorithms may run. */
   isUndirectedMode: boolean
@@ -115,6 +122,29 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   cycleDetectionOutput: CycleDetectionOutput
   cycleDetectionStepIndex: number
   cycleDetectionStepTotal: number
+
+  onRunShortestPath: (strategy: TraversalStrategy) => void
+  onStopShortestPath: () => void
+  canRunShortestPath: boolean
+  shortestPathStatusText: string
+  shortestPathStartNodeLabel: string
+  shortestPathGoalNodeLabel: string
+  onShortestPathStartNodeLabelChange: (value: string) => void
+  onShortestPathGoalNodeLabelChange: (value: string) => void
+  isShortestPathPlaybackPlaying: boolean
+  shortestPathPlaybackSpeed: number
+  onShortestPathPlaybackSpeedChange: (value: number) => void
+  onPlayShortestPath: () => void
+  onPauseShortestPath: () => void
+  onNextShortestPathStep: () => void
+  onPreviousShortestPathStep: () => void
+  canShortestPathStepForward: boolean
+  canShortestPathStepBackward: boolean
+  canShortestPathTogglePlay: boolean
+  isShortestPathPlaybackComplete: boolean
+  shortestPathOutput: ShortestPathOutput
+  shortestPathStepIndex: number
+  shortestPathStepTotal: number
 }
 
 export type SidebarProps = {

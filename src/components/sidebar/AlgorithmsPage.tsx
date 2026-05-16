@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
 import { useStepPlayback } from '../../hooks/useStepPlayback'
 import { PLAYBACK_MAX_DELAY_MS, PLAYBACK_MIN_DELAY_MS } from '../../utils/constants'
-import type { AlgorithmMode, AlgorithmsPageProps, CycleDetectionOutput } from './sidebarTypes'
+import type { AlgorithmMode, AlgorithmsPageProps, CycleDetectionOutput, ShortestPathOutput } from './sidebarTypes'
 import { PlaybackControls } from './PlaybackControls'
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
@@ -47,12 +47,12 @@ const ALGORITHM_DETAILS: Record<AlgorithmMode, {
   },
   'shortest-path': {
     label: 'Shortest path',
-    description: 'Find the shortest path in an unweighted graph.',
+    description: 'BFS finds the shortest path (fewest edges) between two nodes. DFS finds a path but not necessarily the shortest one.',
     runLabel: 'Run shortest path',
     outputLabel: 'Path',
     outputHint: 'Path length and nodes are shown here after a run.',
     needsInputs: true,
-    usesTraversal: false,
+    usesTraversal: true,
   },
   'topological-sort': {
     label: 'Topological sort',
@@ -83,6 +83,34 @@ const formatPlaybackStepDisplay = (sessionActive: boolean, stepIndex: number, st
   return `Ready / ${stepTotal}`
 }
 
+// Output rows for shortest path: whether a path was found, its length, and the node sequence.
+function ShortestPathOutputRows({ output }: { output: ShortestPathOutput }) {
+  const pathFound = output === null ? '—' : output.pathFound ? 'Yes' : 'No'
+  const pathLength = output !== null && output.pathFound ? String(output.pathLength) : '—'
+  const pathSequence =
+    output !== null && output.pathFound && output.pathNodeLabels.length > 0
+      ? output.pathNodeLabels.join(' → ')
+      : null
+  return (
+    <>
+      <div className="output-row">
+        <span className="output-label">Path found</span>
+        <span className="output-value">{pathFound}</span>
+      </div>
+      <div className="output-row">
+        <span className="output-label">Path length</span>
+        <span className="output-value">{pathLength}</span>
+      </div>
+      {pathSequence !== null && (
+        <div className="output-row output-row--stacked">
+          <span className="output-label">Path</span>
+          <div className="output-list">{pathSequence}</div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // Output rows for cycle detection: whether a cycle was found and, if so, its node path.
 function CycleOutputRows({ output }: { output: CycleDetectionOutput }) {
   const cycleFound = output === null ? '—' : output.hasCycle ? 'Yes' : 'No'
@@ -107,13 +135,14 @@ function CycleOutputRows({ output }: { output: CycleDetectionOutput }) {
 }
 
 // Sidebar page: algorithm picker, per-algorithm configuration, playback, and output.
-// Connected components and cycle detection are wired to the canvas; the
-// remaining algorithms currently run a mock playback preview only.
+// Connected components, cycle detection, and shortest path are wired to the canvas;
+// the remaining algorithms currently run a mock playback preview only.
 export const AlgorithmsPage = ({
   blockGraphEdits,
   isTraversalRunning,
   isConnectedComponentsSessionActive,
   isCycleDetectionSessionActive,
+  isShortestPathSessionActive,
   isUndirectedMode,
   onAlgorithmModeChange,
   onRunConnectedComponents,
@@ -152,11 +181,31 @@ export const AlgorithmsPage = ({
   cycleDetectionOutput,
   cycleDetectionStepIndex,
   cycleDetectionStepTotal,
+  onRunShortestPath,
+  onStopShortestPath,
+  canRunShortestPath,
+  shortestPathStatusText,
+  shortestPathStartNodeLabel,
+  shortestPathGoalNodeLabel,
+  onShortestPathStartNodeLabelChange,
+  onShortestPathGoalNodeLabelChange,
+  isShortestPathPlaybackPlaying,
+  shortestPathPlaybackSpeed,
+  onShortestPathPlaybackSpeedChange,
+  onPlayShortestPath,
+  onPauseShortestPath,
+  onNextShortestPathStep,
+  onPreviousShortestPathStep,
+  canShortestPathStepForward,
+  canShortestPathStepBackward,
+  canShortestPathTogglePlay,
+  isShortestPathPlaybackComplete,
+  shortestPathOutput,
+  shortestPathStepIndex,
+  shortestPathStepTotal,
 }: AlgorithmsPageProps) => {
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>('components')
   const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
-  const [shortestPathStart, setShortestPathStart] = useState('')
-  const [shortestPathGoal, setShortestPathGoal] = useState('')
 
   // Mock playback scaffolding for the not-yet-wired algorithms (see GRAPH_ALGO_MOCK_STEPS).
   const [graphAlgoArmed, setGraphAlgoArmed] = useState(false)
@@ -165,7 +214,8 @@ export const AlgorithmsPage = ({
   const selectedAlgorithm = ALGORITHM_DETAILS[algorithmMode]
   const isComponentsMode = algorithmMode === 'components'
   const isCycleMode = algorithmMode === 'cycle'
-  const isRealAlgorithmMode = isComponentsMode || isCycleMode
+  const isShortestPathMode = algorithmMode === 'shortest-path'
+  const isRealAlgorithmMode = isComponentsMode || isCycleMode || isShortestPathMode
   const needsTraversalStrategy = selectedAlgorithm.usesTraversal
   const needsAlgorithmInputs = selectedAlgorithm.needsInputs
 
@@ -197,10 +247,11 @@ export const AlgorithmsPage = ({
     blockGraphEdits ||
     graphAlgoArmed ||
     (isComponentsMode && isConnectedComponentsSessionActive) ||
-    (isCycleMode && isCycleDetectionSessionActive)
+    (isCycleMode && isCycleDetectionSessionActive) ||
+    (isShortestPathMode && isShortestPathSessionActive)
 
   const toggleGraphAlgoRun = () => {
-    if (isTraversalRunning || isConnectedComponentsSessionActive || isCycleDetectionSessionActive) return
+    if (isTraversalRunning || isConnectedComponentsSessionActive || isCycleDetectionSessionActive || isShortestPathSessionActive) return
     if (isRealAlgorithmMode) return
     if (graphAlgoArmed) {
       setGraphAlgoArmed(false)
@@ -228,6 +279,15 @@ export const AlgorithmsPage = ({
     onRunCycleDetection(algorithmTraversal)
   }
 
+  const toggleShortestPathRun = () => {
+    if (isTraversalRunning) return
+    if (isShortestPathSessionActive) {
+      onStopShortestPath()
+      return
+    }
+    onRunShortestPath(algorithmTraversal)
+  }
+
   let graphAlgoPlaybackHint: string
   if (isComponentsMode) {
     graphAlgoPlaybackHint = !isUndirectedMode
@@ -237,6 +297,8 @@ export const AlgorithmsPage = ({
     graphAlgoPlaybackHint = isUndirectedMode
       ? 'Cycle detection is for directed graphs only. Switch to Directed at the top left of the canvas, then press Run.'
       : cycleDetectionStatusText
+  } else if (isShortestPathMode) {
+    graphAlgoPlaybackHint = shortestPathStatusText
   } else if (!graphAlgoArmed) {
     graphAlgoPlaybackHint = `Configure if needed, then press Run to preview ${selectedAlgorithm.label.toLowerCase()} playback.`
   } else if (graphAlgoPlayback.stepIndex < 0) {
@@ -259,6 +321,12 @@ export const AlgorithmsPage = ({
       isCycleDetectionSessionActive,
       cycleDetectionStepIndex,
       cycleDetectionStepTotal,
+    )
+  } else if (isShortestPathMode) {
+    playbackStepDisplay = formatPlaybackStepDisplay(
+      isShortestPathSessionActive,
+      shortestPathStepIndex,
+      shortestPathStepTotal,
     )
   } else if (graphAlgoArmed && graphAlgoPlayback.stepIndex >= 0) {
     playbackStepDisplay = `${graphAlgoPlayback.stepIndex + 1} / ${mockStepsTotal}`
@@ -292,6 +360,8 @@ export const AlgorithmsPage = ({
     )
   } else if (isCycleMode) {
     outputRows = <CycleOutputRows output={cycleDetectionOutput} />
+  } else if (isShortestPathMode) {
+    outputRows = <ShortestPathOutputRows output={shortestPathOutput} />
   } else {
     outputRows = (
       <>
@@ -357,6 +427,32 @@ export const AlgorithmsPage = ({
         stepControlsDisabled={isTraversalRunning}
         speed={cycleDetectionPlaybackSpeed}
         onSpeedChange={onCycleDetectionPlaybackSpeedChange}
+      />
+    )
+  } else if (isShortestPathMode) {
+    playbackControls = (
+      <PlaybackControls
+        runLabel={selectedAlgorithm.runLabel}
+        stopLabel="Stop run"
+        isRunActive={isShortestPathSessionActive}
+        onRunToggle={toggleShortestPathRun}
+        runDisabled={
+          isTraversalRunning ||
+          (!isShortestPathSessionActive && !canRunShortestPath)
+        }
+        onPrevious={onPreviousShortestPathStep}
+        onNext={onNextShortestPathStep}
+        onPlayPauseToggle={
+          isShortestPathPlaybackPlaying ? onPauseShortestPath : onPlayShortestPath
+        }
+        isPlaying={isShortestPathPlaybackPlaying}
+        isPlaybackComplete={isShortestPathPlaybackComplete}
+        canStepBackward={canShortestPathStepBackward}
+        canStepForward={canShortestPathStepForward}
+        canTogglePlay={canShortestPathTogglePlay}
+        stepControlsDisabled={isTraversalRunning}
+        speed={shortestPathPlaybackSpeed}
+        onSpeedChange={onShortestPathPlaybackSpeedChange}
       />
     )
   } else {
@@ -439,8 +535,8 @@ export const AlgorithmsPage = ({
                 </span>
                 <input
                   type="text"
-                  value={shortestPathStart}
-                  onChange={(event) => setShortestPathStart(event.target.value.toUpperCase())}
+                  value={shortestPathStartNodeLabel}
+                  onChange={(event) => onShortestPathStartNodeLabelChange(event.target.value)}
                   onKeyDown={confirmNodeLabelFieldOnEnter}
                   disabled={algorithmPickerFrozen}
                 />
@@ -451,8 +547,8 @@ export const AlgorithmsPage = ({
                 </span>
                 <input
                   type="text"
-                  value={shortestPathGoal}
-                  onChange={(event) => setShortestPathGoal(event.target.value.toUpperCase())}
+                  value={shortestPathGoalNodeLabel}
+                  onChange={(event) => onShortestPathGoalNodeLabelChange(event.target.value)}
                   onKeyDown={confirmNodeLabelFieldOnEnter}
                   disabled={algorithmPickerFrozen}
                 />
