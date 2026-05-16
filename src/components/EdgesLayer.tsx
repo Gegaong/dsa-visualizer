@@ -88,6 +88,7 @@ export const EdgesLayer = ({
             : '#4a7c59'
       const strokeWidth = 2
       const showTraversalOutline = isTraversalActive && !isCcEdge && !isGoalEdge
+      // Glow outline for the edge currently being traversed by the algorithm.
       const renderCurrentOutline = (x1: number, y1: number, x2: number, y2: number) =>
         showTraversalOutline ? (
           <>
@@ -113,6 +114,7 @@ export const EdgesLayer = ({
             />
           </>
         ) : null
+      // Glow outline for edges belonging to a connected component, colored by component hue.
       const renderCcOutline = (x1: number, y1: number, x2: number, y2: number) =>
         isCcEdge && ccStroke ? (
           <>
@@ -132,6 +134,32 @@ export const EdgesLayer = ({
               x2={x2}
               y2={y2}
               stroke={ccStroke}
+              strokeWidth="8"
+              strokeLinecap="round"
+              opacity="0.26"
+            />
+          </>
+        ) : null
+      // Glow outline for edges forming the detected cycle.
+      const renderGoalEdgeOutline = (x1: number, y1: number, x2: number, y2: number) =>
+        isGoalEdge ? (
+          <>
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#2a4f9c"
+              strokeWidth="14"
+              strokeLinecap="round"
+              opacity="0.12"
+            />
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#2a4f9c"
               strokeWidth="8"
               strokeLinecap="round"
               opacity="0.26"
@@ -244,6 +272,7 @@ export const EdgesLayer = ({
               />
             )}
             {renderCcOutline(startX, startY, endX, endY)}
+            {renderGoalEdgeOutline(startX, startY, endX, endY)}
             {renderCurrentOutline(startX, startY, endX, endY)}
             <line
               x1={startX}
@@ -283,6 +312,7 @@ export const EdgesLayer = ({
                 />
               )}
               {renderCcOutline(startX, startY, endX, endY)}
+              {renderGoalEdgeOutline(startX, startY, endX, endY)}
               {renderCurrentOutline(startX, startY, endX, endY)}
               {edge.direction === 'both' ? (
                 <>
@@ -391,6 +421,7 @@ export const EdgesLayer = ({
                 />
               )}
               {renderCcOutline(endX, endY, startX, startY)}
+              {renderGoalEdgeOutline(endX, endY, startX, startY)}
               {renderCurrentOutline(endX, endY, startX, startY)}
               <line
                 x1={endX}
