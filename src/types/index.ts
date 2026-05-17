@@ -29,7 +29,7 @@ export type GraphEdge = {
 export type GraphPreset = {
   id: string
   name: string
-  nodes: Array<{ x: number; y: number }>
+  nodes: Array<{ x: number; y: number; value?: number }>
   edges: Array<[number, number, GraphEdge['direction']?]>
 }
 
