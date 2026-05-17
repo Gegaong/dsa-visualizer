@@ -1,5 +1,7 @@
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+
 import type { ConnectedComponentsOutput } from './sidebarTypes'
+
 import { PlaybackControls } from './PlaybackControls'
 
 export type ConnectedComponentsPanelProps = {

@@ -4,20 +4,26 @@ import {
   useRef,
   useState,
 } from 'react'
+
 import type {
   GraphNode,
   GraphEdge,
 } from '../types'
+
 import type {
   CycleDetectionResult,
   TraversalStrategy,
 } from '../algorithms/algorithmstypes'
+
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
+
 import { runCycleDetection } from '../algorithms/cycleDetection'
+
 import {
   buildCycleDetectionCompletionStatus,
   formatCycleNodeLabels,
 } from '../algorithms/cycleDetectionUIHelpers'
+
 import {
   useAlgorithmPlayback,
   type TraversalVisualSetters,

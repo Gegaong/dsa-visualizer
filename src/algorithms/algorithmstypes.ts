@@ -62,3 +62,15 @@ export type ShortestPathResult = {
   goalNodeId: string
   pathFound: boolean
 }
+
+export type BipartiteStep = BfsStep & {
+  // 0 = group A (yellow), 1 = group B (blue)
+  color: 0 | 1
+}
+
+export type BipartiteResult = {
+  steps: BipartiteStep[]
+  isBipartite: boolean
+  groupANodeIds: string[]
+  groupBNodeIds: string[]
+}

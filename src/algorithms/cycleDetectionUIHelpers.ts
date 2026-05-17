@@ -1,4 +1,5 @@
 import type { GraphNode } from '../types'
+
 import type { CycleDetectionResult } from './algorithmstypes'
 
 // Visible labels of the detected cycle's nodes, in cycle order (empty when no cycle).

@@ -48,6 +48,7 @@ import { useTraversalPlayback } from './hooks/useTraversalPlayback'
 import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPlayback'
 import { useCycleDetectionPlayback } from './hooks/useCycleDetectionPlayback'
 import { useShortestPathPlayback } from './hooks/useShortestPathPlayback'
+import { useBipartitePlayback } from './hooks/useBipartitePlayback'
 import { useNodeDragging } from './hooks/useNodeDragging'
 
 // Root component: owns all graph and algorithm state, wires hooks, renders layout.
@@ -142,12 +143,22 @@ function App() {
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
 
+  const bipartite = useBipartitePlayback({
+    nodes,
+    edges: effectiveEdges,
+    isUndirectedMode,
+    traversalVisualSetters,
+    onResetTraversal: () => traversal.resetTraversalVisualization(),
+  })
+
   // Forwards the sidebar algorithm picker to all canvas-algorithm hooks so their refs stay in sync.
   const handleAlgorithmModeChange = useCallback((mode: AlgorithmMode) => {
     cc.handleAlgorithmModeChangeFromSidebar(mode)
     cycleDetection.handleAlgorithmModeChangeFromSidebar(mode)
     shortestPath.handleAlgorithmModeChangeFromSidebar(mode)
-  }, [cc.handleAlgorithmModeChangeFromSidebar, cycleDetection.handleAlgorithmModeChangeFromSidebar, shortestPath.handleAlgorithmModeChangeFromSidebar])
+    bipartite.handleAlgorithmModeChangeFromSidebar(mode)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cc.handleAlgorithmModeChangeFromSidebar, cycleDetection.handleAlgorithmModeChangeFromSidebar, shortestPath.handleAlgorithmModeChangeFromSidebar, bipartite.handleAlgorithmModeChangeFromSidebar])
 
   const nodeDragging = useNodeDragging({
     canvasElement,
@@ -167,23 +178,27 @@ function App() {
     traversal.isTraversalRunning ||
     cc.isConnectedComponentsRunning ||
     cycleDetection.isCycleDetectionRunning ||
-    shortestPath.isShortestPathRunning
+    shortestPath.isShortestPathRunning ||
+    bipartite.isBipartiteRunning
 
   const ccSessionActive = cc.connectedComponentsResult !== null || cc.isConnectedComponentsRunning
   const cycleSessionActive =
     cycleDetection.cycleDetectionResult !== null || cycleDetection.isCycleDetectionRunning
   const shortestPathSessionActive =
     shortestPath.shortestPathResult !== null || shortestPath.isShortestPathRunning
+  const bipartiteSessionActive =
+    bipartite.bipartiteResult !== null || bipartite.isBipartiteRunning
 
-  // Clears traversal, connected-components, cycle-detection, and shortest-path playback and canvas highlights.
+  // Clears traversal, connected-components, cycle-detection, shortest-path, and bipartite playback and canvas highlights.
   const resetAllGraphAlgorithmVisualizations = useCallback(
     (idleAlgorithm: TraversalStrategy = algorithmTab) => {
       traversal.resetTraversalVisualization(idleAlgorithm)
       cc.resetConnectedComponentsVisualization()
       cycleDetection.resetCycleDetectionVisualization()
       shortestPath.resetShortestPathVisualization()
+      bipartite.resetBipartiteVisualization()
     },
-    [algorithmTab, traversal, cc, cycleDetection, shortestPath],
+    [algorithmTab, traversal, cc, cycleDetection, shortestPath, bipartite],
   )
 
   // Toggles undirected mode; resets any active algorithm since the graph semantics change.
@@ -350,6 +365,12 @@ function App() {
   const handleRunShortestPathFromSidebar = (strategy: TraversalStrategy) => {
     exitCanvasInteractionModes()
     shortestPath.runShortestPathFromSidebar(strategy)
+  }
+
+  // Runs bipartite check after leaving canvas edit modes.
+  const handleRunBipartiteFromSidebar = (strategy: TraversalStrategy) => {
+    exitCanvasInteractionModes()
+    bipartite.runBipartiteFromSidebar(strategy)
   }
 
   // Activates delete-node mode and clears conflicting modes and menus.
@@ -755,9 +776,10 @@ function App() {
         cc.resetConnectedComponentsVisualization()
         cycleDetection.resetCycleDetectionVisualization()
         shortestPath.resetShortestPathVisualization()
+        bipartite.resetBipartiteVisualization()
       }
     },
-    [traversal, cc, cycleDetection, shortestPath],
+    [traversal, cc, cycleDetection, shortestPath, bipartite],
   )
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
@@ -796,6 +818,8 @@ function App() {
           weakCCOutlineActive={cc.weakCCOutlineActive}
           weakCCVisitedNodeIds={cc.weakCCVisitedNodeIds}
           weakCCVisitedEdgeIds={cc.weakCCVisitedEdgeIds}
+          bipartiteGroupANodeIds={bipartite.bipartiteGroupANodeIds}
+          bipartiteGroupBNodeIds={bipartite.bipartiteGroupBNodeIds}
           cycleGoalEdgeIds={cycleDetection.cycleGoalEdgeIds}
           shortestPathEdgeIds={shortestPath.shortestPathEdgeIds}
           shortestPathNodeIds={shortestPath.shortestPathNodeIds}
@@ -846,6 +870,7 @@ function App() {
             isConnectedComponentsSessionActive: ccSessionActive,
             isCycleDetectionSessionActive: cycleSessionActive,
             isShortestPathSessionActive: shortestPathSessionActive,
+            isBipartiteSessionActive: bipartiteSessionActive,
             algorithmTab,
             onAlgorithmTabChange: handleAlgorithmTabChange,
             goalType: traversal.goalType,
@@ -880,6 +905,7 @@ function App() {
             isShortestPathSessionActive: shortestPathSessionActive,
             isUndirectedMode,
             onAlgorithmModeChange: handleAlgorithmModeChange,
+            isBipartiteSessionActive: bipartiteSessionActive,
             onRunConnectedComponents: handleRunConnectedComponentsFromSidebar,
             onStopConnectedComponents: cc.resetConnectedComponentsVisualization,
             canRunConnectedComponents: cc.canRunConnectedComponents,
@@ -938,6 +964,24 @@ function App() {
             shortestPathGoalNodeLabel: shortestPath.goalNodeLabel,
             onShortestPathStartNodeLabelChange: shortestPath.handleStartNodeLabelChange,
             onShortestPathGoalNodeLabelChange: shortestPath.handleGoalNodeLabelChange,
+            onRunBipartite: handleRunBipartiteFromSidebar,
+            onStopBipartite: bipartite.resetBipartiteVisualization,
+            canRunBipartite: bipartite.canRunBipartite,
+            bipartiteStatusText: bipartite.bipartiteStatusText,
+            isBipartitePlaybackPlaying: bipartite.isPlaying,
+            bipartitePlaybackSpeed: bipartite.playbackSpeed,
+            onBipartitePlaybackSpeedChange: bipartite.handleBipartitePlaybackSpeedChange,
+            onPlayBipartite: bipartite.playBipartite,
+            onPauseBipartite: bipartite.pauseBipartite,
+            onNextBipartiteStep: bipartite.stepBipartiteForward,
+            onPreviousBipartiteStep: bipartite.stepBipartiteBackward,
+            canBipartiteStepForward: bipartite.canStepForward,
+            canBipartiteStepBackward: bipartite.canStepBackward,
+            canBipartiteTogglePlay: bipartite.canTogglePlay,
+            isBipartitePlaybackComplete: bipartite.isPlaybackComplete,
+            bipartiteOutput: bipartite.bipartiteOutput,
+            bipartiteStepIndex: bipartite.stepIndex,
+            bipartiteStepTotal: bipartite.bipartiteResult?.steps.length ?? 0,
           }}
         />
       </div>

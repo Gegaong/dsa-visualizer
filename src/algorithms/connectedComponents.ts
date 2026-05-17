@@ -1,11 +1,15 @@
 import type { GraphEdge, GraphNode } from '../types'
+
 import type {
   ConnectedComponentsResult,
   ConnectedComponentsStep,
   TraversalStrategy,
 } from './algorithmstypes'
+
 import { buildWeaklyConnectedNeighborsMap } from './graphAdjacency'
+
 import { traverseReachableFrom } from './graphTraversal'
+
 import { sortIdsByLabel } from './sortIdsByLabel'
 
 // Connected components on undirected adjacency (direction ignored); emits playback steps; strategy only changes visit order inside each component.

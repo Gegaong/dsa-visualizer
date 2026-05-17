@@ -1,7 +1,11 @@
 import type { GraphNode } from '../types'
+
 import type { BfsInput, BfsResult, BfsStep, TraversalStrategy } from './algorithmstypes'
+
 import { buildNeighborsMap } from './graphAdjacency'
+
 import { traverseReachableFrom } from './graphTraversal'
+
 import { sortIdsByLabel } from './sortIdsByLabel'
 
 // True when the node matches a target-label or target-value goal (not max/min extremes).

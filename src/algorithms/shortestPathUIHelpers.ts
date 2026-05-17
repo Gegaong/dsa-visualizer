@@ -1,4 +1,5 @@
 import type { GraphNode } from '../types'
+
 import type { ShortestPathResult } from './algorithmstypes'
 
 // Looks up a node's label by id; falls back to the id itself if missing.

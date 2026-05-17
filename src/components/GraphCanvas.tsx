@@ -1,10 +1,17 @@
 import type { ChangeEvent, KeyboardEvent, MouseEvent } from 'react'
+
 import type { GraphEdge, GraphNode } from '../types'
+
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
+
 import { CANVAS_ZOOM_MIN, CANVAS_ZOOM_MAX } from '../utils/constants'
+
 import { DirectionIcon } from './DirectionIcon'
+
 import { EdgesLayer } from './EdgesLayer'
+
 import { EdgeToggles } from './EdgeToggles'
+
 import { GraphNodeLayer } from './NodesLayer'
 
 type GraphCanvasProps = {
@@ -35,6 +42,8 @@ type GraphCanvasProps = {
   cycleGoalEdgeIds: string[]
   shortestPathEdgeIds: string[]
   shortestPathNodeIds: string[]
+  bipartiteGroupANodeIds: string[]
+  bipartiteGroupBNodeIds: string[]
   onCanvasRef: (el: HTMLDivElement | null) => void
   onCanvasClick: (event: MouseEvent<HTMLDivElement>) => void
   onCanvasContextMenu: (event: MouseEvent<HTMLDivElement>) => void
@@ -88,6 +97,8 @@ export function GraphCanvas({
   cycleGoalEdgeIds,
   shortestPathEdgeIds,
   shortestPathNodeIds,
+  bipartiteGroupANodeIds,
+  bipartiteGroupBNodeIds,
   onCanvasRef,
   onCanvasClick,
   onCanvasContextMenu,
@@ -289,6 +300,8 @@ export function GraphCanvas({
             weakCCOutlineHslByNodeId={weakCCOutlineHslByNodeId}
             weakCCOutlineActive={weakCCOutlineActive}
             weakCCVisitedNodeIds={weakCCVisitedNodeIds}
+            bipartiteGroupANodeIds={bipartiteGroupANodeIds}
+            bipartiteGroupBNodeIds={bipartiteGroupBNodeIds}
             onNodeMouseDown={onNodeMouseDown}
             onConnectNodeClick={onConnectNodeClick}
             onToggleNodeSelection={onToggleNodeSelection}

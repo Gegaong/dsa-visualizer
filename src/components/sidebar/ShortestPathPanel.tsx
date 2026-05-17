@@ -1,6 +1,9 @@
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+
 import type { ShortestPathOutput } from './sidebarTypes'
+
 import { PlaybackControls } from './PlaybackControls'
+
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 export type ShortestPathPanelProps = {

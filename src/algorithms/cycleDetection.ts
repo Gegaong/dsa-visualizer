@@ -1,10 +1,13 @@
 import type { GraphEdge, GraphNode } from '../types'
+
 import type {
   CycleDetectionResult,
   CycleDetectionStep,
   TraversalStrategy,
 } from './algorithmstypes'
+
 import { buildNeighborsMap } from './graphAdjacency'
+
 import { sortIdsByLabel } from './sortIdsByLabel'
 
 type GraphLookups = {

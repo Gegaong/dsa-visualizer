@@ -1,5 +1,7 @@
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+
 import type { CycleDetectionOutput } from './sidebarTypes'
+
 import { PlaybackControls } from './PlaybackControls'
 
 export type CycleDetectionPanelProps = {

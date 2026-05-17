@@ -4,28 +4,35 @@ import {
   useRef,
   useState,
 } from 'react'
+
 import type {
   GraphNode,
   GraphEdge,
   GoalType,
 } from '../types'
+
 import type {
   BfsResult,
   TraversalStrategy,
 } from '../algorithms/algorithmstypes'
+
 import {
   PLAYBACK_MIN_DELAY_MS,
   PLAYBACK_MAX_DELAY_MS,
 } from '../utils/constants'
+
 import {
   parseNumberInput,
   sanitizeNumericInput,
 } from '../utils/format'
+
 import { runDirectedGoalTraversal } from '../algorithms/directedGoalTraversal'
+
 import {
   buildTraversalCompletionStatus,
   prepareTraversalRunInputs,
 } from '../algorithms/traversalUIHelpers'
+
 import { useStepPlayback } from './useStepPlayback'
 
 function bfsDfsLabel(mode: TraversalStrategy): 'DFS' | 'BFS' {

@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
+
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+
 import { useStepPlayback } from '../../hooks/useStepPlayback'
+
 import { PLAYBACK_MAX_DELAY_MS, PLAYBACK_MIN_DELAY_MS } from '../../utils/constants'
+
 import type { AlgorithmMode } from './sidebarTypes'
+
 import { PlaybackControls } from './PlaybackControls'
 
 type MockAlgorithmDetails = {

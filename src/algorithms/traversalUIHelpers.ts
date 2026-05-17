@@ -1,5 +1,7 @@
 import type { BfsGoal, BfsResult, TraversalStrategy } from './algorithmstypes'
+
 import type { GoalType, GraphNode } from '../types'
+
 import { parseNumberInput } from '../utils/format'
 
 type PrepareArgs = {

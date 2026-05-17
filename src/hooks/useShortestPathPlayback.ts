@@ -4,20 +4,26 @@ import {
   useRef,
   useState,
 } from 'react'
+
 import type {
   GraphNode,
   GraphEdge,
 } from '../types'
+
 import type {
   ShortestPathResult,
   TraversalStrategy,
 } from '../algorithms/algorithmstypes'
+
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
+
 import { runShortestPath } from '../algorithms/shortestPath'
+
 import {
   buildShortestPathCompletionStatus,
   formatShortestPathNodeLabels,
 } from '../algorithms/shortestPathUIHelpers'
+
 import {
   useAlgorithmPlayback,
   type TraversalVisualSetters,
@@ -189,7 +195,7 @@ export function useShortestPathPlayback({
       setShortestPathEdgeIds(pathEdgeIds)
       setStatusText(buildShortestPathCompletionStatus(result, nodes))
     }
-  }, [finalizeRef, nodes, edges, setTraversalGoalNodeIds])
+  }, [finalizeRef, nodes, edges, setTraversalGoalNodeIds, setTraversalStartNodeId])
 
   // Validates inputs, runs the algorithm, and initialises the playback session.
   const runShortestPathFromSidebar = (strategy: TraversalStrategy) => {

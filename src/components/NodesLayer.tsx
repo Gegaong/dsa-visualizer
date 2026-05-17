@@ -1,5 +1,7 @@
 import type { ChangeEvent, CSSProperties, KeyboardEvent, MouseEvent } from 'react'
+
 import type { GraphNode } from '../types'
+
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 
 // Pick the right text + size class for a node's value.
@@ -42,6 +44,9 @@ type GraphNodeLayerProps = {
   weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
   weakCCOutlineActive: boolean
   weakCCVisitedNodeIds: string[]
+  // Bipartite 2-coloring groups; yellow = group A, blue = group B.
+  bipartiteGroupANodeIds: string[]
+  bipartiteGroupBNodeIds: string[]
   onNodeMouseDown: (event: MouseEvent<HTMLDivElement>, node: GraphNode) => void
   onConnectNodeClick: (nodeId: string) => void
   onToggleNodeSelection: (nodeId: string) => void
@@ -73,6 +78,8 @@ export const GraphNodeLayer = ({
   weakCCOutlineHslByNodeId,
   weakCCOutlineActive,
   weakCCVisitedNodeIds,
+  bipartiteGroupANodeIds,
+  bipartiteGroupBNodeIds,
   onNodeMouseDown,
   onConnectNodeClick,
   onToggleNodeSelection,
@@ -103,6 +110,10 @@ export const GraphNodeLayer = ({
       const ccVisited = weakCCVisitedNodeIds.includes(node.id)
       const ccOutline = weakCCOutlineActive && ccHsl !== undefined && ccVisited
       const isCcCurrent = ccOutline && isCurrent
+      const isBipartiteGroupA = bipartiteGroupANodeIds.includes(node.id)
+      const isBipartiteGroupB = bipartiteGroupBNodeIds.includes(node.id)
+      const isBipartiteColored = isBipartiteGroupA || isBipartiteGroupB
+      const isBipartiteCurrent = isCurrent && isBipartiteColored
       // Long values are truncated inside the circle; reveal the full value on hover.
       const showHoverValue = typeof node.value === 'number' && String(node.value).length > 5
 
@@ -122,7 +133,7 @@ export const GraphNodeLayer = ({
       return (
         <div
           key={node.id}
-          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''}`}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal && !isBipartiteColored ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent && !isBipartiteCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline && !isBipartiteColored ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''} ${isBipartiteGroupA ? 'is-bipartite-group-a' : ''} ${isBipartiteGroupB ? 'is-bipartite-group-b' : ''} ${isBipartiteCurrent ? 'is-bipartite-current' : ''}`}
           style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
         >
           <div

@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+
 import type { SidebarPage, SidebarProps } from './sidebarTypes'
+
 import { CanvasSetupPage } from './CanvasSetupPage'
+
 import { TraversalPage } from './TraversalPage'
+
 import { AlgorithmsPage } from './AlgorithmsPage'
 
 export type { SidebarPage, AlgorithmMode } from './sidebarTypes'

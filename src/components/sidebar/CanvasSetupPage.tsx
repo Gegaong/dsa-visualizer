@@ -1,4 +1,5 @@
 import { GRAPH_PRESETS } from '../../utils/presets'
+
 import type { CanvasSetupPageProps } from './sidebarTypes'
 
 // Sidebar page: bulk node-value tools (fill / empty-all) and graph presets.

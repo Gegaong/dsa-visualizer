@@ -4,22 +4,30 @@ import {
   useRef,
   useState,
 } from 'react'
+
 import type {
   GraphNode,
   GraphEdge,
 } from '../types'
+
 import type {
   ConnectedComponentsResult,
   TraversalStrategy,
 } from '../algorithms/algorithmstypes'
+
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
+
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
+
 import { buildWeakCCOutlineHSLByNodeId } from '../utils/weakCCOutlineHues'
+
 import { runConnectedComponents } from '../algorithms/connectedComponents'
+
 import {
   buildConnectedComponentsCompletionStatus,
   formatWeakCCGroupsDisplay,
 } from '../algorithms/connectedComponentsUIHelpers'
+
 import {
   useAlgorithmPlayback,
   type TraversalVisualSetters,

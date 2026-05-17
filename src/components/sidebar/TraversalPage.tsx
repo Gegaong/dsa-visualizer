@@ -1,6 +1,9 @@
 import type { GoalType } from '../../types'
+
 import type { TraversalPageProps } from './sidebarTypes'
+
 import { PlaybackControls } from './PlaybackControls'
+
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 // Sidebar page: BFS/DFS goal-traversal — strategy pills, goal inputs, playback, status line.

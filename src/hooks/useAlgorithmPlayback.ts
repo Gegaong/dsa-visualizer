@@ -8,12 +8,16 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from 'react'
+
 import type { BfsStep } from '../algorithms/algorithmstypes'
+
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
+
 import {
   PLAYBACK_MIN_DELAY_MS,
   PLAYBACK_MAX_DELAY_MS,
 } from '../utils/constants'
+
 import { useStepPlayback } from './useStepPlayback'
 
 export type TraversalVisualSetters = {

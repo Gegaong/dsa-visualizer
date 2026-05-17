@@ -1,4 +1,5 @@
 import type { GoalType, GraphPreset } from '../../types'
+
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
 
 export type SidebarPage = 'canvas' | 'traversal' | 'algorithms'
@@ -18,6 +19,7 @@ export type SidebarSharedState = {
   isConnectedComponentsSessionActive: boolean
   isCycleDetectionSessionActive: boolean
   isShortestPathSessionActive: boolean
+  isBipartiteSessionActive: boolean
 }
 
 export type CanvasSetupPageProps = {
@@ -78,6 +80,12 @@ export type ShortestPathOutput = {
   pathFound: boolean
   pathLength: number
   pathNodeLabels: string[]
+} | null
+
+export type BipartiteOutput = {
+  isBipartite: boolean
+  groupALabels: string | null
+  groupBLabels: string | null
 } | null
 
 export type AlgorithmsPageProps = SidebarSharedState & {
@@ -145,6 +153,25 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   shortestPathOutput: ShortestPathOutput
   shortestPathStepIndex: number
   shortestPathStepTotal: number
+
+  onRunBipartite: (strategy: TraversalStrategy) => void
+  onStopBipartite: () => void
+  canRunBipartite: boolean
+  bipartiteStatusText: string
+  isBipartitePlaybackPlaying: boolean
+  bipartitePlaybackSpeed: number
+  onBipartitePlaybackSpeedChange: (value: number) => void
+  onPlayBipartite: () => void
+  onPauseBipartite: () => void
+  onNextBipartiteStep: () => void
+  onPreviousBipartiteStep: () => void
+  canBipartiteStepForward: boolean
+  canBipartiteStepBackward: boolean
+  canBipartiteTogglePlay: boolean
+  isBipartitePlaybackComplete: boolean
+  bipartiteOutput: BipartiteOutput
+  bipartiteStepIndex: number
+  bipartiteStepTotal: number
 }
 
 export type SidebarProps = {

@@ -1,4 +1,5 @@
 import type { GraphNode } from '../types'
+
 import {
   NODE_SIZE,
   NODE_RADIUS,

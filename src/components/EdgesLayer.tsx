@@ -1,9 +1,12 @@
 import type { GraphNode, GraphEdge } from '../types'
+
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
+
 import {
   TINY_EDGE_MARKER_EDGE_LENGTH,
   SHORT_EDGE_MARKER_EDGE_LENGTH,
 } from '../utils/constants'
+
 import { getEdgeGeometry } from '../utils/geometry'
 
 // Short segments at endpoints carry arrowheads on bidirectional edges so the two

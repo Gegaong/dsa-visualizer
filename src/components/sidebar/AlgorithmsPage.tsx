@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
+
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+
 import type { AlgorithmMode, AlgorithmsPageProps } from './sidebarTypes'
+
 import { ConnectedComponentsPanel } from './ConnectedComponentsPanel'
+
 import { CycleDetectionPanel } from './CycleDetectionPanel'
+
 import { ShortestPathPanel } from './ShortestPathPanel'
+
+import { BipartitePanel } from './BipartitePanel'
+
 import { MockAlgorithmPanel } from './MockAlgorithmPanel'
 
 // Sidebar page: algorithm picker and routing to per-algorithm panels.
@@ -13,6 +21,7 @@ export const AlgorithmsPage = ({
   isConnectedComponentsSessionActive,
   isCycleDetectionSessionActive,
   isShortestPathSessionActive,
+  isBipartiteSessionActive,
   isUndirectedMode,
   onAlgorithmModeChange,
   onRunConnectedComponents,
@@ -73,6 +82,24 @@ export const AlgorithmsPage = ({
   shortestPathOutput,
   shortestPathStepIndex,
   shortestPathStepTotal,
+  onRunBipartite,
+  onStopBipartite,
+  canRunBipartite,
+  bipartiteStatusText,
+  isBipartitePlaybackPlaying,
+  bipartitePlaybackSpeed,
+  onBipartitePlaybackSpeedChange,
+  onPlayBipartite,
+  onPauseBipartite,
+  onNextBipartiteStep,
+  onPreviousBipartiteStep,
+  canBipartiteStepForward,
+  canBipartiteStepBackward,
+  canBipartiteTogglePlay,
+  isBipartitePlaybackComplete,
+  bipartiteOutput,
+  bipartiteStepIndex,
+  bipartiteStepTotal,
 }: AlgorithmsPageProps) => {
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>('components')
   const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
@@ -87,14 +114,18 @@ export const AlgorithmsPage = ({
   }, [algorithmMode])
 
   const isRealAlgorithmMode =
-    algorithmMode === 'components' || algorithmMode === 'cycle' || algorithmMode === 'shortest-path'
+    algorithmMode === 'components' ||
+    algorithmMode === 'cycle' ||
+    algorithmMode === 'shortest-path' ||
+    algorithmMode === 'bipartite'
 
   const algorithmPickerFrozen =
     blockGraphEdits ||
     graphAlgoArmed ||
     (algorithmMode === 'components' && isConnectedComponentsSessionActive) ||
     (algorithmMode === 'cycle' && isCycleDetectionSessionActive) ||
-    (algorithmMode === 'shortest-path' && isShortestPathSessionActive)
+    (algorithmMode === 'shortest-path' && isShortestPathSessionActive) ||
+    (algorithmMode === 'bipartite' && isBipartiteSessionActive)
 
   const sharedPanelProps = {
     algorithmTraversal,
@@ -201,6 +232,32 @@ export const AlgorithmsPage = ({
           shortestPathStepTotal={shortestPathStepTotal}
           onRunShortestPath={onRunShortestPath}
           onStopShortestPath={onStopShortestPath}
+        />
+      )}
+
+      {algorithmMode === 'bipartite' && (
+        <BipartitePanel
+          {...sharedPanelProps}
+          isUndirectedMode={isUndirectedMode}
+          isBipartiteSessionActive={isBipartiteSessionActive}
+          canRunBipartite={canRunBipartite}
+          bipartiteStatusText={bipartiteStatusText}
+          isBipartitePlaybackPlaying={isBipartitePlaybackPlaying}
+          bipartitePlaybackSpeed={bipartitePlaybackSpeed}
+          onBipartitePlaybackSpeedChange={onBipartitePlaybackSpeedChange}
+          onPlayBipartite={onPlayBipartite}
+          onPauseBipartite={onPauseBipartite}
+          onNextBipartiteStep={onNextBipartiteStep}
+          onPreviousBipartiteStep={onPreviousBipartiteStep}
+          canBipartiteStepForward={canBipartiteStepForward}
+          canBipartiteStepBackward={canBipartiteStepBackward}
+          canBipartiteTogglePlay={canBipartiteTogglePlay}
+          isBipartitePlaybackComplete={isBipartitePlaybackComplete}
+          bipartiteOutput={bipartiteOutput}
+          bipartiteStepIndex={bipartiteStepIndex}
+          bipartiteStepTotal={bipartiteStepTotal}
+          onRunBipartite={onRunBipartite}
+          onStopBipartite={onStopBipartite}
         />
       )}
 
