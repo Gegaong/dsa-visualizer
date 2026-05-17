@@ -12,8 +12,6 @@ import { ShortestPathPanel } from './ShortestPathPanel'
 
 import { BipartitePanel } from './BipartitePanel'
 
-import { MockAlgorithmPanel } from './MockAlgorithmPanel'
-
 // Sidebar page: algorithm picker and routing to per-algorithm panels.
 export const AlgorithmsPage = ({
   blockGraphEdits,
@@ -103,25 +101,12 @@ export const AlgorithmsPage = ({
 }: AlgorithmsPageProps) => {
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>('components')
   const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
-  const [graphAlgoArmed, setGraphAlgoArmed] = useState(false)
-
   useEffect(() => {
     onAlgorithmModeChange?.(algorithmMode)
   }, [algorithmMode, onAlgorithmModeChange])
 
-  useEffect(() => {
-    queueMicrotask(() => setGraphAlgoArmed(false))
-  }, [algorithmMode])
-
-  const isRealAlgorithmMode =
-    algorithmMode === 'components' ||
-    algorithmMode === 'cycle' ||
-    algorithmMode === 'shortest-path' ||
-    algorithmMode === 'bipartite'
-
   const algorithmPickerFrozen =
     blockGraphEdits ||
-    graphAlgoArmed ||
     (algorithmMode === 'components' && isConnectedComponentsSessionActive) ||
     (algorithmMode === 'cycle' && isCycleDetectionSessionActive) ||
     (algorithmMode === 'shortest-path' && isShortestPathSessionActive) ||
@@ -149,7 +134,6 @@ export const AlgorithmsPage = ({
             <option value="cycle">Cycle detection</option>
             <option value="bipartite">Bipartite check</option>
             <option value="shortest-path">Shortest path</option>
-            <option value="topological-sort">Topological sort</option>
           </select>
         </label>
       </div>
@@ -261,20 +245,7 @@ export const AlgorithmsPage = ({
         />
       )}
 
-      {!isRealAlgorithmMode && (
-        <MockAlgorithmPanel
-          algorithmMode={algorithmMode}
-          isTraversalRunning={isTraversalRunning}
-          isConnectedComponentsSessionActive={isConnectedComponentsSessionActive}
-          isCycleDetectionSessionActive={isCycleDetectionSessionActive}
-          isShortestPathSessionActive={isShortestPathSessionActive}
-          isArmed={graphAlgoArmed}
-          onSetArmed={setGraphAlgoArmed}
-          algorithmTraversal={algorithmTraversal}
-          onAlgorithmTraversalChange={setAlgorithmTraversal}
-          algorithmPickerFrozen={algorithmPickerFrozen}
-        />
-      )}
+
     </div>
   )
 }

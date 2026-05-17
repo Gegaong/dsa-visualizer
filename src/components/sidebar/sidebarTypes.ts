@@ -9,7 +9,6 @@ export type AlgorithmMode =
   | 'cycle'
   | 'bipartite'
   | 'shortest-path'
-  | 'topological-sort'
 
 // State shared across pages: the canvas-algorithm families mutually disable each other,
 // and graph edits freeze whenever any of them is active.
