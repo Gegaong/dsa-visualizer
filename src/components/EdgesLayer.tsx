@@ -91,108 +91,11 @@ export const EdgesLayer = ({
             : '#4a7c59'
       const strokeWidth = 2
       const showTraversalOutline = isTraversalActive && !isCcEdge && !isGoalEdge && !isShortestPathEdge
-      // Glow outline for the edge currently being traversed by the algorithm.
-      const renderCurrentOutline = (x1: number, y1: number, x2: number, y2: number) =>
-        showTraversalOutline ? (
+      const renderGlowOutline = (x1: number, y1: number, x2: number, y2: number, color: string, active: boolean) =>
+        active ? (
           <>
-            <line
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#3a6f5a"
-              strokeWidth="14"
-              strokeLinecap="round"
-              opacity="0.12"
-            />
-            <line
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#3a6f5a"
-              strokeWidth="8"
-              strokeLinecap="round"
-              opacity="0.26"
-            />
-          </>
-        ) : null
-      // Glow outline for edges belonging to a connected component, colored by component hue.
-      const renderCcOutline = (x1: number, y1: number, x2: number, y2: number) =>
-        isCcEdge && ccStroke ? (
-          <>
-            <line
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke={ccStroke}
-              strokeWidth="14"
-              strokeLinecap="round"
-              opacity="0.12"
-            />
-            <line
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke={ccStroke}
-              strokeWidth="8"
-              strokeLinecap="round"
-              opacity="0.26"
-            />
-          </>
-        ) : null
-      // Glow outline for edges forming the detected cycle.
-      const renderGoalEdgeOutline = (x1: number, y1: number, x2: number, y2: number) =>
-        isGoalEdge ? (
-          <>
-            <line
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#2a4f9c"
-              strokeWidth="14"
-              strokeLinecap="round"
-              opacity="0.12"
-            />
-            <line
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#2a4f9c"
-              strokeWidth="8"
-              strokeLinecap="round"
-              opacity="0.26"
-            />
-          </>
-        ) : null
-      // Glow outline for edges forming the shortest path.
-      const renderShortestPathEdgeOutline = (x1: number, y1: number, x2: number, y2: number) =>
-        isShortestPathEdge ? (
-          <>
-            <line
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#2a4f9c"
-              strokeWidth="14"
-              strokeLinecap="round"
-              opacity="0.12"
-            />
-            <line
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#2a4f9c"
-              strokeWidth="8"
-              strokeLinecap="round"
-              opacity="0.26"
-            />
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="14" strokeLinecap="round" opacity="0.12" />
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="8" strokeLinecap="round" opacity="0.26" />
           </>
         ) : null
 
@@ -300,10 +203,10 @@ export const EdgesLayer = ({
                 stroke="#2a4f9c" strokeWidth="12" strokeLinecap="round" opacity="0.22"
               />
             )}
-            {renderCcOutline(startX, startY, endX, endY)}
-            {renderGoalEdgeOutline(startX, startY, endX, endY)}
-            {renderShortestPathEdgeOutline(startX, startY, endX, endY)}
-            {renderCurrentOutline(startX, startY, endX, endY)}
+            {renderGlowOutline(startX, startY, endX, endY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
+            {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isGoalEdge)}
+            {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isShortestPathEdge)}
+            {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showTraversalOutline)}
             <line
               x1={startX}
               y1={startY}
@@ -341,10 +244,10 @@ export const EdgesLayer = ({
                   opacity="0.22"
                 />
               )}
-              {renderCcOutline(startX, startY, endX, endY)}
-              {renderGoalEdgeOutline(startX, startY, endX, endY)}
-              {renderShortestPathEdgeOutline(startX, startY, endX, endY)}
-              {renderCurrentOutline(startX, startY, endX, endY)}
+              {renderGlowOutline(startX, startY, endX, endY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
+              {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isGoalEdge)}
+              {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isShortestPathEdge)}
+              {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showTraversalOutline)}
               {edge.direction === 'both' ? (
                 <>
                   <line
@@ -451,10 +354,10 @@ export const EdgesLayer = ({
                   opacity="0.22"
                 />
               )}
-              {renderCcOutline(endX, endY, startX, startY)}
-              {renderGoalEdgeOutline(endX, endY, startX, startY)}
-              {renderShortestPathEdgeOutline(endX, endY, startX, startY)}
-              {renderCurrentOutline(endX, endY, startX, startY)}
+              {renderGlowOutline(endX, endY, startX, startY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
+              {renderGlowOutline(endX, endY, startX, startY, '#2a4f9c', isGoalEdge)}
+              {renderGlowOutline(endX, endY, startX, startY, '#2a4f9c', isShortestPathEdge)}
+              {renderGlowOutline(endX, endY, startX, startY, '#3a6f5a', showTraversalOutline)}
               <line
                 x1={endX}
                 y1={endY}
