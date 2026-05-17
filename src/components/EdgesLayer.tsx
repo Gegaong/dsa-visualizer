@@ -46,7 +46,9 @@ export const EdgesLayer = ({
   cycleGoalEdgeIds,
   shortestPathEdgeIds,
   onToggleEdgeSelection,
-}: EdgesLayerProps) => (
+}: EdgesLayerProps) => {
+  const nodeById = new Map(nodes.map((n) => [n.id, n]))
+  return (
   <svg
     className="edges-layer"
     style={{
@@ -59,8 +61,8 @@ export const EdgesLayer = ({
     }}
   >
     {edges.map((edge) => {
-      const fromNode = nodes.find((n) => n.id === edge.fromNodeId)
-      const toNode = nodes.find((n) => n.id === edge.toNodeId)
+      const fromNode = nodeById.get(edge.fromNodeId)
+      const toNode = nodeById.get(edge.toNodeId)
 
       if (!fromNode || !toNode) return null
 
@@ -387,4 +389,5 @@ export const EdgesLayer = ({
       )
     })}
   </svg>
-)
+  )
+}
