@@ -73,41 +73,46 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
   return { steps, pathNodeIds: [] }
 }
 
-// DFS finds the first path discovered by depth-first order, which is not necessarily shortest.
-// Iterative with an explicit stack; parent is recorded on first visit only.
+// DFS exhaustively explores every acyclic path via backtracking and returns the shortest
+// (fewest edges). A node can be revisited across different branches but not within the same
+// path (inPath guards against cycles). Prunes branches that can no longer beat the current best.
 function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): PathOutcome {
   const { nodeById, outNeighborsById } = lookups
-  const parentById = new Map<string, string | null>()
-  const visited = new Set<string>()
-  const stack: Array<{ id: string; fromId: string | null }> = [{ id: startId, fromId: null }]
   const steps: ShortestPathStep[] = []
   let order = 1
+  let bestPath: string[] = []
 
-  while (stack.length > 0) {
-    const frame = stack.pop()
-    if (!frame || visited.has(frame.id)) continue
-    visited.add(frame.id)
-    parentById.set(frame.id, frame.fromId)
-    const node = nodeById.get(frame.id)
-    if (!node) continue
-    steps.push({ nodeId: frame.id, nodeLabel: node.label, order, fromNodeId: frame.fromId })
+  function dfs(currentId: string, fromId: string | null, currentPath: string[], inPath: Set<string>): void {
+    const node = nodeById.get(currentId)
+    if (!node) return
+    steps.push({ nodeId: currentId, nodeLabel: node.label, order, fromNodeId: fromId })
     order += 1
-    if (frame.id === goalId) return { steps, pathNodeIds: reconstructPath(parentById, startId, goalId) }
-    const neighbors = outNeighborsById.get(frame.id) ?? []
-    // Push in reverse so the smallest-label neighbor is explored first.
-    for (let i = neighbors.length - 1; i >= 0; i -= 1) {
-      const neighborId = neighbors[i]
-      if (!visited.has(neighborId)) {
-        stack.push({ id: neighborId, fromId: frame.id })
+    if (currentId === goalId) {
+      if (bestPath.length === 0 || currentPath.length < bestPath.length) bestPath = [...currentPath]
+      return
+    }
+    // Even reaching goal in one more step can't improve best — prune.
+    if (bestPath.length > 0 && currentPath.length + 1 >= bestPath.length) return
+    for (const neighborId of outNeighborsById.get(currentId) ?? []) {
+      if (!inPath.has(neighborId)) {
+        currentPath.push(neighborId)
+        inPath.add(neighborId)
+        dfs(neighborId, currentId, currentPath, inPath)
+        currentPath.pop()
+        inPath.delete(neighborId)
       }
     }
   }
 
-  return { steps, pathNodeIds: [] }
+  const initialPath = [startId]
+  const inPath = new Set([startId])
+  dfs(startId, null, initialPath, inPath)
+
+  return { steps, pathNodeIds: bestPath }
 }
 
 // Finds a path from startNodeId to goalNodeId using the chosen strategy.
-// BFS guarantees shortest path; DFS finds the first path in depth-first order.
+// BFS guarantees shortest path; DFS exhaustively backtracks to find the true shortest path.
 export function runShortestPath(
   nodes: GraphNode[],
   edges: GraphEdge[],
