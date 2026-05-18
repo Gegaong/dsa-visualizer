@@ -239,7 +239,7 @@
 }
 
 .edges-layer {
-	z-index: 2;
+	z-index: 1;
 	pointer-events: auto;
 }
 
@@ -876,11 +876,11 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	z-index: 1;
+	z-index: 2;
 }
 
 .node-wrap.is-dragging {
-	z-index: 3;
+	z-index: 4;
 }
 
 .node-wrap.is-dragging .node {

@@ -245,6 +245,7 @@ function App() {
 
     // Presets are laid out for the unzoomed viewport; reset zoom so the whole graph fits.
     setCanvasZoom(1)
+    setIsUndirectedMode(preset.undirected === true)
     nextId.current = nextCounter
     setNodes(reindexNodes(presetNodes))
     setEdges(presetEdges)

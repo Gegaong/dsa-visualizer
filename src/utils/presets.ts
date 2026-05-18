@@ -51,6 +51,7 @@ export const GRAPH_PRESETS: GraphPreset[] = [
   {
     id: 'disconnected',
     name: 'Connected Components',
+    undirected: true,
     nodes: [
       // K4 complete graph (top-left)
       { x: 50,  y: 50  },
@@ -98,6 +99,7 @@ export const GRAPH_PRESETS: GraphPreset[] = [
   {
     id: 'bipartite',
     name: 'Bipartite Graph',
+    undirected: true,
     nodes: [
       // Left group
       { x: 80, y: 60  },

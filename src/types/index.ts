@@ -29,6 +29,8 @@ export type GraphEdge = {
 export type GraphPreset = {
   id: string
   name: string
+  // When true, applying this preset switches the canvas to undirected mode.
+  undirected?: boolean
   nodes: Array<{ x: number; y: number; value?: number }>
   edges: Array<[number, number, GraphEdge['direction']?]>
 }
