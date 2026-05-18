@@ -12,6 +12,8 @@ import { EdgesLayer } from './EdgesLayer'
 
 import { EdgeToggles } from './EdgeToggles'
 
+import { EdgeWeightLabels } from './EdgeWeightLabels'
+
 import { GraphNodeLayer } from './NodesLayer'
 
 type GraphCanvasProps = {
@@ -66,6 +68,14 @@ type GraphCanvasProps = {
   onToggleEdgeDirection: (edgeId: string) => void
   isUndirectedMode: boolean
   onUndirectedModeToggle: () => void
+  isWeightedMode: boolean
+  editingEdgeWeightId: string | null
+  draftEdgeWeight: string
+  onEdgeWeightClick: (edgeId: string) => void
+  onEdgeWeightChange: (value: string) => void
+  onEdgeWeightKeyDown: (event: React.KeyboardEvent<HTMLInputElement>, edgeId: string) => void
+  onCommitEdgeWeight: (edgeId: string, rawValue: string) => void
+  onEdgeRightClick: (edgeId: string, x: number, y: number) => void
 }
 
 // Canvas panel: header with graph editing actions, zoom controls, and all rendering layers.
@@ -121,12 +131,20 @@ export function GraphCanvas({
   onToggleEdgeDirection,
   isUndirectedMode,
   onUndirectedModeToggle,
+  isWeightedMode,
+  editingEdgeWeightId,
+  draftEdgeWeight,
+  onEdgeWeightClick,
+  onEdgeWeightChange,
+  onEdgeWeightKeyDown,
+  onCommitEdgeWeight,
+  onEdgeRightClick,
 }: GraphCanvasProps) {
   return (
     <section className="canvas-panel">
       <div className="canvas-header">
         <div className="canvas-copy">
-          <h2>Graph Canvas</h2>
+          <h2>{isWeightedMode ? 'Weighted Graph Canvas' : 'Graph Canvas'}</h2>
           <p>Place nodes and edges, then pick an algorithm on the right.</p>
         </div>
         <div className="canvas-actions">
@@ -270,23 +288,42 @@ export function GraphCanvas({
             cycleGoalEdgeIds={cycleGoalEdgeIds}
             shortestPathEdgeIds={shortestPathEdgeIds}
             onToggleEdgeSelection={onToggleEdgeSelection}
+            onEdgeRightClick={onEdgeRightClick}
           />
 
-          <EdgeToggles
-            nodes={nodes}
-            edges={edges}
-            isDeleteEdgeMode={isDeleteEdgeMode}
-            selectedEdgeIds={selectedEdgeIds}
-            isUndirectedMode={isUndirectedMode}
-            onToggleEdgeDirection={onToggleEdgeDirection}
-            onToggleEdgeSelection={onToggleEdgeSelection}
-          />
+          {!isWeightedMode && (
+            <EdgeToggles
+              nodes={nodes}
+              edges={edges}
+              isDeleteEdgeMode={isDeleteEdgeMode}
+              selectedEdgeIds={selectedEdgeIds}
+              isUndirectedMode={isUndirectedMode}
+              onToggleEdgeDirection={onToggleEdgeDirection}
+              onToggleEdgeSelection={onToggleEdgeSelection}
+              onEdgeRightClick={onEdgeRightClick}
+            />
+          )}
+
+          {isWeightedMode && (
+            <EdgeWeightLabels
+              nodes={nodes}
+              edges={edges}
+              editingEdgeId={editingEdgeWeightId}
+              draftWeight={draftEdgeWeight}
+              onWeightClick={onEdgeWeightClick}
+              onWeightChange={onEdgeWeightChange}
+              onWeightKeyDown={onEdgeWeightKeyDown}
+              onCommitWeight={onCommitEdgeWeight}
+              onEdgeRightClick={onEdgeRightClick}
+            />
+          )}
 
           <GraphNodeLayer
             nodes={nodes}
             isConnectMode={isConnectMode}
             isDeleteMode={isDeleteMode}
             isDeleteEdgeMode={isDeleteEdgeMode}
+            isWeightedMode={isWeightedMode}
             selectedNodeIds={selectedNodeIds}
             connectionSource={connectionSource}
             draggingNodeId={draggingNodeId}

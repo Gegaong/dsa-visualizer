@@ -24,6 +24,15 @@ export type GraphEdge = {
   fromNodeId: string
   toNodeId: string
   direction: 'both' | 'forward' | 'backward'
+  weight?: number
+}
+
+export type CanvasType = 'graph' | 'weighted-graph'
+
+export type EdgeContextMenuState = {
+  edgeId: string
+  x: number
+  y: number
 }
 
 export type GraphPreset = {

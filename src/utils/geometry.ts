@@ -124,7 +124,7 @@ export const getEdgeGeometry = (fromNode: GraphNode, toNode: GraphNode) => {
   const unitY = dy / dist
   // Keep a minimum visible edge length so arrowheads don't crowd on short edges.
   const inset = Math.min(
-    NODE_RADIUS,
+    NODE_RADIUS + 2,
     Math.max(0, (dist - MIN_EDGE_VISUAL_LENGTH) / 2),
   )
 

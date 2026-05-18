@@ -10,6 +10,8 @@ import type {
   ContextMenuState,
   GraphEdge,
   GraphPreset,
+  CanvasType,
+  EdgeContextMenuState,
 } from './types'
 
 import {
@@ -22,6 +24,7 @@ import {
   CANVAS_ZOOM_STEP,
 } from './utils/constants'
 
+import { EdgeContextMenu } from './components/EdgeContextMenu'
 import { GraphCanvas } from './components/GraphCanvas'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
@@ -74,6 +77,12 @@ function App() {
   const [canvasZoom, setCanvasZoom] = useState(1)
   const [isUndirectedMode, setIsUndirectedMode] = useState(false)
   const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
+  const [canvasType, setCanvasType] = useState<CanvasType>('graph')
+  const [editingEdgeWeightId, setEditingEdgeWeightId] = useState<string | null>(null)
+  const [draftEdgeWeight, setDraftEdgeWeight] = useState('')
+  const [edgeContextMenu, setEdgeContextMenu] = useState<EdgeContextMenuState | null>(null)
+
+  const isWeightedMode = canvasType === 'weighted-graph'
 
   // useRef instead of useState: changing nextId doesn't trigger a re-render
   const nextId = useRef(1)
@@ -208,6 +217,78 @@ function App() {
     setIsUndirectedMode((prev) => !prev)
   }
 
+  // Switches canvas type and clears all edge-weight editing state.
+  const handleCanvasTypeChange = (type: CanvasType) => {
+    setCanvasType(type)
+    setEditingEdgeWeightId(null)
+    setDraftEdgeWeight('')
+    setEdgeContextMenu(null)
+  }
+
+  // Opens inline weight editing for an edge, pre-filling the current weight.
+  const handleEdgeWeightClick = (edgeId: string) => {
+    const edge = edges.find((e) => e.id === edgeId)
+    if (!edge) return
+    setEditingEdgeWeightId(edgeId)
+    setDraftEdgeWeight(edge.weight !== undefined ? String(edge.weight) : '1')
+    setEdgeContextMenu(null)
+  }
+
+  // Updates the draft weight string while typing in the inline input.
+  const handleEdgeWeightChange = (value: string) => {
+    setDraftEdgeWeight(sanitizeNumericInput(value))
+  }
+
+  // Commits the typed weight to the edge; falls back to 0 if empty.
+  const handleCommitEdgeWeight = (edgeId: string, rawValue: string) => {
+    const parsed = parseNumberInput(rawValue)
+    setEdges((prev) =>
+      prev.map((e) =>
+        e.id === edgeId ? { ...e, weight: parsed !== null ? parsed : 0 } : e,
+      ),
+    )
+    setEditingEdgeWeightId(null)
+    setDraftEdgeWeight('')
+  }
+
+  // Inline weight input: Enter commits, Escape cancels.
+  const handleEdgeWeightKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    edgeId: string,
+  ) => {
+    if (event.key === 'Enter') {
+      handleCommitEdgeWeight(edgeId, draftEdgeWeight)
+    } else if (event.key === 'Escape') {
+      setEditingEdgeWeightId(null)
+      setDraftEdgeWeight('')
+    }
+  }
+
+  // Opens the edge context menu at the pointer position.
+  const handleEdgeRightClick = (edgeId: string, x: number, y: number) => {
+    setEdgeContextMenu({ edgeId, x, y })
+    setEditingEdgeWeightId(null)
+  }
+
+  // Closes the edge context menu.
+  const closeEdgeContextMenu = () => setEdgeContextMenu(null)
+
+  // Deletes the edge from the context menu and closes the menu.
+  const handleDeleteEdgeFromContextMenu = (edgeId: string) => {
+    setEdges((prev) => prev.filter((e) => e.id !== edgeId))
+    closeEdgeContextMenu()
+  }
+
+  // Closes the context menu and opens the inline weight editor for the edge.
+  const handleEditWeightFromContextMenu = (edgeId: string) => {
+    closeEdgeContextMenu()
+    handleEdgeWeightClick(edgeId)
+  }
+
+  const handleChangeEdgeDirection = (edgeId: string, direction: GraphEdge['direction']) => {
+    setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, direction } : e)))
+  }
+
   // Dismisses the node context menu without changing graph state.
   const closeContextMenu = () => setContextMenu(null)
 
@@ -257,6 +338,7 @@ function App() {
     clearSelection()
     clearEdgeSelection()
     closeContextMenu()
+    closeEdgeContextMenu()
   }
 
   // Removes one node, its incident edges, and any stale edge selection entries.
@@ -483,6 +565,7 @@ function App() {
     if (blockGraphInteraction) return
     event.preventDefault()
     closeContextMenu()
+    closeEdgeContextMenu()
   }
 
   // Starts inline value editing for a node from the canvas (not used while delete-node mode is on).
@@ -592,17 +675,48 @@ function App() {
     setShowEmptyAllConfirm(true)
   }
 
-  // Confirms empty-all: sets every node's value to empty and closes the modal.
+  // Confirms the modal action: in weighted mode resets every edge weight to 1; otherwise empties every node's value.
   const confirmEmptyAll = () => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
-    setNodes((prev) => prev.map((node): GraphNode => ({ ...node, value: 'empty' })))
+    if (isWeightedMode) {
+      setEdges((prev) => prev.map((edge) => ({ ...edge, weight: 1 })))
+    } else {
+      setNodes((prev) => prev.map((node): GraphNode => ({ ...node, value: 'empty' })))
+    }
     cancelEditing()
     setShowEmptyAllConfirm(false)
   }
 
   // Cancels the empty-all confirmation without changing nodes.
   const cancelEmptyAll = () => setShowEmptyAllConfirm(false)
+
+  // Weighted-mode: assigns random integers in the fill range to every edge still at the default weight (1).
+  const randomizeEdgeWeights = () => {
+    if (blockGraphInteraction) return
+    resetAllGraphAlgorithmVisualizations()
+    const minValue = parseNumberInput(fillMin)
+    const maxValue = parseNumberInput(fillMax)
+    if (minValue === null || maxValue === null) return
+
+    const low = Math.min(minValue, maxValue)
+    const high = Math.max(minValue, maxValue)
+
+    setEdges((prev) =>
+      prev.map((edge) =>
+        (edge.weight ?? 1) === 1
+          ? { ...edge, weight: getRandomIntInclusive(low, high) }
+          : edge,
+      ),
+    )
+  }
+
+  // Weighted-mode equivalent of "Empty all values": opens the confirm modal before resetting all weights to 1.
+  const handleResetEdgeWeightsClick = () => {
+    if (blockGraphInteraction) return
+    if (edges.every((edge) => (edge.weight ?? 1) === 1)) return
+    setShowEmptyAllConfirm(true)
+  }
 
   // Inline editor: Enter commits; Escape cancels without saving.
   const handleValueKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, nodeId: string) => {
@@ -684,6 +798,7 @@ function App() {
       fromNodeId: fromId,
       toNodeId: toId,
       direction,
+      ...(isWeightedMode && { weight: 1 }),
     }
     nextId.current += 1
     setEdges((prev) => [...prev, newEdge])
@@ -785,13 +900,17 @@ function App() {
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
   const hasNonEmptyNodes = nodes.some((node) => node.value !== 'empty')
+  const hasDefaultEdges = edges.some((edge) => (edge.weight ?? 1) === 1)
+  const hasNonOneEdges = edges.some((edge) => (edge.weight ?? 1) !== 1)
   const fillRangeReady = parseNumberInput(fillMin) !== null && parseNumberInput(fillMax) !== null
-  const canFillEmpty = hasEmptyNodes && fillRangeReady
-  const canEmptyAll = hasNonEmptyNodes
+  const canFillEmpty = isWeightedMode
+    ? hasDefaultEdges && fillRangeReady
+    : hasEmptyNodes && fillRangeReady
+  const canEmptyAll = isWeightedMode ? hasNonOneEdges : hasNonEmptyNodes
 
   return (
     <div className="app">
-      <Header />
+      <Header activeCanvas={canvasType} onCanvasTypeChange={handleCanvasTypeChange} />
 
       <div className="workspace">
         <GraphCanvas
@@ -846,22 +965,32 @@ function App() {
           onToggleEdgeDirection={toggleEdgeDirection}
           isUndirectedMode={isUndirectedMode}
           onUndirectedModeToggle={handleUndirectedModeToggle}
+          isWeightedMode={isWeightedMode}
+          editingEdgeWeightId={editingEdgeWeightId}
+          draftEdgeWeight={draftEdgeWeight}
+          onEdgeWeightClick={handleEdgeWeightClick}
+          onEdgeWeightChange={handleEdgeWeightChange}
+          onEdgeWeightKeyDown={handleEdgeWeightKeyDown}
+          onCommitEdgeWeight={handleCommitEdgeWeight}
+          onEdgeRightClick={handleEdgeRightClick}
         />
 
         <Sidebar
           onSidebarSectionChange={handleSidebarSectionChange}
+          isWeightedMode={isWeightedMode}
           canvasSetup={{
             blockGraphEdits: blockGraphInteraction,
+            isWeightedMode,
             fillMin,
             fillMax,
             onFillMinChange: handleFillMinChange,
             onFillMaxChange: handleFillMaxChange,
             onFillRangeBlur: syncFillRange,
             onFillRangeKeyDown: handleFillRangeKeyDown,
-            onFillEmptyValues: fillEmptyValues,
+            onFillEmptyValues: isWeightedMode ? randomizeEdgeWeights : fillEmptyValues,
             canFillEmpty,
 
-            onEmptyAllValues: handleEmptyAllClick,
+            onEmptyAllValues: isWeightedMode ? handleResetEdgeWeightsClick : handleEmptyAllClick,
             canEmptyAll,
             onPresetClick: handlePresetClick,
           }}
@@ -1009,9 +1138,11 @@ function App() {
 
       <ConfirmModal
         open={showEmptyAllConfirm}
-        title="Empty all values?"
-        body="This resets every node back to empty, wiping any numbers and nulls."
-        confirmLabel="Empty all"
+        title={isWeightedMode ? 'Reset all weights to 1?' : 'Empty all values?'}
+        body={isWeightedMode
+          ? 'This sets every edge weight back to 1, including ones you customized.'
+          : 'This resets every node back to empty, wiping any numbers and nulls.'}
+        confirmLabel={isWeightedMode ? 'Reset all' : 'Empty all'}
         onConfirm={confirmEmptyAll}
         onCancel={cancelEmptyAll}
       />
@@ -1020,9 +1151,22 @@ function App() {
         contextMenu={contextMenu}
         nodes={nodes}
         isDeleteMode={isDeleteMode}
+        isWeightedMode={isWeightedMode}
         onClose={closeContextMenu}
         onEditValue={beginEditingNode}
         onDelete={deleteNode}
+      />
+
+      <EdgeContextMenu
+        contextMenu={edgeContextMenu}
+        edges={edges}
+        nodes={nodes}
+        isUndirectedMode={isUndirectedMode}
+        isWeightedMode={isWeightedMode}
+        onClose={closeEdgeContextMenu}
+        onEditWeight={handleEditWeightFromContextMenu}
+        onDelete={handleDeleteEdgeFromContextMenu}
+        onChangeDirection={handleChangeEdgeDirection}
       />
     </div>
   )

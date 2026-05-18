@@ -29,6 +29,7 @@ type EdgesLayerProps = {
   cycleGoalEdgeIds: string[]
   shortestPathEdgeIds: string[]
   onToggleEdgeSelection: (edgeId: string) => void
+  onEdgeRightClick?: (edgeId: string, x: number, y: number) => void
 }
 
 // SVG layer that draws every edge between connected nodes.
@@ -49,6 +50,7 @@ export const EdgesLayer = ({
   cycleGoalEdgeIds,
   shortestPathEdgeIds,
   onToggleEdgeSelection,
+  onEdgeRightClick,
 }: EdgesLayerProps) => {
   const nodeById = new Map(nodes.map((n) => [n.id, n]))
   return (
@@ -60,7 +62,7 @@ export const EdgesLayer = ({
       left: 0,
       width: '100%',
       height: '100%',
-      pointerEvents: isDeleteEdgeMode ? 'auto' : 'none',
+      pointerEvents: 'none',
     }}
   >
     {edges.map((edge) => {
@@ -104,13 +106,26 @@ export const EdgesLayer = ({
           </>
         ) : null
 
-      // Click handler for the invisible hit-line placed over the visual line.
-      // Lets users reliably pick short/stationary edges without changing the
-      // visual appearance of the edge itself.
       const handleEdgePick = (event: React.MouseEvent<SVGLineElement>) => {
         event.stopPropagation()
         onToggleEdgeSelection(edge.id)
       }
+
+      const handleEdgeContextMenu = (event: React.MouseEvent<SVGLineElement>) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onEdgeRightClick?.(edge.id, event.clientX, event.clientY)
+      }
+
+      // Single full-span hit line for right-click context menu in both modes.
+      // Covers the entire startX→endX segment regardless of arrow direction.
+      const contextMenuHitLine = (
+        <line
+          x1={startX} y1={startY} x2={endX} y2={endY}
+          stroke="transparent" strokeWidth="12" pointerEvents="stroke"
+          onContextMenu={handleEdgeContextMenu}
+        />
+      )
       // Per-edge markers paint with this stroke so arrowheads match the line in every
       // state (goal, visited, component highlights). Global markers + currentColor are unreliable
       // across browsers for marker context.
@@ -228,6 +243,7 @@ export const EdgesLayer = ({
                 onClick={handleEdgePick}
               />
             )}
+            {contextMenuHitLine}
           </g>
         )
       }
@@ -388,6 +404,7 @@ export const EdgesLayer = ({
               )}
             </>
           )}
+          {contextMenuHitLine}
         </g>
       )
     })}

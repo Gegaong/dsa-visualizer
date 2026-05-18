@@ -29,6 +29,7 @@ type GraphNodeLayerProps = {
   isConnectMode: boolean
   isDeleteMode: boolean
   isDeleteEdgeMode: boolean
+  isWeightedMode: boolean
   selectedNodeIds: string[]
   connectionSource: string | null
   draggingNodeId: string | null
@@ -65,6 +66,7 @@ export const GraphNodeLayer = ({
   isConnectMode,
   isDeleteMode,
   isDeleteEdgeMode,
+  isWeightedMode,
   selectedNodeIds,
   connectionSource,
   draggingNodeId,
@@ -95,6 +97,8 @@ export const GraphNodeLayer = ({
       const valueClass = display.sizeClass
         ? `node-value ${display.sizeClass}`
         : 'node-value'
+      const labelSizeClass = node.label.length > 2 ? 'node-value--small' : ''
+      const labelClass = labelSizeClass ? `node-value ${labelSizeClass}` : 'node-value'
       const isSelected = selectedNodeIds.includes(node.id)
       const isConnectionSource = connectionSource === node.id
       const isVisited = traversalVisitedNodeIds.includes(node.id)
@@ -153,9 +157,7 @@ export const GraphNodeLayer = ({
                 return
               }
 
-              // Edge-delete mode owns its own clicks; swallow node clicks so they
-              // don't fall through and accidentally add a node to the canvas.
-              if (isDeleteEdgeMode) {
+              if (isDeleteEdgeMode || isWeightedMode) {
                 event.stopPropagation()
                 return
               }
@@ -168,7 +170,9 @@ export const GraphNodeLayer = ({
                 : (event) => onNodeContextMenu(event, node)
             }
           >
-            {editingNodeId === node.id ? (
+            {isWeightedMode ? (
+              <span className={labelClass}>{node.label}</span>
+            ) : editingNodeId === node.id ? (
               <input
                 className="node-input"
                 inputMode="numeric"
@@ -182,8 +186,8 @@ export const GraphNodeLayer = ({
               <span className={valueClass}>{display.text}</span>
             )}
           </div>
-          <span className="node-label">{node.label}</span>
-          {showHoverValue && <span className="node-hover-value">{node.value}</span>}
+          {!isWeightedMode && <span className="node-label">{node.label}</span>}
+          {!isWeightedMode && showHoverValue && <span className="node-hover-value">{node.value}</span>}
         </div>
       )
     })}

@@ -14,6 +14,7 @@ type EdgeTogglesProps = {
   isUndirectedMode: boolean
   onToggleEdgeDirection: (edgeId: string) => void
   onToggleEdgeSelection: (edgeId: string) => void
+  onEdgeRightClick: (edgeId: string, x: number, y: number) => void
 }
 
 // Midpoint pill rendered on top of each edge.
@@ -30,6 +31,7 @@ export const EdgeToggles = ({
   isUndirectedMode,
   onToggleEdgeDirection,
   onToggleEdgeSelection,
+  onEdgeRightClick,
 }: EdgeTogglesProps) => (
   <>
     {edges.map((edge) => {
@@ -71,6 +73,11 @@ export const EdgeToggles = ({
             }
 
             onToggleEdgeDirection(edge.id)
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onEdgeRightClick(edge.id, e.clientX, e.clientY)
           }}
           type="button"
           title={

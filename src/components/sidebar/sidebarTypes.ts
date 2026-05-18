@@ -23,6 +23,7 @@ export type SidebarSharedState = {
 
 export type CanvasSetupPageProps = {
   blockGraphEdits: boolean
+  isWeightedMode: boolean
   fillMin: string
   fillMax: string
   onFillMinChange: (event: React.ChangeEvent<HTMLInputElement>) => void
@@ -178,4 +179,5 @@ export type SidebarProps = {
   canvasSetup: CanvasSetupPageProps
   traversal: TraversalPageProps
   algorithms: AlgorithmsPageProps
+  isWeightedMode?: boolean
 }

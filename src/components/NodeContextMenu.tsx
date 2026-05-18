@@ -4,6 +4,7 @@ type NodeContextMenuProps = {
   contextMenu: ContextMenuState | null
   nodes: GraphNode[]
   isDeleteMode: boolean
+  isWeightedMode: boolean
   onClose: () => void
   onEditValue: (node: GraphNode) => void
   onDelete: (nodeId: string) => void
@@ -17,6 +18,7 @@ export const NodeContextMenu = ({
   contextMenu,
   nodes,
   isDeleteMode,
+  isWeightedMode,
   onClose,
   onEditValue,
   onDelete,
@@ -42,22 +44,26 @@ export const NodeContextMenu = ({
       >
         <div className="context-header">
           <span className="context-title">Node {node.label}</span>
-          <span className="context-value">
-            {node.value === 'empty' ? 'empty' : node.value}
-          </span>
+          {!isWeightedMode && (
+            <span className="context-value">
+              {node.value === 'empty' ? 'empty' : node.value}
+            </span>
+          )}
         </div>
         {!isDeleteMode && (
           <>
-            <button
-              className="context-action"
-              type="button"
-              onClick={() => {
-                onEditValue(node)
-                onClose()
-              }}
-            >
-              Edit value
-            </button>
+            {!isWeightedMode && (
+              <button
+                className="context-action"
+                type="button"
+                onClick={() => {
+                  onEditValue(node)
+                  onClose()
+                }}
+              >
+                Edit value
+              </button>
+            )}
             <button
               className="context-action context-action--danger"
               type="button"

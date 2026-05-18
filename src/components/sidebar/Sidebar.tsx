@@ -20,54 +20,64 @@ const PAGE_CLASS: Record<SidebarPage, string> = {
 // parent on page changes. CanvasSetupPage and TraversalPage mount only while active;
 // AlgorithmsPage stays mounted at all times (display:none when inactive) so that
 // algorithmMode state and the hooks' sidebarAlgorithmModeRef stay in sync.
+// In weighted-graph mode, the Traversal and Algorithms tabs are hidden and the sidebar
+// is forced to the Canvas setup page.
 export const Sidebar = ({
   onSidebarSectionChange,
   canvasSetup,
   traversal,
   algorithms,
+  isWeightedMode,
 }: SidebarProps) => {
   const [activePage, setActivePage] = useState<SidebarPage>('canvas')
   const prevPageRef = useRef<SidebarPage>(activePage)
 
+  // Derive the effective page: weighted mode forces canvas setup.
+  const effectivePage: SidebarPage = isWeightedMode ? 'canvas' : activePage
+
   useEffect(() => {
     const prev = prevPageRef.current
-    if (prev !== activePage) {
-      onSidebarSectionChange?.({ from: prev, to: activePage })
-      prevPageRef.current = activePage
+    if (prev !== effectivePage) {
+      onSidebarSectionChange?.({ from: prev, to: effectivePage })
+      prevPageRef.current = effectivePage
     }
-  }, [activePage, onSidebarSectionChange])
+  }, [effectivePage, onSidebarSectionChange])
 
   return (
-    <aside className={`sidebar ${PAGE_CLASS[activePage]}`}>
+    <aside className={`sidebar ${PAGE_CLASS[effectivePage]}`}>
       <div className="sidebar-page-switch">
         <button
-          className={`sidebar-page-tab ${activePage === 'canvas' ? 'is-active' : ''}`}
+          className={`sidebar-page-tab ${effectivePage === 'canvas' ? 'is-active' : ''}`}
           type="button"
           onClick={() => setActivePage('canvas')}
         >
           Canvas setup
         </button>
-        <button
-          className={`sidebar-page-tab ${activePage === 'traversal' ? 'is-active' : ''}`}
-          type="button"
-          onClick={() => setActivePage('traversal')}
-        >
-          Traversal mode
-        </button>
-        <button
-          className={`sidebar-page-tab ${activePage === 'algorithms' ? 'is-active' : ''}`}
-          type="button"
-          onClick={() => setActivePage('algorithms')}
-        >
-          Algorithms
-        </button>
+        {!isWeightedMode && (
+          <button
+            className={`sidebar-page-tab ${effectivePage === 'traversal' ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => setActivePage('traversal')}
+          >
+            Traversal mode
+          </button>
+        )}
+        {!isWeightedMode && (
+          <button
+            className={`sidebar-page-tab ${effectivePage === 'algorithms' ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => setActivePage('algorithms')}
+          >
+            Algorithms
+          </button>
+        )}
       </div>
 
-      {activePage === 'canvas' && <CanvasSetupPage {...canvasSetup} />}
-      {activePage === 'traversal' && <TraversalPage {...traversal} />}
+      {effectivePage === 'canvas' && <CanvasSetupPage {...canvasSetup} />}
+      {effectivePage === 'traversal' && <TraversalPage {...traversal} />}
       <div
         className="sidebar-page-root"
-        style={{ display: activePage === 'algorithms' ? undefined : 'none' }}
+        style={{ display: effectivePage === 'algorithms' ? undefined : 'none' }}
       >
         <AlgorithmsPage {...algorithms} />
       </div>

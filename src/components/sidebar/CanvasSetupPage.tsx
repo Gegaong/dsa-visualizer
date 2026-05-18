@@ -2,9 +2,11 @@ import { GRAPH_PRESETS } from '../../utils/presets'
 
 import type { CanvasSetupPageProps } from './sidebarTypes'
 
-// Sidebar page: bulk node-value tools (fill / empty-all) and graph presets.
+// Sidebar page: bulk fill / reset tools (node values in graph mode, edge weights in
+// weighted mode) and graph presets. Labels swap based on isWeightedMode.
 export const CanvasSetupPage = ({
   blockGraphEdits,
+  isWeightedMode,
   fillMin,
   fillMax,
   onFillMinChange,
@@ -19,7 +21,7 @@ export const CanvasSetupPage = ({
 }: CanvasSetupPageProps) => (
   <div className="sidebar-page-body">
     <div className="sidebar-section">
-      <h3>Node values</h3>
+      <h3>{isWeightedMode ? 'Edge weights' : 'Node values'}</h3>
       <label className="field">
         <span>Minimum</span>
         <input
@@ -51,7 +53,7 @@ export const CanvasSetupPage = ({
           onClick={onFillEmptyValues}
           disabled={!canFillEmpty || blockGraphEdits}
         >
-          Fill empty values
+          {isWeightedMode ? 'Randomize default weights' : 'Fill empty values'}
         </button>
         <button
           className="btn"
@@ -59,7 +61,7 @@ export const CanvasSetupPage = ({
           onClick={onEmptyAllValues}
           disabled={!canEmptyAll || blockGraphEdits}
         >
-          Empty all values
+          {isWeightedMode ? 'Reset all weights to 1' : 'Empty all values'}
         </button>
       </div>
     </div>
