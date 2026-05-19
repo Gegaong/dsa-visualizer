@@ -130,50 +130,53 @@ export const GRAPH_PRESETS: GraphPreset[] = [
       [4, 9],
     ],
   },
-  // Complex directed graph with multiple cycles and all 3 edge types; suits cycle-detection algorithm.
-  // Outer ring is a regular heptagon; inner nodes are placed near the centre, away from all ring edges.
+  // 13-node directed graph with two arcing paths from A that converge at J, plus crossing
+  // diagonals and side branches. Every node has in-degree ≥ 1 so Kahn's queue starts empty.
+  // DFS (back-edge on smallest-label path) finds the upper arc: A→B→E→F→H→J→K→A.
+  // BFS/Kahn's (predecessor walk from smallest leftover) finds the lower arc: A→C→D→G→I→J→K→A.
+  // The arcs share only the entry A and the exit leg J→K, and cross each other via D→F and E→G.
   {
     id: 'cycle',
     name: 'Cycle Detection',
     nodes: [
-      // Outer ring — regular heptagon, centre (300, 268), radius 228
-      { x: 300, y: 40  },  // 0 top
-      { x: 478, y: 134 },  // 1 top-right
-      { x: 524, y: 328 },  // 2 right
-      { x: 398, y: 487 },  // 3 bottom-right
-      { x: 202, y: 487 },  // 4 bottom-left
-      { x: 76,  y: 328 },  // 5 left
-      { x: 122, y: 134 },  // 6 top-left
-      // Inner nodes — well inside the ring, away from all edges
-      { x: 295, y: 168 },  // 7 upper-centre
-      { x: 400, y: 284 },  // 8 right-centre
-      { x: 295, y: 388 },  // 9 lower-centre
-      { x: 178, y: 278 },  // 10 left-centre
+      { x: 75,  y: 338 },  // 0  A  — left entry, connects to both arcs
+      { x: 225, y: 160 },  // 1  B  — upper arc
+      { x: 220, y: 510 },  // 2  C  — lower arc
+      { x: 345, y: 510 },  // 3  D  — lower arc (cross: D→F)
+      { x: 430, y: 100 },  // 4  E  — upper arc (cross: E→G)
+      { x: 575, y: 215 },  // 5  F  — upper arc (receives from E and D)
+      { x: 470, y: 475 },  // 6  G  — lower arc (receives from D and E)
+      { x: 730, y: 230 },  // 7  I  — lower arc  ← label 7, smaller than H
+      { x: 690, y: 470 },  // 8  H  — upper arc  ← label 8, larger than I
+      { x: 940, y: 326 },  // 9  J  — convergence (from H, I, L, M)
+      { x: 375, y: 297 },  // 10 K  — shared return leg mid-point
+      { x: 820, y: 160 },  // 11 L  — side branch off F
+      { x: 820, y: 530 },  // 12 M  — side branch off G
     ],
     edges: [
-      // Outer directed ring (one big cycle)
+      // Upper arc: A→B→E→F→H→J  (DFS takes this — B has label 1, smaller than C=2)
       [0,  1,  'forward'],
-      [1,  2,  'forward'],
-      [2,  3,  'forward'],
-      [3,  4,  'forward'],
+      [1,  4,  'forward'],
       [4,  5,  'forward'],
-      [5,  6,  'forward'],
-      [6,  0,  'forward'],
-      // Inner directed square (second independent cycle)
-      [7,  8,  'forward'],
+      [5,  8,  'forward'],
       [8,  9,  'forward'],
+      // Lower arc: A→C→D→G→I→J  (Kahn's predecessor walk follows this)
+      [0,  2,  'forward'],
+      [2,  3,  'forward'],
+      [3,  6,  'forward'],
+      [6,  7,  'forward'],
+      [7,  9,  'forward'],
+      // Shared return: J→K→A  (both cycles close here)
       [9,  10, 'forward'],
-      [10, 7,  'forward'],
-      // Outer → inner entries
-      [0,  7,  'forward'],
-      [1,  8,  'forward'],
-      // Inner → outer exits (create mixed cycles)
-      [9,  3,  'forward'],
-      [10, 5,  'forward'],
-      // Mixed-type edges that add further cycles
-      [2,  8,  'both'],
-      [6,  7,  'backward'],
-      [4,  9,  'backward'],
+      [10, 0,  'forward'],
+      // Crossing diagonals — create the X in the middle and extra mixed cycles
+      [4,  6,  'forward'],  // E→G  (upper crosses to lower)
+      [3,  5,  'forward'],  // D→F  (lower crosses to upper)
+      // Side branches off F and G — add extra paths into J
+      [5,  11, 'forward'],  // F→L
+      [11, 9,  'forward'],  // L→J
+      [6,  12, 'forward'],  // G→M
+      [12, 9,  'forward'],  // M→J
     ],
   },
   // Dense directed graph with all 3 edge types and many inter-node paths; suits shortest-path algorithm.
