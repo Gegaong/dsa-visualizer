@@ -54,6 +54,7 @@ export type CycleDetectionPlaybackHandle = {
   isCycleDetectionRunning: boolean
   cycleDetectionStatusText: string
   cycleGoalEdgeIds: string[]
+  cycleDetectionStartNodeLabel: string
 
   isPlaying: boolean
   playbackSpeed: number
@@ -69,6 +70,7 @@ export type CycleDetectionPlaybackHandle = {
   clearCycleDetectionAlgorithmStateOnly: () => void
   runCycleDetectionFromSidebar: (strategy: TraversalStrategy) => void
   handleAlgorithmModeChangeFromSidebar: (mode: AlgorithmMode) => void
+  handleCycleDetectionStartNodeLabelChange: (value: string) => void
   stepCycleDetectionForward: () => void
   stepCycleDetectionBackward: () => void
   playCycleDetection: () => void
@@ -96,6 +98,7 @@ export function useCycleDetectionPlayback({
 
   const [statusText, setStatusText] = useState(IDLE_STATUS)
   const [cycleGoalEdgeIds, setCycleGoalEdgeIds] = useState<string[]>([])
+  const [startNodeLabel, setStartNodeLabel] = useState('')
   const strategyRef = useRef<TraversalStrategy>('bfs')
 
   // Clears the algorithm-specific extra state shared by all reset paths.
@@ -202,7 +205,8 @@ export function useCycleDetectionPlayback({
       return
     }
 
-    const result = runCycleDetection(nodes, edges, strategy)
+    const startNodeId = nodes.find((n) => n.label === startNodeLabel.trim())?.id
+    const result = runCycleDetection(nodes, edges, strategy, startNodeId)
     if (result.steps.length === 0) {
       setStatusText('Cycle detection could not run on this graph.')
       return
@@ -230,6 +234,7 @@ export function useCycleDetectionPlayback({
     isCycleDetectionRunning: pb.isRunning,
     cycleDetectionStatusText: statusText,
     cycleGoalEdgeIds,
+    cycleDetectionStartNodeLabel: startNodeLabel,
 
     isPlaying: pb.isPlaying,
     playbackSpeed: pb.playbackSpeed,
@@ -245,6 +250,7 @@ export function useCycleDetectionPlayback({
     clearCycleDetectionAlgorithmStateOnly: pb.clearStateOnly,
     runCycleDetectionFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
+    handleCycleDetectionStartNodeLabelChange: setStartNodeLabel,
     stepCycleDetectionForward: pb.stepForward,
     stepCycleDetectionBackward: pb.stepBackward,
     playCycleDetection: pb.play,

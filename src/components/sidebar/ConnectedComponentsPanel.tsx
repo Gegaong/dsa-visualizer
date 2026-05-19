@@ -4,6 +4,8 @@ import type { ConnectedComponentsOutput } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+
 export type ConnectedComponentsPanelProps = {
   isTraversalRunning: boolean
   isUndirectedMode: boolean
@@ -29,6 +31,8 @@ export type ConnectedComponentsPanelProps = {
   connectedComponentsStepTotal: number
   onRunConnectedComponents: (strategy: TraversalStrategy) => void
   onStopConnectedComponents: () => void
+  ccStartNodeLabel: string
+  onCCStartNodeLabelChange: (value: string) => void
 }
 
 // Returns a human-readable step counter; shows "Ready / N" before playback begins.
@@ -64,6 +68,8 @@ export const ConnectedComponentsPanel = ({
   connectedComponentsStepTotal,
   onRunConnectedComponents,
   onStopConnectedComponents,
+  ccStartNodeLabel,
+  onCCStartNodeLabelChange,
 }: ConnectedComponentsPanelProps) => {
   // Starts a new run or stops the active one; no-ops while traversal is running.
   const toggleRun = () => {
@@ -107,6 +113,20 @@ export const ConnectedComponentsPanel = ({
             >
               DFS
             </button>
+          </div>
+          <div className="algorithm-inputs-section">
+            <label className="field">
+              <span>
+                Start node <span className="optional-indicator">(optional)</span>
+              </span>
+              <input
+                type="text"
+                value={ccStartNodeLabel}
+                onChange={(e) => onCCStartNodeLabelChange(e.target.value)}
+                onKeyDown={confirmNodeLabelFieldOnEnter}
+                disabled={algorithmPickerFrozen}
+              />
+            </label>
           </div>
         </div>
       </div>

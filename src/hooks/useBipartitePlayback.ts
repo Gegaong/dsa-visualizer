@@ -42,6 +42,7 @@ export type BipartitePlaybackHandle = {
   bipartiteStatusText: string
   bipartiteGroupANodeIds: string[]
   bipartiteGroupBNodeIds: string[]
+  bipartiteStartNodeLabel: string
 
   isPlaying: boolean
   playbackSpeed: number
@@ -57,6 +58,7 @@ export type BipartitePlaybackHandle = {
   clearBipartiteAlgorithmStateOnly: () => void
   runBipartiteFromSidebar: (strategy: TraversalStrategy) => void
   handleAlgorithmModeChangeFromSidebar: (mode: AlgorithmMode) => void
+  handleBipartiteStartNodeLabelChange: (value: string) => void
   stepBipartiteForward: () => void
   stepBipartiteBackward: () => void
   playBipartite: () => void
@@ -85,6 +87,7 @@ export function useBipartitePlayback({
   const [statusText, setStatusText] = useState(IDLE_STATUS)
   const [bipartiteGroupANodeIds, setBipartiteGroupANodeIds] = useState<string[]>([])
   const [bipartiteGroupBNodeIds, setBipartiteGroupBNodeIds] = useState<string[]>([])
+  const [startNodeLabel, setStartNodeLabel] = useState('')
   const strategyRef = useRef<TraversalStrategy>('bfs')
 
   // Clears bipartite-specific state shared by both reset paths.
@@ -183,7 +186,8 @@ export function useBipartitePlayback({
       return
     }
 
-    const result = runBipartiteCheck(nodes, edges, strategy)
+    const startNodeId = nodes.find((n) => n.label === startNodeLabel.trim())?.id
+    const result = runBipartiteCheck(nodes, edges, strategy, startNodeId)
     if (result.steps.length === 0) {
       setStatusText('Bipartite check could not run on this graph.')
       return
@@ -213,6 +217,7 @@ export function useBipartitePlayback({
     bipartiteStatusText: statusText,
     bipartiteGroupANodeIds,
     bipartiteGroupBNodeIds,
+    bipartiteStartNodeLabel: startNodeLabel,
 
     isPlaying: pb.isPlaying,
     playbackSpeed: pb.playbackSpeed,
@@ -228,6 +233,7 @@ export function useBipartitePlayback({
     clearBipartiteAlgorithmStateOnly: pb.clearStateOnly,
     runBipartiteFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
+    handleBipartiteStartNodeLabelChange: setStartNodeLabel,
     stepBipartiteForward: pb.stepForward,
     stepBipartiteBackward: pb.stepBackward,
     playBipartite: pb.play,

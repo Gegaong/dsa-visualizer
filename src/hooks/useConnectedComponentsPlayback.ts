@@ -62,6 +62,7 @@ export type ConnectedComponentsPlaybackHandle = {
   weakCCOutlineActive: boolean
   weakCCVisitedNodeIds: string[]
   weakCCVisitedEdgeIds: string[]
+  ccStartNodeLabel: string
 
   isPlaying: boolean
   playbackSpeed: number
@@ -77,6 +78,7 @@ export type ConnectedComponentsPlaybackHandle = {
   clearConnectedComponentsAlgorithmStateOnly: () => void
   runConnectedComponentsFromSidebar: (strategy: TraversalStrategy) => void
   handleAlgorithmModeChangeFromSidebar: (mode: AlgorithmMode) => void
+  handleCCStartNodeLabelChange: (value: string) => void
   stepConnectedComponentsForward: () => void
   stepConnectedComponentsBackward: () => void
   playConnectedComponents: () => void
@@ -109,6 +111,7 @@ export function useConnectedComponentsPlayback({
   > | null>(null)
   const [weakCCVisitedNodeIds, setWeakCCVisitedNodeIds] = useState<string[]>([])
   const [weakCCVisitedEdgeIds, setWeakCCVisitedEdgeIds] = useState<string[]>([])
+  const [startNodeLabel, setStartNodeLabel] = useState('')
   const strategyRef = useRef<TraversalStrategy>('bfs')
 
   // Clears the algorithm-specific extra state shared by both reset paths.
@@ -197,7 +200,8 @@ export function useConnectedComponentsPlayback({
       return
     }
 
-    const result = runConnectedComponents(nodes, edges, strategy)
+    const startNodeId = nodes.find((n) => n.label === startNodeLabel.trim())?.id
+    const result = runConnectedComponents(nodes, edges, strategy, startNodeId)
     if (result.steps.length === 0) {
       setStatusText('Connected components could not run on this graph.')
       return
@@ -232,6 +236,7 @@ export function useConnectedComponentsPlayback({
     weakCCOutlineActive,
     weakCCVisitedNodeIds,
     weakCCVisitedEdgeIds,
+    ccStartNodeLabel: startNodeLabel,
 
     isPlaying: pb.isPlaying,
     playbackSpeed: pb.playbackSpeed,
@@ -247,6 +252,7 @@ export function useConnectedComponentsPlayback({
     clearConnectedComponentsAlgorithmStateOnly: pb.clearStateOnly,
     runConnectedComponentsFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
+    handleCCStartNodeLabelChange: setStartNodeLabel,
     stepConnectedComponentsForward: pb.stepForward,
     stepConnectedComponentsBackward: pb.stepBackward,
     playConnectedComponents: pb.play,

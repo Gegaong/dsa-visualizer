@@ -13,12 +13,16 @@ type GraphLookups = {
 }
 
 // Pre-builds neighbor and node-id maps; neighbors within each list are sorted by label.
-function buildLookups(nodes: GraphNode[], edges: GraphEdge[]): GraphLookups {
+// If startNodeId is provided and valid, that node is placed first in the iteration order.
+function buildLookups(nodes: GraphNode[], edges: GraphEdge[], startNodeId?: string): GraphLookups {
   const nodeById = new Map(nodes.map((n) => [n.id, n]))
   const rawNeighbors = buildWeaklyConnectedNeighborsMap(nodes, edges)
   const neighborsById = new Map<string, string[]>()
   rawNeighbors.forEach((ids, id) => neighborsById.set(id, sortIdsByLabel(ids, nodeById)))
-  const sortedNodeIds = sortIdsByLabel(nodes.map((n) => n.id), nodeById)
+  let sortedNodeIds = sortIdsByLabel(nodes.map((n) => n.id), nodeById)
+  if (startNodeId && nodeById.has(startNodeId)) {
+    sortedNodeIds = [startNodeId, ...sortedNodeIds.filter((id) => id !== startNodeId)]
+  }
   return { nodeById, neighborsById, sortedNodeIds }
 }
 
@@ -103,16 +107,18 @@ function colorDfs(
 
 // Runs the 2-coloring bipartite check on an undirected graph (edge directions are ignored).
 // Emits one step per node as it gets assigned to group A (color 0) or group B (color 1).
+// startNodeId is optional — when given, traversal begins from that node instead of the default order.
 export function runBipartiteCheck(
   nodes: GraphNode[],
   edges: GraphEdge[],
   strategy: 'bfs' | 'dfs',
+  startNodeId?: string,
 ): BipartiteResult {
   if (nodes.length === 0) {
     return { steps: [], isBipartite: true, groupANodeIds: [], groupBNodeIds: [] }
   }
 
-  const lookups = buildLookups(nodes, edges)
+  const lookups = buildLookups(nodes, edges, startNodeId)
   const steps: BipartiteStep[] = []
   let order = 1
 

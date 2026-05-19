@@ -97,6 +97,8 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   onStopConnectedComponents: () => void
   canRunConnectedComponents: boolean
   connectedComponentsStatusText: string
+  ccStartNodeLabel: string
+  onCCStartNodeLabelChange: (value: string) => void
   isConnectedComponentsPlaybackPlaying: boolean
   connectedComponentsPlaybackSpeed: number
   onConnectedComponentsPlaybackSpeedChange: (value: number) => void
@@ -116,6 +118,8 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   onStopCycleDetection: () => void
   canRunCycleDetection: boolean
   cycleDetectionStatusText: string
+  cycleDetectionStartNodeLabel: string
+  onCycleDetectionStartNodeLabelChange: (value: string) => void
   isCycleDetectionPlaybackPlaying: boolean
   cycleDetectionPlaybackSpeed: number
   onCycleDetectionPlaybackSpeedChange: (value: number) => void
@@ -158,6 +162,8 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   onStopBipartite: () => void
   canRunBipartite: boolean
   bipartiteStatusText: string
+  bipartiteStartNodeLabel: string
+  onBipartiteStartNodeLabelChange: (value: string) => void
   isBipartitePlaybackPlaying: boolean
   bipartitePlaybackSpeed: number
   onBipartitePlaybackSpeedChange: (value: number) => void

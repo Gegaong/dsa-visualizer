@@ -4,6 +4,8 @@ import type { BipartiteOutput } from '../../hooks/useBipartitePlayback'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+
 export type BipartitePanelProps = {
   isTraversalRunning: boolean
   isUndirectedMode: boolean
@@ -29,6 +31,8 @@ export type BipartitePanelProps = {
   bipartiteStepTotal: number
   onRunBipartite: (strategy: TraversalStrategy) => void
   onStopBipartite: () => void
+  bipartiteStartNodeLabel: string
+  onBipartiteStartNodeLabelChange: (value: string) => void
 }
 
 // Returns a human-readable step counter; shows "Ready / N" before playback begins.
@@ -64,6 +68,8 @@ export const BipartitePanel = ({
   bipartiteStepTotal,
   onRunBipartite,
   onStopBipartite,
+  bipartiteStartNodeLabel,
+  onBipartiteStartNodeLabelChange,
 }: BipartitePanelProps) => {
   // Starts a new run or stops the active one; no-ops while traversal is running.
   const toggleRun = () => {
@@ -105,6 +111,20 @@ export const BipartitePanel = ({
             >
               DFS
             </button>
+          </div>
+          <div className="algorithm-inputs-section">
+            <label className="field">
+              <span>
+                Start node <span className="optional-indicator">(optional)</span>
+              </span>
+              <input
+                type="text"
+                value={bipartiteStartNodeLabel}
+                onChange={(e) => onBipartiteStartNodeLabelChange(e.target.value)}
+                onKeyDown={confirmNodeLabelFieldOnEnter}
+                disabled={algorithmPickerFrozen}
+              />
+            </label>
           </div>
         </div>
       </div>

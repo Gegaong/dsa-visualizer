@@ -4,6 +4,8 @@ import type { CycleDetectionOutput } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+
 export type CycleDetectionPanelProps = {
   isTraversalRunning: boolean
   isUndirectedMode: boolean
@@ -29,6 +31,8 @@ export type CycleDetectionPanelProps = {
   cycleDetectionStepTotal: number
   onRunCycleDetection: (strategy: TraversalStrategy) => void
   onStopCycleDetection: () => void
+  cycleDetectionStartNodeLabel: string
+  onCycleDetectionStartNodeLabelChange: (value: string) => void
 }
 
 // Returns a human-readable step counter; shows "Ready / N" before playback begins.
@@ -64,6 +68,8 @@ export const CycleDetectionPanel = ({
   cycleDetectionStepTotal,
   onRunCycleDetection,
   onStopCycleDetection,
+  cycleDetectionStartNodeLabel,
+  onCycleDetectionStartNodeLabelChange,
 }: CycleDetectionPanelProps) => {
   // Starts a new run or stops the active one; no-ops while traversal is running.
   const toggleRun = () => {
@@ -113,6 +119,20 @@ export const CycleDetectionPanel = ({
             >
               DFS
             </button>
+          </div>
+          <div className="algorithm-inputs-section">
+            <label className="field">
+              <span>
+                Start node <span className="optional-indicator">(optional)</span>
+              </span>
+              <input
+                type="text"
+                value={cycleDetectionStartNodeLabel}
+                onChange={(e) => onCycleDetectionStartNodeLabelChange(e.target.value)}
+                onKeyDown={confirmNodeLabelFieldOnEnter}
+                disabled={algorithmPickerFrozen}
+              />
+            </label>
           </div>
         </div>
       </div>

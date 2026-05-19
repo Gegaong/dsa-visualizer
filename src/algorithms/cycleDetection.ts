@@ -19,15 +19,16 @@ type GraphLookups = {
 }
 
 // Pre-builds sorted neighbor and node-id maps used by both DFS and BFS detection.
-function buildGraphLookups(nodes: GraphNode[], edges: GraphEdge[]): GraphLookups {
+// If startNodeId is provided and valid, that node is placed first in the iteration order.
+function buildGraphLookups(nodes: GraphNode[], edges: GraphEdge[], startNodeId?: string): GraphLookups {
   const nodeById = new Map(nodes.map((node) => [node.id, node]))
   const rawNeighbors = buildNeighborsMap(nodes, edges)
   const outNeighborsById = new Map<string, string[]>()
   rawNeighbors.forEach((ids, id) => outNeighborsById.set(id, sortIdsByLabel(ids, nodeById)))
-  const sortedNodeIds = sortIdsByLabel(
-    nodes.map((node) => node.id),
-    nodeById,
-  )
+  let sortedNodeIds = sortIdsByLabel(nodes.map((node) => node.id), nodeById)
+  if (startNodeId && nodeById.has(startNodeId)) {
+    sortedNodeIds = [startNodeId, ...sortedNodeIds.filter((id) => id !== startNodeId)]
+  }
   return { nodeById, outNeighborsById, sortedNodeIds }
 }
 
@@ -200,16 +201,18 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
 
 // Detects whether the directed graph contains a cycle, producing playback steps for the
 // chosen strategy plus (if found) one concrete cycle. Bidirectional edges count as 2-cycles.
+// startNodeId is optional — when given, traversal begins from that node instead of the default order.
 export function runCycleDetection(
   nodes: GraphNode[],
   edges: GraphEdge[],
   strategy: TraversalStrategy,
+  startNodeId?: string,
 ): CycleDetectionResult {
   if (nodes.length === 0) {
     return { steps: [], hasCycle: false, cycleNodeIds: [] }
   }
 
-  const lookups = buildGraphLookups(nodes, edges)
+  const lookups = buildGraphLookups(nodes, edges, startNodeId)
   const outcome = strategy === 'dfs' ? detectCycleDfs(lookups) : detectCycleBfs(lookups)
 
   return {

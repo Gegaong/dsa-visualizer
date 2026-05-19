@@ -13,10 +13,12 @@ import { traverseReachableFrom } from './graphTraversal'
 import { sortIdsByLabel } from './sortIdsByLabel'
 
 // Connected components on undirected adjacency (direction ignored); emits playback steps; strategy only changes visit order inside each component.
+// startNodeId is optional — when given, traversal begins from that node's component first.
 export function runConnectedComponents(
   nodes: GraphNode[],
   edges: GraphEdge[],
   strategy: TraversalStrategy,
+  startNodeId?: string,
 ): ConnectedComponentsResult {
   if (nodes.length === 0) {
     return {
@@ -29,10 +31,10 @@ export function runConnectedComponents(
 
   const nodeById = new Map(nodes.map((node) => [node.id, node]))
   const neighborsById = buildWeaklyConnectedNeighborsMap(nodes, edges)
-  const sortedRoots = sortIdsByLabel(
-    nodes.map((node) => node.id),
-    nodeById,
-  )
+  let sortedRoots = sortIdsByLabel(nodes.map((node) => node.id), nodeById)
+  if (startNodeId && nodeById.has(startNodeId)) {
+    sortedRoots = [startNodeId, ...sortedRoots.filter((id) => id !== startNodeId)]
+  }
 
   const globalVisited = new Set<string>()
   const components: string[][] = []

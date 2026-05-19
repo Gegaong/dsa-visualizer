@@ -26,6 +26,8 @@ export const AlgorithmsPage = ({
   onStopConnectedComponents,
   canRunConnectedComponents,
   connectedComponentsStatusText,
+  ccStartNodeLabel,
+  onCCStartNodeLabelChange,
   isConnectedComponentsPlaybackPlaying,
   connectedComponentsPlaybackSpeed,
   onConnectedComponentsPlaybackSpeedChange,
@@ -44,6 +46,8 @@ export const AlgorithmsPage = ({
   onStopCycleDetection,
   canRunCycleDetection,
   cycleDetectionStatusText,
+  cycleDetectionStartNodeLabel,
+  onCycleDetectionStartNodeLabelChange,
   isCycleDetectionPlaybackPlaying,
   cycleDetectionPlaybackSpeed,
   onCycleDetectionPlaybackSpeedChange,
@@ -84,6 +88,8 @@ export const AlgorithmsPage = ({
   onStopBipartite,
   canRunBipartite,
   bipartiteStatusText,
+  bipartiteStartNodeLabel,
+  onBipartiteStartNodeLabelChange,
   isBipartitePlaybackPlaying,
   bipartitePlaybackSpeed,
   onBipartitePlaybackSpeedChange,
@@ -161,6 +167,8 @@ export const AlgorithmsPage = ({
           connectedComponentsStepTotal={connectedComponentsStepTotal}
           onRunConnectedComponents={onRunConnectedComponents}
           onStopConnectedComponents={onStopConnectedComponents}
+          ccStartNodeLabel={ccStartNodeLabel}
+          onCCStartNodeLabelChange={onCCStartNodeLabelChange}
         />
       )}
 
@@ -187,6 +195,8 @@ export const AlgorithmsPage = ({
           cycleDetectionStepTotal={cycleDetectionStepTotal}
           onRunCycleDetection={onRunCycleDetection}
           onStopCycleDetection={onStopCycleDetection}
+          cycleDetectionStartNodeLabel={cycleDetectionStartNodeLabel}
+          onCycleDetectionStartNodeLabelChange={onCycleDetectionStartNodeLabelChange}
         />
       )}
 
@@ -242,6 +252,8 @@ export const AlgorithmsPage = ({
           bipartiteStepTotal={bipartiteStepTotal}
           onRunBipartite={onRunBipartite}
           onStopBipartite={onStopBipartite}
+          bipartiteStartNodeLabel={bipartiteStartNodeLabel}
+          onBipartiteStartNodeLabelChange={onBipartiteStartNodeLabelChange}
         />
       )}
 
