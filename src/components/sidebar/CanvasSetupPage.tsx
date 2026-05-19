@@ -1,4 +1,4 @@
-import { GRAPH_PRESETS } from '../../utils/presets'
+import { GRAPH_PRESETS, WEIGHTED_GRAPH_PRESETS } from '../../utils/presets'
 
 import type { CanvasSetupPageProps } from './sidebarTypes'
 
@@ -68,7 +68,7 @@ export const CanvasSetupPage = ({
 
     <div className="sidebar-section">
       <h3>Presets</h3>
-      {GRAPH_PRESETS.map((preset) => (
+      {(isWeightedMode ? WEIGHTED_GRAPH_PRESETS : GRAPH_PRESETS).map((preset) => (
         <button
           key={preset.id}
           className="btn btn-ghost"
