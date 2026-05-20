@@ -88,10 +88,7 @@ export const EdgeContextMenu = ({
           <button
             className="context-action"
             type="button"
-            onClick={() => {
-              onEditWeight(edge.id)
-              onClose()
-            }}
+            onClick={() => onEditWeight(edge.id)}
           >
             Edit weight
           </button>

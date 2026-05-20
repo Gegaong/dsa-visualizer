@@ -264,53 +264,10 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
       [7, 8, 'both', 3],
     ],
   },
-  // 12 nodes: source + col-A(3) + col-B(3) + col-C(3) + col-D(2).
+  // 15 nodes: source + col-A(3) + col-B(4) + col-C(4) + col-D(3).
   {
     id: 'weighted-preset-2',
     name: 'Preset 2',
-    undirected: true,
-    nodes: [
-      { x: 60,  y: 235 },  // 0  source
-      { x: 225, y: 70  },  // 1  col-A top
-      { x: 225, y: 235 },  // 2  col-A mid
-      { x: 225, y: 400 },  // 3  col-A bot
-      { x: 410, y: 70  },  // 4  col-B top
-      { x: 410, y: 235 },  // 5  col-B mid
-      { x: 410, y: 400 },  // 6  col-B bot
-      { x: 590, y: 90  },  // 7  col-C top
-      { x: 590, y: 260 },  // 8  col-C mid
-      { x: 590, y: 430 },  // 9  col-C bot
-      { x: 760, y: 160 },  // 10 col-D top
-      { x: 760, y: 345 },  // 11 col-D bot
-    ],
-    edges: [
-      // source → col-A
-      [0, 1, 'both', 4],
-      [0, 2, 'both', 2],
-      [0, 3, 'both', 5],
-      // col-A → col-B  (monotone same+down)
-      [1, 4, 'both', 2],
-      [1, 5, 'both', 6],
-      [2, 5, 'both', 2],
-      [2, 6, 'both', 5],
-      [3, 6, 'both', 2],
-      // col-B → col-C  (monotone same+down)
-      [4, 7, 'both', 3],
-      [4, 8, 'both', 7],
-      [5, 8, 'both', 2],
-      [5, 9, 'both', 6],
-      [6, 9, 'both', 2],
-      // col-C → col-D  (row0→both ; row1→bot ; row2→bot)
-      [7, 10, 'both', 3],
-      [7, 11, 'both', 8],
-      [8, 11, 'both', 2],
-      [9, 11, 'both', 4],
-    ],
-  },
-  // 15 nodes: source + col-A(3) + col-B(4) + col-C(4) + col-D(3).
-  {
-    id: 'weighted-preset-3',
-    name: 'Preset 3',
     undirected: true,
     nodes: [
       { x: 60,  y: 260 },  // 0  source
@@ -358,72 +315,10 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
       [11, 14, 'both', 4],
     ],
   },
-  // 18 nodes: source + col-A(4) + col-B(4) + col-C(4) + col-D(4) + sink.
-  {
-    id: 'weighted-preset-4',
-    name: 'Preset 4',
-    undirected: true,
-    nodes: [
-      { x: 60,  y: 265 },  // 0  source
-      { x: 210, y: 60  },  // 1  col-A row0
-      { x: 210, y: 170 },  // 2  col-A row1
-      { x: 210, y: 290 },  // 3  col-A row2
-      { x: 210, y: 420 },  // 4  col-A row3
-      { x: 375, y: 60  },  // 5  col-B row0
-      { x: 375, y: 170 },  // 6  col-B row1
-      { x: 375, y: 290 },  // 7  col-B row2
-      { x: 375, y: 420 },  // 8  col-B row3
-      { x: 540, y: 60  },  // 9  col-C row0
-      { x: 540, y: 170 },  // 10 col-C row1
-      { x: 540, y: 290 },  // 11 col-C row2
-      { x: 540, y: 420 },  // 12 col-C row3
-      { x: 705, y: 75  },  // 13 col-D row0
-      { x: 705, y: 195 },  // 14 col-D row1
-      { x: 705, y: 315 },  // 15 col-D row2
-      { x: 705, y: 435 },  // 16 col-D row3
-      { x: 870, y: 265 },  // 17 sink
-    ],
-    edges: [
-      // source → col-A
-      [0,  1,  'both', 5],
-      [0,  2,  'both', 3],
-      [0,  3,  'both', 2],
-      [0,  4,  'both', 6],
-      // col-A → col-B  (monotone same+down)
-      [1,  5,  'both', 2],
-      [1,  6,  'both', 7],
-      [2,  6,  'both', 2],
-      [2,  7,  'both', 4],
-      [3,  7,  'both', 2],
-      [3,  8,  'both', 6],
-      [4,  8,  'both', 2],
-      // col-B → col-C  (monotone same+down)
-      [5,  9,  'both', 4],
-      [5,  10, 'both', 6],
-      [6,  10, 'both', 2],
-      [6,  11, 'both', 5],
-      [7,  11, 'both', 3],
-      [7,  12, 'both', 4],
-      [8,  12, 'both', 2],
-      // col-C → col-D  (monotone same+down)
-      [9,  13, 'both', 3],
-      [9,  14, 'both', 7],
-      [10, 14, 'both', 3],
-      [10, 15, 'both', 4],
-      [11, 15, 'both', 2],
-      [11, 16, 'both', 6],
-      [12, 16, 'both', 2],
-      // col-D → sink
-      [13, 17, 'both', 7],
-      [14, 17, 'both', 5],
-      [15, 17, 'both', 3],
-      [16, 17, 'both', 2],
-    ],
-  },
   // 21 nodes: source + col-A(4) + col-B(4) + col-C(4) + col-D(4) + col-E(4).
   {
-    id: 'weighted-preset-5',
-    name: 'Preset 5',
+    id: 'weighted-preset-3',
+    name: 'Preset 3',
     undirected: true,
     nodes: [
       { x: 60,  y: 270 },  // 0  source

@@ -62,6 +62,7 @@ function App() {
   const [draftValue, setDraftValue] = useState('')
   const [fillMin, setFillMin] = useState('1')
   const [fillMax, setFillMax] = useState('10')
+  const [heuristicPixelsPerUnit, setHeuristicPixelsPerUnit] = useState('100')
   const [showEmptyAllConfirm, setShowEmptyAllConfirm] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showPresetConfirm, setShowPresetConfirm] = useState(false)
@@ -86,6 +87,11 @@ function App() {
 
   // useRef instead of useState: changing nextId doesn't trigger a re-render
   const nextId = useRef(1)
+
+  // Saved state per canvas type so switching between them preserves each canvas independently.
+  type SavedCanvasState = { nodes: GraphNode[]; edges: GraphEdge[]; nextId: number; isUndirectedMode: boolean; canvasZoom: number }
+  const savedGraphState = useRef<SavedCanvasState>({ nodes: [], edges: [], nextId: 1, isUndirectedMode: false, canvasZoom: 1 })
+  const savedWeightedState = useRef<SavedCanvasState>({ nodes: [], edges: [], nextId: 1, isUndirectedMode: false, canvasZoom: 1 })
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
 
   // `.canvas-content` fills the canvas and is scaled by `canvasZoom` about its center,
@@ -219,10 +225,28 @@ function App() {
 
   // Switches canvas type and clears all edge-weight editing state.
   const handleCanvasTypeChange = (type: CanvasType) => {
+    if (type === canvasType) return
+
+    // Save current canvas state
+    const outgoing = canvasType === 'graph' ? savedGraphState : savedWeightedState
+    outgoing.current = { nodes, edges, nextId: nextId.current, isUndirectedMode, canvasZoom }
+
+    // Restore incoming canvas state
+    const incoming = type === 'graph' ? savedGraphState : savedWeightedState
+    setNodes(incoming.current.nodes)
+    setEdges(incoming.current.edges)
+    nextId.current = incoming.current.nextId
+    setIsUndirectedMode(incoming.current.isUndirectedMode)
+    setCanvasZoom(type === 'weighted-graph' ? 1 : incoming.current.canvasZoom)
+
     setCanvasType(type)
     setEditingEdgeWeightId(null)
     setDraftEdgeWeight('')
     setEdgeContextMenu(null)
+    exitCanvasInteractionModes()
+    cancelEditing()
+    closeContextMenu()
+    resetAllGraphAlgorithmVisualizations()
   }
 
   // Opens inline weight editing for an edge, pre-filling the current weight.
@@ -618,6 +642,12 @@ function App() {
     }
   }
 
+  const syncHeuristicPixelsPerUnit = () => {
+    const val = parseInt(heuristicPixelsPerUnit, 10)
+    if (isNaN(val)) setHeuristicPixelsPerUnit('100')
+    else setHeuristicPixelsPerUnit(String(Math.min(500, Math.max(1, val))))
+  }
+
   // Sidebar: on Enter in fill min/max fields, normalizes order and blurs the active input.
   const handleFillRangeKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -966,6 +996,7 @@ function App() {
           isUndirectedMode={isUndirectedMode}
           onUndirectedModeToggle={handleUndirectedModeToggle}
           isWeightedMode={isWeightedMode}
+          heuristicPixelsPerUnit={parseInt(heuristicPixelsPerUnit, 10) || 100}
           editingEdgeWeightId={editingEdgeWeightId}
           draftEdgeWeight={draftEdgeWeight}
           onEdgeWeightClick={handleEdgeWeightClick}
@@ -993,6 +1024,9 @@ function App() {
             onEmptyAllValues: isWeightedMode ? handleResetEdgeWeightsClick : handleEmptyAllClick,
             canEmptyAll,
             onPresetClick: handlePresetClick,
+            heuristicPixelsPerUnit,
+            onHeuristicPixelsPerUnitChange: (e) => setHeuristicPixelsPerUnit(e.target.value.replace(/[^0-9]/g, '')),
+            onHeuristicPixelsPerUnitBlur: syncHeuristicPixelsPerUnit,
           }}
           traversal={{
             blockGraphEdits: blockGraphInteraction,

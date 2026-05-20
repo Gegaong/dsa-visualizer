@@ -18,8 +18,31 @@ export const CanvasSetupPage = ({
   onEmptyAllValues,
   canEmptyAll,
   onPresetClick,
+  heuristicPixelsPerUnit,
+  onHeuristicPixelsPerUnitChange,
+  onHeuristicPixelsPerUnitBlur,
 }: CanvasSetupPageProps) => (
   <div className="sidebar-page-body">
+    {isWeightedMode && (
+      <div className="sidebar-section">
+        <h3>Heuristic scale</h3>
+        <label className="field">
+          <span>1 unit =</span>
+          <div className="field-inline-unit">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={heuristicPixelsPerUnit}
+              onChange={onHeuristicPixelsPerUnitChange}
+              onBlur={onHeuristicPixelsPerUnitBlur}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur() } }}
+            />
+            <span className="field-unit-suffix">px</span>
+          </div>
+        </label>
+      </div>
+    )}
+
     <div className="sidebar-section">
       <h3>{isWeightedMode ? 'Edge weights' : 'Node values'}</h3>
       <label className="field">

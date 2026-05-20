@@ -7,6 +7,7 @@ import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 import { CANVAS_ZOOM_MIN, CANVAS_ZOOM_MAX } from '../utils/constants'
 
 import { DirectionIcon } from './DirectionIcon'
+import { GridOverlay } from './GridOverlay'
 
 import { EdgesLayer } from './EdgesLayer'
 
@@ -69,6 +70,7 @@ type GraphCanvasProps = {
   isUndirectedMode: boolean
   onUndirectedModeToggle: () => void
   isWeightedMode: boolean
+  heuristicPixelsPerUnit: number
   editingEdgeWeightId: string | null
   draftEdgeWeight: string
   onEdgeWeightClick: (edgeId: string) => void
@@ -132,6 +134,7 @@ export function GraphCanvas({
   isUndirectedMode,
   onUndirectedModeToggle,
   isWeightedMode,
+  heuristicPixelsPerUnit,
   editingEdgeWeightId,
   draftEdgeWeight,
   onEdgeWeightClick,
@@ -226,7 +229,7 @@ export function GraphCanvas({
       </div>
 
       <div
-        className={`canvas ${isConnectMode
+        className={`canvas ${isWeightedMode ? 'is-weighted' : ''} ${isConnectMode
           ? 'is-connect'
           : isDeleteMode || isDeleteEdgeMode
             ? 'is-select'
@@ -248,32 +251,36 @@ export function GraphCanvas({
           </button>
         </div>
 
-        <div className="canvas-zoom-controls" onClick={(event) => event.stopPropagation()}>
-          <button
-            className="canvas-zoom-btn"
-            type="button"
-            onClick={onZoomOut}
-            disabled={canvasZoom <= CANVAS_ZOOM_MIN}
-            aria-label="Zoom out"
-          >
-            -
-          </button>
-          <span className="canvas-zoom-value">{Math.round(canvasZoom * 100)}%</span>
-          <button
-            className="canvas-zoom-btn"
-            type="button"
-            onClick={onZoomIn}
-            disabled={canvasZoom >= CANVAS_ZOOM_MAX}
-            aria-label="Zoom in"
-          >
-            +
-          </button>
-        </div>
+        {!isWeightedMode && (
+          <div className="canvas-zoom-controls" onClick={(event) => event.stopPropagation()}>
+            <button
+              className="canvas-zoom-btn"
+              type="button"
+              onClick={onZoomOut}
+              disabled={canvasZoom <= CANVAS_ZOOM_MIN}
+              aria-label="Zoom out"
+            >
+              -
+            </button>
+            <span className="canvas-zoom-value">{Math.round(canvasZoom * 100)}%</span>
+            <button
+              className="canvas-zoom-btn"
+              type="button"
+              onClick={onZoomIn}
+              disabled={canvasZoom >= CANVAS_ZOOM_MAX}
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+          </div>
+        )}
 
         <div
           className="canvas-content"
           style={{ transform: `scale(${canvasZoom})`, transformOrigin: 'center center' }}
         >
+          {isWeightedMode && <GridOverlay cellSize={heuristicPixelsPerUnit} />}
+
           <EdgesLayer
             nodes={nodes}
             edges={edges}

@@ -35,6 +35,9 @@ export type CanvasSetupPageProps = {
   onEmptyAllValues: () => void
   canEmptyAll: boolean
   onPresetClick: (preset: GraphPreset) => void
+  heuristicPixelsPerUnit: string
+  onHeuristicPixelsPerUnitChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onHeuristicPixelsPerUnitBlur: () => void
 }
 
 export type TraversalPageProps = SidebarSharedState & {

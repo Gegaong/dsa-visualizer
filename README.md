@@ -30,12 +30,12 @@ Your graph on screen always produces the same animation. Changing edges can chan
 - [x] Node creation + basic canvas rendering
 - [x] Graph canvas environment (drag, connect edges, edit nodes, preset templates)
 - [x] Graph algorithms (BFS, DFS, ...)
-- [ ] Weighted graph canvas environment (weights, edit edges, preset templates)
-- [ ] Weighted graph algorithms (Dijkstra, Greedy Search, A\*, ...)
+- [x] Weighted graph canvas environment (weights, edit edges, preset templates)
+- [ ] Weighted graph algorithms (BFS, DFS, Dijkstra, greedy search, A\* ...)
 - [ ] Grid canvas environment (cells, walls, start/end, preset templates)
-- [ ] Grid algorithms (BFS, DFS, Greedy Search, A\*, ...)
+- [ ] Grid algorithms (BFS, DFS, ...)
 - [ ] Maze canvas environment (maze generation + edit, preset templates)
-- [ ] Maze algorithms (BFS, DFS, Greedy Search, A\*, ...)
+- [ ] Maze algorithms (BFS, DFS, ...)
 - [ ] Animation polish (colors, visited/path states)
 - [ ] Final testing + documentation
 

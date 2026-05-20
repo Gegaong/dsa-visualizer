@@ -170,9 +170,7 @@ export const GraphNodeLayer = ({
                 : (event) => onNodeContextMenu(event, node)
             }
           >
-            {isWeightedMode ? (
-              <span className={labelClass}>{node.label}</span>
-            ) : editingNodeId === node.id ? (
+            {!isWeightedMode && (editingNodeId === node.id ? (
               <input
                 className="node-input"
                 inputMode="numeric"
@@ -184,9 +182,9 @@ export const GraphNodeLayer = ({
               />
             ) : (
               <span className={valueClass}>{display.text}</span>
-            )}
+            ))}
           </div>
-          {!isWeightedMode && <span className="node-label">{node.label}</span>}
+          <span className="node-label">{node.label}</span>
           {!isWeightedMode && showHoverValue && <span className="node-hover-value">{node.value}</span>}
         </div>
       )
