@@ -91,6 +91,7 @@ export type TraversalPlaybackHandle = {
   handleTraversalPlaybackSpeedChange: (value: number) => void
   sidebarTraversalStatusText: string
   canRunTraversal: boolean
+  traversalRunningBest: number | null
 }
 
 export function useTraversalPlayback({
@@ -384,5 +385,6 @@ export function useTraversalPlayback({
     handleTraversalPlaybackSpeedChange,
     sidebarTraversalStatusText,
     canRunTraversal,
+    traversalRunningBest: traversalResult?.steps[traversalPlayback.stepIndex]?.runningBest ?? null,
   }
 }

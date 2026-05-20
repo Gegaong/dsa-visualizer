@@ -37,6 +37,7 @@ export const TraversalPage = ({
   canStepBackward,
   canTogglePlay,
   isTraversalPlaybackComplete,
+  traversalRunningBest,
 }: TraversalPageProps) => {
   const algoShort = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
 
@@ -149,6 +150,11 @@ export const TraversalPage = ({
       </div>
 
       <div className="sidebar-traversal-status">
+        {(goalType === 'max-value' || goalType === 'min-value') && isTraversalRunning && !isTraversalPlaybackComplete && traversalRunningBest !== null && (
+          <p className="hint">
+            Current {goalType === 'max-value' ? 'max' : 'min'}: <strong>{traversalRunningBest}</strong>
+          </p>
+        )}
         <p className="hint">{traversalStatusText}</p>
       </div>
     </div>

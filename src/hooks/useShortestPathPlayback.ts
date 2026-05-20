@@ -83,6 +83,7 @@ export type ShortestPathPlaybackHandle = {
   pauseShortestPath: () => void
   handleShortestPathPlaybackSpeedChange: (value: number) => void
   canRunShortestPath: boolean
+  dfsBestPathLength: number | null
 }
 
 // Manages shortest path algorithm state, playback controls, and canvas visual updates.
@@ -296,5 +297,6 @@ export function useShortestPathPlayback({
     pauseShortestPath: pb.pause,
     handleShortestPathPlaybackSpeedChange: pb.setPlaybackSpeed,
     canRunShortestPath,
+    dfsBestPathLength: pb.result?.steps[pb.stepIndex]?.dfsBestPathLength ?? null,
   }
 }

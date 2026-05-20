@@ -66,6 +66,7 @@ export type TraversalPageProps = SidebarSharedState & {
   canStepBackward: boolean
   canTogglePlay: boolean
   isTraversalPlaybackComplete: boolean
+  traversalRunningBest: number | null
 }
 
 export type ConnectedComponentsOutput = {
@@ -160,6 +161,7 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   shortestPathOutput: ShortestPathOutput
   shortestPathStepIndex: number
   shortestPathStepTotal: number
+  shortestPathDfsBestLength: number | null
 
   onRunBipartite: (strategy: TraversalStrategy) => void
   onStopBipartite: () => void

@@ -32,6 +32,7 @@ export type ShortestPathPanelProps = {
   shortestPathOutput: ShortestPathOutput
   shortestPathStepIndex: number
   shortestPathStepTotal: number
+  shortestPathDfsBestLength: number | null
   onRunShortestPath: (strategy: TraversalStrategy) => void
   onStopShortestPath: () => void
 }
@@ -70,6 +71,7 @@ export const ShortestPathPanel = ({
   shortestPathOutput,
   shortestPathStepIndex,
   shortestPathStepTotal,
+  shortestPathDfsBestLength,
   onRunShortestPath,
   onStopShortestPath,
 }: ShortestPathPanelProps) => {
@@ -168,6 +170,9 @@ export const ShortestPathPanel = ({
           speed={shortestPathPlaybackSpeed}
           onSpeedChange={onShortestPathPlaybackSpeedChange}
         />
+        {algorithmTraversal === 'dfs' && (
+          <p className="hint">Shortest path so far: {isShortestPathSessionActive && !isShortestPathPlaybackComplete && shortestPathDfsBestLength !== null && <strong>{shortestPathDfsBestLength} edge{shortestPathDfsBestLength === 1 ? '' : 's'}</strong>}</p>
+        )}
         <p className="hint">{shortestPathStatusText}</p>
       </div>
 

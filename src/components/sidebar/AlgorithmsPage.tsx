@@ -84,6 +84,7 @@ export const AlgorithmsPage = ({
   shortestPathOutput,
   shortestPathStepIndex,
   shortestPathStepTotal,
+  shortestPathDfsBestLength,
   onRunBipartite,
   onStopBipartite,
   canRunBipartite,
@@ -224,6 +225,7 @@ export const AlgorithmsPage = ({
           shortestPathOutput={shortestPathOutput}
           shortestPathStepIndex={shortestPathStepIndex}
           shortestPathStepTotal={shortestPathStepTotal}
+          shortestPathDfsBestLength={shortestPathDfsBestLength}
           onRunShortestPath={onRunShortestPath}
           onStopShortestPath={onStopShortestPath}
         />

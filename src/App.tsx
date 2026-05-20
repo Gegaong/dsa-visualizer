@@ -1060,6 +1060,7 @@ function App() {
             canStepBackward: traversal.canStepBackward,
             canTogglePlay: traversal.canTogglePlay,
             isTraversalPlaybackComplete: traversal.isPlaybackComplete,
+            traversalRunningBest: traversal.traversalRunningBest,
           }}
           algorithms={{
             blockGraphEdits: blockGraphInteraction,
@@ -1128,6 +1129,7 @@ function App() {
             shortestPathOutput: shortestPath.shortestPathOutput,
             shortestPathStepIndex: shortestPath.stepIndex,
             shortestPathStepTotal: shortestPath.shortestPathResult?.steps.length ?? 0,
+            shortestPathDfsBestLength: shortestPath.dfsBestPathLength,
             shortestPathStartNodeLabel: shortestPath.startNodeLabel,
             shortestPathGoalNodeLabel: shortestPath.goalNodeLabel,
             onShortestPathStartNodeLabelChange: shortestPath.handleStartNodeLabelChange,

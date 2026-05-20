@@ -18,6 +18,7 @@ export type BfsStep = {
   nodeLabel: string
   order: number
   fromNodeId: string | null
+  runningBest?: number | null
 }
 
 export type BfsResult = {
@@ -52,7 +53,9 @@ export type CycleDetectionResult = {
   cycleNodeIds: string[]
 }
 
-export type ShortestPathStep = BfsStep
+export type ShortestPathStep = BfsStep & {
+  dfsBestPathLength?: number | null
+}
 
 export type ShortestPathResult = {
   steps: ShortestPathStep[]

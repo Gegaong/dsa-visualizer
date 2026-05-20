@@ -77,9 +77,6 @@ export function runDirectedGoalTraversal(
       const currentNode = nodeById.get(currentId)
       if (!currentNode) return
 
-      steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId })
-      order += 1
-
       if (input.goal.type === 'max-value' || input.goal.type === 'min-value') {
         if (typeof currentNode.value === 'number') {
           if (extremeValue === null) {
@@ -95,10 +92,17 @@ export function runDirectedGoalTraversal(
             extremeNodes.push(currentNode)
           }
         }
-      } else if (matchesGoal(currentNode, input.goal)) {
-        foundNode = currentNode
-        return 'stop'
+        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, runningBest: extremeValue })
+      } else {
+        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId })
+        if (matchesGoal(currentNode, input.goal)) {
+          foundNode = currentNode
+          order += 1
+          return 'stop'
+        }
       }
+
+      order += 1
     },
   })
 

@@ -85,12 +85,14 @@ function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): Pa
   function dfs(currentId: string, fromId: string | null, currentPath: string[], inPath: Set<string>): void {
     const node = nodeById.get(currentId)
     if (!node) return
-    steps.push({ nodeId: currentId, nodeLabel: node.label, order, fromNodeId: fromId })
-    order += 1
     if (currentId === goalId) {
       if (bestPath.length === 0 || currentPath.length < bestPath.length) bestPath = [...currentPath]
+      steps.push({ nodeId: currentId, nodeLabel: node.label, order, fromNodeId: fromId, dfsBestPathLength: bestPath.length - 1 })
+      order += 1
       return
     }
+    steps.push({ nodeId: currentId, nodeLabel: node.label, order, fromNodeId: fromId, dfsBestPathLength: bestPath.length > 0 ? bestPath.length - 1 : null })
+    order += 1
     // Even reaching goal in one more step can't improve best — prune.
     if (bestPath.length > 0 && currentPath.length + 1 >= bestPath.length) return
     for (const neighborId of outNeighborsById.get(currentId) ?? []) {
