@@ -34,6 +34,7 @@ type UseNodeDraggingParams = {
   isConnectMode: boolean
   isDeleteMode: boolean
   isDeleteEdgeMode: boolean
+  blockDragging: boolean
 }
 
 export type NodeDraggingHandle = {
@@ -57,6 +58,7 @@ export function useNodeDragging({
   isConnectMode,
   isDeleteMode,
   isDeleteEdgeMode,
+  blockDragging,
 }: UseNodeDraggingParams): NodeDraggingHandle {
   const dragStateRef = useRef<DragState | null>(null)
   const suppressClickRef = useRef(false)
@@ -72,7 +74,7 @@ export function useNodeDragging({
       return
     }
 
-    if (isConnectMode || isDeleteMode || isDeleteEdgeMode) return
+    if (isConnectMode || isDeleteMode || isDeleteEdgeMode || blockDragging) return
 
     const canvas = event.currentTarget.closest('.canvas') as HTMLDivElement | null
     const canvasBounds = canvas?.getBoundingClientRect()

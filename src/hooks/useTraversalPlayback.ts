@@ -116,6 +116,7 @@ export function useTraversalPlayback({
   const [isTraversalRunning, setIsTraversalRunning] = useState(false)
   const [traversalResult, setTraversalResult] = useState<BfsResult | null>(null)
   const traversalResultRef = useRef<BfsResult | null>(null)
+  const initialGoalNodeIdsRef = useRef<string[]>([])
   const finalizeTraversalRunRef = useRef<(r: BfsResult) => void>(() => {})
   const traversalPlaybackStopRef = useRef(() => {})
   const [traversalPlaybackSession, setTraversalPlaybackSession] = useState(0)
@@ -237,6 +238,7 @@ export function useTraversalPlayback({
       return
     }
 
+    initialGoalNodeIdsRef.current = preparation.initialGoalNodeIds
     setTraversalGoalNodeIds(preparation.initialGoalNodeIds)
     setTraversalStartNodeId(preparation.startNode.id)
 
@@ -291,7 +293,7 @@ export function useTraversalPlayback({
     if (!traversalResult) return
     traversalPlayback.stepBackward()
     setIsTraversalRunning(true)
-    setTraversalGoalNodeIds([])
+    setTraversalGoalNodeIds(initialGoalNodeIdsRef.current)
   }
 
   const playTraversal = () => {
@@ -299,7 +301,7 @@ export function useTraversalPlayback({
     const replayFromEnd = traversalPlayback.stepIndex >= traversalResult.steps.length - 1
     traversalPlayback.togglePlay()
     if (replayFromEnd) {
-      setTraversalGoalNodeIds([])
+      setTraversalGoalNodeIds(initialGoalNodeIdsRef.current)
       setIsTraversalRunning(true)
     }
   }

@@ -47,6 +47,16 @@ type GraphCanvasProps = {
   shortestPathNodeIds: string[]
   bipartiteGroupANodeIds: string[]
   bipartiteGroupBNodeIds: string[]
+  wpSettledNodeIds: string[]
+  wpTentativeNodeIds: string[]
+  wpCurrentNodeId: string | null
+  wpStartNodeId: string | null
+  wpGoalNodeId: string | null
+  wpPathNodeIds: string[]
+  wpCostByNodeId: Map<string, number>
+  wpCurrentEdgeId: string | null
+  wpVisitedEdgeIds: string[]
+  wpPathEdgeIds: string[]
   onCanvasRef: (el: HTMLDivElement | null) => void
   onCanvasClick: (event: MouseEvent<HTMLDivElement>) => void
   onCanvasContextMenu: (event: MouseEvent<HTMLDivElement>) => void
@@ -111,6 +121,16 @@ export function GraphCanvas({
   shortestPathNodeIds,
   bipartiteGroupANodeIds,
   bipartiteGroupBNodeIds,
+  wpSettledNodeIds,
+  wpTentativeNodeIds,
+  wpCurrentNodeId,
+  wpStartNodeId,
+  wpGoalNodeId,
+  wpPathNodeIds,
+  wpCostByNodeId,
+  wpCurrentEdgeId,
+  wpVisitedEdgeIds,
+  wpPathEdgeIds,
   onCanvasRef,
   onCanvasClick,
   onCanvasContextMenu,
@@ -294,6 +314,9 @@ export function GraphCanvas({
             weakCCVisitedEdgeIds={weakCCVisitedEdgeIds}
             cycleGoalEdgeIds={cycleGoalEdgeIds}
             shortestPathEdgeIds={shortestPathEdgeIds}
+            wpCurrentEdgeId={wpCurrentEdgeId}
+            wpVisitedEdgeIds={wpVisitedEdgeIds}
+            wpPathEdgeIds={wpPathEdgeIds}
             onToggleEdgeSelection={onToggleEdgeSelection}
             onEdgeRightClick={onEdgeRightClick}
           />
@@ -346,6 +369,13 @@ export function GraphCanvas({
             weakCCVisitedNodeIds={weakCCVisitedNodeIds}
             bipartiteGroupANodeIds={bipartiteGroupANodeIds}
             bipartiteGroupBNodeIds={bipartiteGroupBNodeIds}
+            wpSettledNodeIds={wpSettledNodeIds}
+            wpTentativeNodeIds={wpTentativeNodeIds}
+            wpCurrentNodeId={wpCurrentNodeId}
+            wpStartNodeId={wpStartNodeId}
+            wpGoalNodeId={wpGoalNodeId}
+            wpPathNodeIds={wpPathNodeIds}
+            wpCostByNodeId={wpCostByNodeId}
             onNodeMouseDown={onNodeMouseDown}
             onConnectNodeClick={onConnectNodeClick}
             onToggleNodeSelection={onToggleNodeSelection}

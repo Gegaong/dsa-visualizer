@@ -52,6 +52,7 @@ import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPl
 import { useCycleDetectionPlayback } from './hooks/useCycleDetectionPlayback'
 import { useShortestPathPlayback } from './hooks/useShortestPathPlayback'
 import { useBipartitePlayback } from './hooks/useBipartitePlayback'
+import { useWeightedPathfindingPlayback } from './hooks/useWeightedPathfindingPlayback'
 import { useNodeDragging } from './hooks/useNodeDragging'
 
 // Root component: owns all graph and algorithm state, wires hooks, renders layout.
@@ -166,6 +167,11 @@ function App() {
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
 
+  const weightedPathfinding = useWeightedPathfindingPlayback({
+    nodes,
+    edges: effectiveEdges,
+  })
+
   // Forwards the sidebar algorithm picker to all canvas-algorithm hooks so their refs stay in sync.
   const handleAlgorithmModeChange = useCallback((mode: AlgorithmMode) => {
     cc.handleAlgorithmModeChangeFromSidebar(mode)
@@ -187,6 +193,13 @@ function App() {
     isConnectMode,
     isDeleteMode,
     isDeleteEdgeMode,
+    blockDragging:
+      traversal.isTraversalRunning ||
+      cc.isConnectedComponentsRunning ||
+      cycleDetection.isCycleDetectionRunning ||
+      shortestPath.isShortestPathRunning ||
+      bipartite.isBipartiteRunning ||
+      weightedPathfinding.isWPRunning,
   })
 
   const blockGraphInteraction =
@@ -194,7 +207,8 @@ function App() {
     cc.isConnectedComponentsRunning ||
     cycleDetection.isCycleDetectionRunning ||
     shortestPath.isShortestPathRunning ||
-    bipartite.isBipartiteRunning
+    bipartite.isBipartiteRunning ||
+    weightedPathfinding.isWPRunning
 
   const ccSessionActive = cc.connectedComponentsResult !== null || cc.isConnectedComponentsRunning
   const cycleSessionActive =
@@ -212,8 +226,9 @@ function App() {
       cycleDetection.resetCycleDetectionVisualization()
       shortestPath.resetShortestPathVisualization()
       bipartite.resetBipartiteVisualization()
+      weightedPathfinding.resetWPVisualization()
     },
-    [algorithmTab, traversal, cc, cycleDetection, shortestPath, bipartite],
+    [algorithmTab, traversal, cc, cycleDetection, shortestPath, bipartite, weightedPathfinding],
   )
 
   // Toggles undirected mode; resets any active algorithm since the graph semantics change.
@@ -478,6 +493,12 @@ function App() {
   const handleRunBipartiteFromSidebar = (strategy: TraversalStrategy) => {
     exitCanvasInteractionModes()
     bipartite.runBipartiteFromSidebar(strategy)
+  }
+
+  // Runs weighted pathfinding after leaving canvas edit modes.
+  const handleRunWPFromSidebar = (strategy: TraversalStrategy) => {
+    exitCanvasInteractionModes()
+    weightedPathfinding.runWPFromSidebar(strategy)
   }
 
   // Activates delete-node mode and clears conflicting modes and menus.
@@ -924,8 +945,11 @@ function App() {
         shortestPath.resetShortestPathVisualization()
         bipartite.resetBipartiteVisualization()
       }
+      if (from === 'pathfinder' && to !== 'pathfinder') {
+        weightedPathfinding.resetWPVisualization()
+      }
     },
-    [traversal, cc, cycleDetection, shortestPath, bipartite],
+    [traversal, cc, cycleDetection, shortestPath, bipartite, weightedPathfinding],
   )
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
@@ -973,6 +997,16 @@ function App() {
           cycleGoalEdgeIds={cycleDetection.cycleGoalEdgeIds}
           shortestPathEdgeIds={shortestPath.shortestPathEdgeIds}
           shortestPathNodeIds={shortestPath.shortestPathNodeIds}
+          wpSettledNodeIds={weightedPathfinding.wpSettledNodeIds}
+          wpTentativeNodeIds={weightedPathfinding.wpTentativeNodeIds}
+          wpCurrentNodeId={weightedPathfinding.wpCurrentNodeId}
+          wpStartNodeId={weightedPathfinding.wpStartNodeId}
+          wpGoalNodeId={weightedPathfinding.wpGoalNodeId}
+          wpPathNodeIds={weightedPathfinding.wpPathNodeIds}
+          wpCostByNodeId={weightedPathfinding.wpCostByNodeId}
+          wpCurrentEdgeId={weightedPathfinding.wpCurrentEdgeId}
+          wpVisitedEdgeIds={weightedPathfinding.wpVisitedEdgeIds}
+          wpPathEdgeIds={weightedPathfinding.wpPathEdgeIds}
           onCanvasRef={setCanvasElement}
           onCanvasClick={handleCanvasClick}
           onCanvasContextMenu={handleCanvasContextMenu}
@@ -1009,6 +1043,33 @@ function App() {
         <Sidebar
           onSidebarSectionChange={handleSidebarSectionChange}
           isWeightedMode={isWeightedMode}
+          pathfinder={{
+            isWPSessionActive: weightedPathfinding.wpResult !== null || weightedPathfinding.isWPRunning,
+            canRunWP: weightedPathfinding.canRunWP,
+            wpStatusText: weightedPathfinding.wpStatusText,
+            wpStartNodeLabel: weightedPathfinding.startNodeLabel,
+            wpGoalNodeLabel: weightedPathfinding.goalNodeLabel,
+            onWPStartNodeLabelChange: weightedPathfinding.handleStartNodeLabelChange,
+            onWPGoalNodeLabelChange: weightedPathfinding.handleGoalNodeLabelChange,
+            isWPPlaybackPlaying: weightedPathfinding.isPlaying,
+            wpPlaybackSpeed: weightedPathfinding.playbackSpeed,
+            onWPPlaybackSpeedChange: weightedPathfinding.handleWPPlaybackSpeedChange,
+            onPlayWP: weightedPathfinding.playWP,
+            onPauseWP: weightedPathfinding.pauseWP,
+            onNextWPStep: weightedPathfinding.stepWPForward,
+            onPreviousWPStep: weightedPathfinding.stepWPBackward,
+            canWPStepForward: weightedPathfinding.canStepForward,
+            canWPStepBackward: weightedPathfinding.canStepBackward,
+            canWPTogglePlay: weightedPathfinding.canTogglePlay,
+            isWPPlaybackComplete: weightedPathfinding.isPlaybackComplete,
+            wpOutput: weightedPathfinding.wpOutput,
+            wpStepIndex: weightedPathfinding.stepIndex,
+            wpStepTotal: weightedPathfinding.wpActiveStepTotal,
+            isDetailedMode: weightedPathfinding.isDetailedMode,
+            onToggleDetailedMode: weightedPathfinding.toggleDetailedMode,
+            onRunWP: handleRunWPFromSidebar,
+            onStopWP: weightedPathfinding.resetWPVisualization,
+          }}
           canvasSetup={{
             blockGraphEdits: blockGraphInteraction,
             isWeightedMode,

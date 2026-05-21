@@ -28,6 +28,10 @@ type EdgesLayerProps = {
   weakCCVisitedEdgeIds: string[]
   cycleGoalEdgeIds: string[]
   shortestPathEdgeIds: string[]
+  // Weighted pathfinding: visited edges (orange), confirmed path edges (green), and active edge (glow).
+  wpVisitedEdgeIds: string[]
+  wpPathEdgeIds: string[]
+  wpCurrentEdgeId: string | null
   onToggleEdgeSelection: (edgeId: string) => void
   onEdgeRightClick?: (edgeId: string, x: number, y: number) => void
 }
@@ -49,6 +53,9 @@ export const EdgesLayer = ({
   weakCCVisitedEdgeIds,
   cycleGoalEdgeIds,
   shortestPathEdgeIds,
+  wpVisitedEdgeIds,
+  wpPathEdgeIds,
+  wpCurrentEdgeId,
   onToggleEdgeSelection,
   onEdgeRightClick,
 }: EdgesLayerProps) => {
@@ -78,8 +85,7 @@ export const EdgesLayer = ({
       const { startX, startY, endX, endY } = geometry
       const isSelected = selectedEdgeIds.includes(edge.id)
       const isTraversalActive = traversalCurrentEdgeId === edge.id
-      const isTraversalVisitedPast =
-        traversalVisitedEdgeIds.includes(edge.id) && !isTraversalActive
+      const isTraversalVisitedPast = traversalVisitedEdgeIds.includes(edge.id) && !isTraversalActive
       const ccHsl = weakCCOutlineHslByNodeId?.get(fromNode.id)
         ?? weakCCOutlineHslByNodeId?.get(toNode.id)
       const ccStroke = ccHsl ? `hsl(${ccHsl.h} ${ccHsl.s}% ${ccHsl.l}%)` : null
@@ -89,15 +95,21 @@ export const EdgesLayer = ({
         weakCCVisitedEdgeIds.includes(edge.id)
       const isGoalEdge = cycleGoalEdgeIds.includes(edge.id)
       const isShortestPathEdge = shortestPathEdgeIds.includes(edge.id)
-      const strokeColor = isGoalEdge || isShortestPathEdge
-        ? '#2a4f9c'
-        : isCcEdge
-          ? ccStroke
-          : isTraversalVisitedPast
-            ? '#e07b39'
-            : '#4a7c59'
-      const strokeWidth = 2
-      const showTraversalOutline = isTraversalActive && !isCcEdge && !isGoalEdge && !isShortestPathEdge
+      const isWpPathEdge = wpPathEdgeIds.includes(edge.id)
+      const isWpCurrentEdge = wpCurrentEdgeId === edge.id
+      const isWpVisitedEdge = !isWpPathEdge && !isWpCurrentEdge && wpVisitedEdgeIds.includes(edge.id)
+      const strokeColor = isWpPathEdge
+        ? '#43a047'
+        : isGoalEdge || isShortestPathEdge
+          ? '#2a4f9c'
+          : isCcEdge
+            ? ccStroke
+            : isTraversalVisitedPast || isWpVisitedEdge
+              ? '#e07b39'
+              : '#4a7c59'
+      const strokeWidth = isWpPathEdge ? 2.5 : 2
+      const showTraversalOutline = isTraversalActive && !isCcEdge && !isGoalEdge && !isShortestPathEdge && !isWpPathEdge
+      const showWpCurrentOutline = isWpCurrentEdge && !isWpPathEdge
       const renderGlowOutline = (x1: number, y1: number, x2: number, y2: number, color: string, active: boolean) =>
         active ? (
           <>
@@ -226,7 +238,9 @@ export const EdgesLayer = ({
             {renderGlowOutline(startX, startY, endX, endY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
             {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isGoalEdge)}
             {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isShortestPathEdge)}
+            {renderGlowOutline(startX, startY, endX, endY, '#43a047', isWpPathEdge)}
             {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showTraversalOutline)}
+            {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showWpCurrentOutline)}
             <line
               x1={startX}
               y1={startY}
@@ -268,7 +282,9 @@ export const EdgesLayer = ({
               {renderGlowOutline(startX, startY, endX, endY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
               {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isGoalEdge)}
               {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isShortestPathEdge)}
+              {renderGlowOutline(startX, startY, endX, endY, '#43a047', isWpPathEdge)}
               {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showTraversalOutline)}
+              {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showWpCurrentOutline)}
               {edge.direction === 'both' ? (
                 <>
                   <line
@@ -378,7 +394,9 @@ export const EdgesLayer = ({
               {renderGlowOutline(endX, endY, startX, startY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
               {renderGlowOutline(endX, endY, startX, startY, '#2a4f9c', isGoalEdge)}
               {renderGlowOutline(endX, endY, startX, startY, '#2a4f9c', isShortestPathEdge)}
+              {renderGlowOutline(endX, endY, startX, startY, '#43a047', isWpPathEdge)}
               {renderGlowOutline(endX, endY, startX, startY, '#3a6f5a', showTraversalOutline)}
+              {renderGlowOutline(endX, endY, startX, startY, '#3a6f5a', showWpCurrentOutline)}
               <line
                 x1={endX}
                 y1={endY}

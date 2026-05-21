@@ -8,12 +8,15 @@ import { TraversalPage } from './TraversalPage'
 
 import { AlgorithmsPage } from './AlgorithmsPage'
 
+import { WeightedPathfindingPanel } from './WeightedPathfindingPanel'
+
 export type { SidebarPage, AlgorithmMode } from './sidebarTypes'
 
 const PAGE_CLASS: Record<SidebarPage, string> = {
   canvas: 'is-canvas-setup',
   traversal: 'is-traversal-setup',
   algorithms: 'is-algorithm-setup',
+  pathfinder: 'is-pathfinder-setup',
 }
 
 // Right-side control panel. A thin shell: owns the page-switch tabs and notifies the
@@ -27,13 +30,17 @@ export const Sidebar = ({
   canvasSetup,
   traversal,
   algorithms,
+  pathfinder,
   isWeightedMode,
 }: SidebarProps) => {
   const [activePage, setActivePage] = useState<SidebarPage>('canvas')
   const prevPageRef = useRef<SidebarPage>(activePage)
 
-  // Derive the effective page: weighted mode forces canvas setup.
-  const effectivePage: SidebarPage = isWeightedMode ? 'canvas' : activePage
+  // In weighted mode the only valid pages are 'canvas' and 'pathfinder'.
+  // Map any leftover non-weighted page to 'canvas' when entering weighted mode.
+  const effectivePage: SidebarPage = isWeightedMode
+    ? activePage === 'pathfinder' ? 'pathfinder' : 'canvas'
+    : activePage === 'pathfinder' ? 'canvas' : activePage
 
   useEffect(() => {
     const prev = prevPageRef.current
@@ -53,13 +60,22 @@ export const Sidebar = ({
         >
           Canvas setup
         </button>
+        {isWeightedMode && (
+          <button
+            className={`sidebar-page-tab ${effectivePage === 'pathfinder' ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => setActivePage('pathfinder')}
+          >
+            Pathfinder setup
+          </button>
+        )}
         {!isWeightedMode && (
           <button
             className={`sidebar-page-tab ${effectivePage === 'traversal' ? 'is-active' : ''}`}
             type="button"
             onClick={() => setActivePage('traversal')}
           >
-            Traversal mode
+            Traversal setup
           </button>
         )}
         {!isWeightedMode && (
@@ -68,12 +84,13 @@ export const Sidebar = ({
             type="button"
             onClick={() => setActivePage('algorithms')}
           >
-            Algorithms
+            Algorithm setup
           </button>
         )}
       </div>
 
       {effectivePage === 'canvas' && <CanvasSetupPage {...canvasSetup} />}
+      {effectivePage === 'pathfinder' && <WeightedPathfindingPanel {...pathfinder} />}
       {effectivePage === 'traversal' && <TraversalPage {...traversal} />}
       <div
         className="sidebar-page-root"

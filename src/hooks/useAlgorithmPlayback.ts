@@ -213,9 +213,8 @@ export function useAlgorithmPlayback<TResult extends { steps: BfsStep[] }>({
     if (!result) return
     playback.stepBackward()
     setIsRunning(true)
-    setTraversalGoalNodeIds([])
     onClearCompletionRef.current?.()
-  }, [result, playback, setTraversalGoalNodeIds])
+  }, [result, playback])
 
   // Starts or resumes auto-play; restarts from the beginning if already at the last step.
   const play = useCallback(() => {
@@ -224,10 +223,9 @@ export function useAlgorithmPlayback<TResult extends { steps: BfsStep[] }>({
     playback.togglePlay()
     if (replayFromEnd) {
       setIsRunning(true)
-      setTraversalGoalNodeIds([])
       onClearCompletionRef.current?.()
     }
-  }, [result, playback, setTraversalGoalNodeIds])
+  }, [result, playback])
 
   // Pauses auto-play without resetting the current step.
   const pause = useCallback(() => {

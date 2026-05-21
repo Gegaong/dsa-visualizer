@@ -1,8 +1,12 @@
 import type { GoalType, GraphPreset } from '../../types'
 
+import type { WeightedPathfindingPanelProps } from './WeightedPathfindingPanel'
+
+export type { WeightedPathfindingPanelProps }
+
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
 
-export type SidebarPage = 'canvas' | 'traversal' | 'algorithms'
+export type SidebarPage = 'canvas' | 'traversal' | 'algorithms' | 'pathfinder'
 
 export type AlgorithmMode =
   | 'components'
@@ -90,6 +94,12 @@ export type BipartiteOutput = {
   isBipartite: boolean
   groupALabels: string | null
   groupBLabels: string | null
+} | null
+
+export type WPOutput = {
+  pathFound: boolean
+  pathCost: number | null
+  pathNodeLabels: string[]
 } | null
 
 export type AlgorithmsPageProps = SidebarSharedState & {
@@ -190,5 +200,6 @@ export type SidebarProps = {
   canvasSetup: CanvasSetupPageProps
   traversal: TraversalPageProps
   algorithms: AlgorithmsPageProps
+  pathfinder: WeightedPathfindingPanelProps
   isWeightedMode?: boolean
 }

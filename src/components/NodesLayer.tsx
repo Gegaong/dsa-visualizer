@@ -48,6 +48,14 @@ type GraphNodeLayerProps = {
   // Bipartite 2-coloring groups; yellow = group A, blue = group B.
   bipartiteGroupANodeIds: string[]
   bipartiteGroupBNodeIds: string[]
+  // Weighted pathfinding visual state (null = inactive).
+  wpSettledNodeIds: string[]
+  wpTentativeNodeIds: string[]
+  wpCurrentNodeId: string | null
+  wpStartNodeId: string | null
+  wpGoalNodeId: string | null
+  wpPathNodeIds: string[]
+  wpCostByNodeId: Map<string, number>
   onNodeMouseDown: (event: MouseEvent<HTMLDivElement>, node: GraphNode) => void
   onConnectNodeClick: (nodeId: string) => void
   onToggleNodeSelection: (nodeId: string) => void
@@ -82,6 +90,13 @@ export const GraphNodeLayer = ({
   weakCCVisitedNodeIds,
   bipartiteGroupANodeIds,
   bipartiteGroupBNodeIds,
+  wpSettledNodeIds,
+  wpTentativeNodeIds,
+  wpCurrentNodeId,
+  wpStartNodeId,
+  wpGoalNodeId,
+  wpPathNodeIds,
+  wpCostByNodeId,
   onNodeMouseDown,
   onConnectNodeClick,
   onToggleNodeSelection,
@@ -97,8 +112,6 @@ export const GraphNodeLayer = ({
       const valueClass = display.sizeClass
         ? `node-value ${display.sizeClass}`
         : 'node-value'
-      const labelSizeClass = node.label.length > 2 ? 'node-value--small' : ''
-      const labelClass = labelSizeClass ? `node-value ${labelSizeClass}` : 'node-value'
       const isSelected = selectedNodeIds.includes(node.id)
       const isConnectionSource = connectionSource === node.id
       const isVisited = traversalVisitedNodeIds.includes(node.id)
@@ -121,6 +134,16 @@ export const GraphNodeLayer = ({
       // Long values are truncated inside the circle; reveal the full value on hover.
       const showHoverValue = typeof node.value === 'number' && String(node.value).length > 5
 
+      // Weighted pathfinding visual state
+      const wpActive = wpStartNodeId !== null || wpGoalNodeId !== null
+      const isWpSettled = wpSettledNodeIds.includes(node.id)
+      const isWpTentative = !isWpSettled && wpTentativeNodeIds.includes(node.id)
+      const isWpCurrent = wpCurrentNodeId === node.id
+      const isWpStart = wpStartNodeId === node.id
+      const isWpGoal = wpGoalNodeId === node.id
+      const isWpPath = wpPathNodeIds.includes(node.id)
+      const wpCost = wpCostByNodeId.get(node.id)
+
       const ccNodeStyle: CSSProperties | undefined =
         ccOutline && ccHsl
           ? {
@@ -134,10 +157,26 @@ export const GraphNodeLayer = ({
           }
           : undefined
 
+      // Build cost label shown inside the node circle during weighted pathfinding.
+      // Tentative nodes show "cost?" (e.g. "42?"); settled/path nodes show the exact cost.
+      const wpCostLabel =
+        wpActive && wpCost !== undefined
+          ? isWpTentative
+            ? `${wpCost}?`
+            : String(wpCost)
+          : null
+
+      const wpCostLabelSizeClass =
+        wpCostLabel !== null && wpCostLabel.length > 5
+          ? 'node-value--tiny'
+          : wpCostLabel !== null && wpCostLabel.length > 3
+            ? 'node-value--small'
+            : ''
+
       return (
         <div
           key={node.id}
-          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal && !isBipartiteColored ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent && !isBipartiteCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline && !isBipartiteColored ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''} ${isBipartiteGroupA ? 'is-bipartite-group-a' : ''} ${isBipartiteGroupB ? 'is-bipartite-group-b' : ''} ${isBipartiteCurrent ? 'is-bipartite-current' : ''}`}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal && !isBipartiteColored ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent && !isBipartiteCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline && !isBipartiteColored ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''} ${isBipartiteGroupA ? 'is-bipartite-group-a' : ''} ${isBipartiteGroupB ? 'is-bipartite-group-b' : ''} ${isBipartiteCurrent ? 'is-bipartite-current' : ''} ${wpActive && !isWpStart && !isWpGoal && !isWpSettled && !isWpTentative && !isWpPath ? 'is-wp-undiscovered' : ''} ${isWpTentative ? 'is-wp-tentative' : ''} ${isWpSettled && !isWpPath ? 'is-wp-settled' : ''} ${isWpPath ? 'is-wp-path' : ''} ${isWpCurrent ? 'is-wp-current' : ''} ${isWpStart ? 'is-traversal-start' : ''} ${isWpGoal ? 'is-traversal-goal' : ''}`}
           style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
         >
           <div
@@ -183,6 +222,11 @@ export const GraphNodeLayer = ({
             ) : (
               <span className={valueClass}>{display.text}</span>
             ))}
+            {isWeightedMode && wpCostLabel !== null && (
+              <span className={`node-value${wpCostLabelSizeClass ? ` ${wpCostLabelSizeClass}` : ''}`}>
+                {wpCostLabel}
+              </span>
+            )}
           </div>
           <span className="node-label">{node.label}</span>
           {!isWeightedMode && showHoverValue && <span className="node-hover-value">{node.value}</span>}
