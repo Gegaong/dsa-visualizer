@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { WeightedAlgorithm } from '../../algorithms/algorithmstypes'
 
@@ -74,6 +74,23 @@ export const WeightedPathfindingPanel = ({
   wpNodesSettled,
 }: WeightedPathfindingPanelProps) => {
   const [algorithm, setAlgorithm] = useState<WeightedAlgorithm>('bfs')
+  const [showHelp, setShowHelp] = useState(false)
+  const helpBtnRef = useRef<HTMLButtonElement>(null)
+  const helpPopupRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showHelp) return
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as Node
+      const inBtn = helpBtnRef.current?.contains(target) ?? false
+      const inPopup = helpPopupRef.current?.contains(target) ?? false
+      if (!inBtn && !inPopup) setShowHelp(false)
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [showHelp])
+
+  const toggleHelp = () => setShowHelp((v) => !v)
 
   const toggleRun = () => {
     if (isWPSessionActive) {
@@ -172,6 +189,54 @@ export const WeightedPathfindingPanel = ({
               />
               Show confirmation steps
             </label>
+            <button
+              ref={helpBtnRef}
+              type="button"
+              className="detail-mode-help-btn"
+              onClick={toggleHelp}
+              aria-label="What are confirmation steps?"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.5 9a2.5 2.5 0 0 1 4.9 0.7c0 1.7-2.4 1.7-2.4 3.3" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </button>
+            {showHelp && (
+              <div
+                ref={helpPopupRef}
+                className="detail-mode-help-popup"
+                role="tooltip"
+              >
+                <p className="detail-mode-help-popup-title">Confirmation steps</p>
+                <p>
+                  A node turns green once its cost is locked in — no remaining path can reach
+                  it more cheaply.
+                </p>
+                <p>
+                  <strong>How we detect this:</strong> after each expansion, we check the
+                  cheapest cost left in the queue. Any node whose best cost is ≤ that minimum
+                  is confirmed.
+                </p>
+                <p>
+                  <strong>Off:</strong> confirmations happen silently during discovery.
+                </p>
+                <p>
+                  <strong>On:</strong> each confirmation gets its own step explaining why the
+                  cost is final.
+                </p>
+              </div>
+            )}
           </div>
         )}
         <p className="hint">{wpStatusText}</p>
