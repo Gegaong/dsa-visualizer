@@ -302,9 +302,12 @@ export function useWeightedPathfindingPlayback({
           ? getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
           : null
 
+        const discoverMsg = currentStep.fromNodeId === null
+          ? `${currentStep.nodeLabel} queued — start node, cost 0 · ${label}`
+          : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${currentStep.edgeWeight}, total cost ${currentStep.gCost}) · ${label}`
         const statusMsg = currentStep.eventType === 'settle'
-          ? (currentStep.settleReason ?? `${currentStep.nodeLabel} settled at cost ${currentStep.gCost}`)
-          : `Queued ${currentStep.nodeLabel} — cost from start ${currentStep.gCost} (step ${bound + 1}/${r.steps.length}) · ${currentStep.queueSizeAfter} in queue · ${label}`
+          ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${currentStep.gCost} · ${label}`)
+          : discoverMsg
 
         setWpSettledNodeIds([...settledSet])
         setWpTentativeNodeIds([...tentativeMap.keys()])

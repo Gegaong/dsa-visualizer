@@ -92,6 +92,8 @@ export function runPriorityPathfinding(
     nodeLabel: startNode.label,
     order: order++,
     fromNodeId: null,
+    fromNodeLabel: null,
+    edgeWeight: null,
     gCost: 0,
     hCost: startH,
     priority: startPriority,
@@ -112,15 +114,16 @@ export function runPriorityPathfinding(
     const queueSizeAfterPop = pq.length
     const hCost = heuristicFn(settledNode, goalNode)
 
-    const settleReason = queueSizeAfterPop > 0
-      ? `${settledNode.label} settled at cost ${gCost} — ${queueSizeAfterPop} node${queueSizeAfterPop === 1 ? '' : 's'} still in queue · ${algorithmLabel}`
-      : `${settledNode.label} settled at cost ${gCost} — queue empty · ${algorithmLabel}`
+    const parentId = bestParent.get(nodeId) ?? null
+    const settleReason = `${settledNode.label} confirmed — cost ${gCost} is optimal (cheapest unvisited node) · ${algorithmLabel}`
 
     steps.push({
       nodeId,
       nodeLabel: settledNode.label,
       order: order++,
-      fromNodeId: bestParent.get(nodeId) ?? null,
+      fromNodeId: parentId,
+      fromNodeLabel: parentId !== null ? (nodeById.get(parentId)?.label ?? null) : null,
+      edgeWeight: null,
       gCost,
       hCost,
       priority: priorityFn(gCost, hCost),
@@ -153,6 +156,8 @@ export function runPriorityPathfinding(
           nodeLabel: neighborNode.label,
           order: order++,
           fromNodeId: nodeId,
+          fromNodeLabel: settledNode.label,
+          edgeWeight: edgeInfo?.weight ?? 1,
           gCost: newG,
           hCost: newH,
           priority: newPriority,

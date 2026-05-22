@@ -115,11 +115,13 @@ export type PriorityPathStep = {
   nodeLabel: string
   order: number
   fromNodeId: string | null
+  fromNodeLabel: string | null
+  edgeWeight: number | null
   gCost: number        // actual cost from start
   hCost: number        // heuristic value (0 for Dijkstra)
   priority: number     // value used to order in the queue (g for Dijkstra, g+h for A*, h for Greedy)
   eventType: 'discover' | 'settle'
-  queueSizeAfter: number  // priority queue size immediately after this step
+  queueSizeAfter: number
   settleReason?: string
 }
 
