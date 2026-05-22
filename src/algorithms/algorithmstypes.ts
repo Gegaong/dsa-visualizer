@@ -95,10 +95,37 @@ export type WeightedPathStep = {
 }
 
 export type WeightedPathResult = {
+  kind: 'bfsdfs'
   // Discover-only step sequence — settlement is inferred from minPendingCostAfter.
   steps: WeightedPathStep[]
   // Discover + explicit settle steps interleaved — used when detail mode is on.
   detailedSteps: WeightedPathStep[]
+  pathNodeIds: string[]
+  startNodeId: string
+  goalNodeId: string
+  pathFound: boolean
+  pathCost: number | null
+}
+
+// 'bfs' / 'dfs' are the unweighted-style path searches; 'dijkstra' / 'astar' / 'greedy' use a priority queue.
+export type WeightedAlgorithm = 'bfs' | 'dfs' | 'dijkstra' | 'astar' | 'greedy'
+
+export type PriorityPathStep = {
+  nodeId: string
+  nodeLabel: string
+  order: number
+  fromNodeId: string | null
+  gCost: number        // actual cost from start
+  hCost: number        // heuristic value (0 for Dijkstra)
+  priority: number     // value used to order in the queue (g for Dijkstra, g+h for A*, h for Greedy)
+  eventType: 'discover' | 'settle'
+  queueSizeAfter: number  // priority queue size immediately after this step
+  settleReason?: string
+}
+
+export type PriorityPathResult = {
+  kind: 'priority'
+  steps: PriorityPathStep[]
   pathNodeIds: string[]
   startNodeId: string
   goalNodeId: string

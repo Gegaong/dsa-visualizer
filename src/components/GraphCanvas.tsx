@@ -56,6 +56,8 @@ type GraphCanvasProps = {
   wpCostByNodeId: Map<string, number>
   wpCurrentEdgeId: string | null
   wpVisitedEdgeIds: string[]
+  wpVisitedEdgeFwdIds: string[]
+  wpVisitedEdgeRevIds: string[]
   wpPathEdgeIds: string[]
   onCanvasRef: (el: HTMLDivElement | null) => void
   onCanvasClick: (event: MouseEvent<HTMLDivElement>) => void
@@ -130,6 +132,8 @@ export function GraphCanvas({
   wpCostByNodeId,
   wpCurrentEdgeId,
   wpVisitedEdgeIds,
+  wpVisitedEdgeFwdIds,
+  wpVisitedEdgeRevIds,
   wpPathEdgeIds,
   onCanvasRef,
   onCanvasClick,
@@ -316,6 +320,8 @@ export function GraphCanvas({
             shortestPathEdgeIds={shortestPathEdgeIds}
             wpCurrentEdgeId={wpCurrentEdgeId}
             wpVisitedEdgeIds={wpVisitedEdgeIds}
+            wpVisitedEdgeFwdIds={wpVisitedEdgeFwdIds}
+            wpVisitedEdgeRevIds={wpVisitedEdgeRevIds}
             wpPathEdgeIds={wpPathEdgeIds}
             onToggleEdgeSelection={onToggleEdgeSelection}
             onEdgeRightClick={onEdgeRightClick}

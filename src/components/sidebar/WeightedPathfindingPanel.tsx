@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+import type { WeightedAlgorithm } from '../../algorithms/algorithmstypes'
 
 import type { WPOutput } from './sidebarTypes'
 
@@ -32,8 +32,10 @@ export type WeightedPathfindingPanelProps = {
   wpStepTotal: number
   isDetailedMode: boolean
   onToggleDetailedMode: () => void
-  onRunWP: (strategy: TraversalStrategy) => void
+  onRunWP: (algorithm: WeightedAlgorithm) => void
   onStopWP: () => void
+  wpQueueSize: number | null
+  wpNodesSettled: number
 }
 
 function formatStepDisplay(sessionActive: boolean, stepIndex: number, stepTotal: number): string {
@@ -42,7 +44,6 @@ function formatStepDisplay(sessionActive: boolean, stepIndex: number, stepTotal:
   return `Ready / ${stepTotal}`
 }
 
-// BFS/DFS strategy picker, start/goal inputs, playback controls, and output for weighted pathfinding.
 export const WeightedPathfindingPanel = ({
   isWPSessionActive,
   canRunWP,
@@ -69,18 +70,21 @@ export const WeightedPathfindingPanel = ({
   onToggleDetailedMode,
   onRunWP,
   onStopWP,
+  wpQueueSize,
+  wpNodesSettled,
 }: WeightedPathfindingPanelProps) => {
-  const [strategy, setStrategy] = useState<TraversalStrategy>('bfs')
+  const [algorithm, setAlgorithm] = useState<WeightedAlgorithm>('bfs')
 
   const toggleRun = () => {
     if (isWPSessionActive) {
       onStopWP()
       return
     }
-    onRunWP(strategy)
+    onRunWP(algorithm)
   }
 
   const frozen = isWPSessionActive
+  const showDetailedMode = algorithm === 'bfs' || algorithm === 'dfs'
 
   const stepDisplay = formatStepDisplay(isWPSessionActive, wpStepIndex, wpStepTotal)
   const pathFound = wpOutput === null ? '—' : wpOutput.pathFound ? 'Yes' : 'No'
@@ -95,26 +99,20 @@ export const WeightedPathfindingPanel = ({
   return (
     <div className="sidebar-page-body sidebar-page-body--pathfinder">
       <div className="sidebar-section algorithm-config-section">
-        <h3>Algorithm</h3>
+        <h3>Pathfinder</h3>
         <div className="algorithm-config-content">
-          <div className="pill-group algorithm-traversal-buttons">
-            <button
-              className={`btn btn-pill ${strategy === 'bfs' ? 'btn-active' : ''}`}
-              type="button"
+          <label className="field">
+            <span>Method</span>
+            <select
+              value={algorithm}
+              onChange={(e) => setAlgorithm(e.target.value as WeightedAlgorithm)}
               disabled={frozen}
-              onClick={() => setStrategy('bfs')}
             >
-              BFS
-            </button>
-            <button
-              className={`btn btn-pill ${strategy === 'dfs' ? 'btn-active' : ''}`}
-              type="button"
-              disabled={frozen}
-              onClick={() => setStrategy('dfs')}
-            >
-              DFS
-            </button>
-          </div>
+              <option value="bfs">BFS (Breadth-First)</option>
+              <option value="dfs">DFS (Depth-First)</option>
+              <option value="dijkstra">Dijkstra</option>
+            </select>
+          </label>
           <div className="algorithm-inputs-section">
             <label className="field">
               <span>
@@ -163,17 +161,19 @@ export const WeightedPathfindingPanel = ({
           speed={wpPlaybackSpeed}
           onSpeedChange={onWPPlaybackSpeedChange}
         />
-        <div className="detail-mode-row">
-          <label className="detail-mode-label">
-            <input
-              type="checkbox"
-              checked={isDetailedMode}
-              onChange={onToggleDetailedMode}
-              disabled={frozen}
-            />
-            Show confirmation steps
-          </label>
-        </div>
+        {showDetailedMode && (
+          <div className="detail-mode-row">
+            <label className="detail-mode-label">
+              <input
+                type="checkbox"
+                checked={isDetailedMode}
+                onChange={onToggleDetailedMode}
+                disabled={frozen}
+              />
+              Show confirmation steps
+            </label>
+          </div>
+        )}
         <p className="hint">{wpStatusText}</p>
       </div>
 
@@ -184,6 +184,18 @@ export const WeightedPathfindingPanel = ({
             <span className="output-label">Playback step</span>
             <span className="output-value">{stepDisplay}</span>
           </div>
+          {isWPSessionActive && (
+            <div className="output-row">
+              <span className="output-label">Nodes settled</span>
+              <span className="output-value">{wpNodesSettled}</span>
+            </div>
+          )}
+          {wpQueueSize !== null && (
+            <div className="output-row">
+              <span className="output-label">Queue size</span>
+              <span className="output-value">{wpQueueSize}</span>
+            </div>
+          )}
           <div className="output-row">
             <span className="output-label">Path found</span>
             <span className="output-value">{pathFound}</span>

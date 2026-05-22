@@ -52,6 +52,32 @@ export function getDirectedEdgeId(edges: GraphEdge[], fromId: string, toId: stri
   return null
 }
 
+// Like getDirectedEdgeId but also returns whether the traversal goes in the canonical
+// forward direction (fromNodeId→toNodeId). Used to track per-direction visits on both-edges.
+export function getDirectedEdgeInfo(
+  edges: GraphEdge[],
+  fromId: string,
+  toId: string,
+): { id: string; isForward: boolean } | null {
+  for (const edge of edges) {
+    if (
+      edge.fromNodeId === fromId &&
+      edge.toNodeId === toId &&
+      (edge.direction === 'forward' || edge.direction === 'both')
+    ) {
+      return { id: edge.id, isForward: true }
+    }
+    if (
+      edge.fromNodeId === toId &&
+      edge.toNodeId === fromId &&
+      (edge.direction === 'backward' || edge.direction === 'both')
+    ) {
+      return { id: edge.id, isForward: false }
+    }
+  }
+  return null
+}
+
 type PathItem = {
   path: string[]
   pathSet: Set<string>
@@ -72,6 +98,7 @@ export function runWeightedPathfinding(
   strategy: TraversalStrategy,
 ): WeightedPathResult {
   const empty: WeightedPathResult = {
+    kind: 'bfsdfs',
     steps: [],
     detailedSteps: [],
     pathNodeIds: [],
@@ -213,6 +240,7 @@ export function runWeightedPathfinding(
   }
 
   return {
+    kind: 'bfsdfs',
     steps,
     detailedSteps,
     pathNodeIds: bestGoalPath,

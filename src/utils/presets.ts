@@ -223,11 +223,13 @@ export const GRAPH_PRESETS: GraphPreset[] = [
   },
 ]
 
-// Five undirected weighted-graph presets for Dijkstra, Greedy best-first, and A*.
+// Three undirected weighted-graph presets for Dijkstra, Greedy best-first, and A*.
 // Ordered by complexity: Preset 1 is simplest (9 nodes), each subsequent preset adds ~3 nodes.
 // All presets use a monotone-downward edge pattern between columns (each node only connects
 // to the same row or one row lower in the next column, never upward). This guarantees that
 // no two edges form an X-cross, so weight badge midpoints never overlap.
+// Edges are stored as 'forward' (source→sink direction) so toggling to directed mode gives a
+// logical left-to-right flow without the user having to manually fix every edge.
 export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
   // 9 nodes: source + col-A(2) + col-B(3) + col-C(2) + sink.
   {
@@ -235,152 +237,156 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
     name: 'Preset 1',
     undirected: true,
     nodes: [
-      { x: 60,  y: 240 },  // 0  source
-      { x: 220, y: 80  },  // 1  col-A top
-      { x: 220, y: 400 },  // 2  col-A bot
-      { x: 410, y: 55  },  // 3  col-B top
-      { x: 410, y: 235 },  // 4  col-B mid
-      { x: 410, y: 415 },  // 5  col-B bot
-      { x: 600, y: 95  },  // 6  col-C top
-      { x: 600, y: 385 },  // 7  col-C bot
-      { x: 780, y: 240 },  // 8  sink
+      { x: 60,  y: 280 },  // 0  source
+      { x: 230, y: 110 },  // 1  col-A top
+      { x: 230, y: 450 },  // 2  col-A bot
+      { x: 415, y: 55  },  // 3  col-B top
+      { x: 415, y: 280 },  // 4  col-B mid
+      { x: 415, y: 505 },  // 5  col-B bot
+      { x: 600, y: 110 },  // 6  col-C top
+      { x: 600, y: 450 },  // 7  col-C bot
+      { x: 770, y: 280 },  // 8  sink
     ],
     edges: [
       // source → col-A
-      [0, 1, 'both', 3],
-      [0, 2, 'both', 2],
+      [0, 1, 'forward', 3],
+      [0, 2, 'forward', 2],
       // col-A → col-B  (monotone: row0→row0,row1 ; row1→row1,row2)
-      [1, 3, 'both', 5],
-      [1, 4, 'both', 4],
-      [2, 4, 'both', 4],
-      [2, 5, 'both', 2],
+      [1, 3, 'forward', 5],
+      [1, 4, 'forward', 4],
+      [2, 4, 'forward', 4],
+      [2, 5, 'forward', 2],
       // col-B → col-C  (monotone: row0→row0 ; row0→row1 ; row1→row1 ; row2→row1)
-      [3, 6, 'both', 3],
-      [3, 7, 'both', 9],
-      [4, 7, 'both', 5],
-      [5, 7, 'both', 2],
+      [3, 6, 'forward', 3],
+      [3, 7, 'forward', 9],
+      [4, 7, 'forward', 5],
+      [5, 7, 'forward', 2],
       // col-C → sink
-      [6, 8, 'both', 7],
-      [7, 8, 'both', 3],
+      [6, 8, 'forward', 7],
+      [7, 8, 'forward', 3],
     ],
   },
-  // 15 nodes: source + col-A(3) + col-B(4) + col-C(4) + col-D(3).
+  // 15 nodes: source + col-A(3) + col-B(4) + col-C(3) + col-D(2) + far-right(2).
+  // Far-right nodes sit at extreme y values so back-edges return to col-B at a steep angle,
+  // giving clear right-to-left arrows when directed mode is toggled on.
   {
     id: 'weighted-preset-2',
     name: 'Preset 2',
     undirected: true,
     nodes: [
-      { x: 60,  y: 260 },  // 0  source
-      { x: 215, y: 80  },  // 1  col-A top
-      { x: 215, y: 255 },  // 2  col-A mid
-      { x: 215, y: 440 },  // 3  col-A bot
-      { x: 390, y: 60  },  // 4  col-B row0
-      { x: 390, y: 185 },  // 5  col-B row1
-      { x: 390, y: 315 },  // 6  col-B row2
-      { x: 390, y: 450 },  // 7  col-B row3
-      { x: 560, y: 65  },  // 8  col-C row0
-      { x: 560, y: 190 },  // 9  col-C row1
-      { x: 560, y: 320 },  // 10 col-C row2
-      { x: 560, y: 455 },  // 11 col-C row3
-      { x: 730, y: 110 },  // 12 col-D top
-      { x: 730, y: 270 },  // 13 col-D mid
-      { x: 730, y: 435 },  // 14 col-D bot
+      { x: 60,  y: 295 },  // 0  source
+      { x: 210, y: 80  },  // 1  col-A top
+      { x: 210, y: 295 },  // 2  col-A mid
+      { x: 210, y: 510 },  // 3  col-A bot
+      { x: 370, y: 55  },  // 4  col-B row0
+      { x: 370, y: 215 },  // 5  col-B row1  ← target of far-top back-edge
+      { x: 370, y: 375 },  // 6  col-B row2  ← target of far-bot back-edge
+      { x: 370, y: 535 },  // 7  col-B row3
+      { x: 530, y: 60  },  // 8  col-C top   ← source of far-top forward edge
+      { x: 530, y: 295 },  // 9  col-C mid
+      { x: 530, y: 530 },  // 10 col-C bot
+      { x: 680, y: 195 },  // 11 col-D top
+      { x: 680, y: 435 },  // 12 col-D bot  ← source of far-bot forward edge
+      { x: 800, y: 50  },  // 13 far-right top  (← col-C top, → col-B row1, right-to-left)
+      { x: 800, y: 510 },  // 14 far-right bot  (← col-D bot,  → col-B row2, right-to-left)
     ],
     edges: [
       // source → col-A
-      [0, 1,  'both', 4],
-      [0, 2,  'both', 2],
-      [0, 3,  'both', 5],
-      // col-A(3) → col-B(4)  (row0→r0,r1 ; row1→r1,r2 ; row2→r2,r3)
-      [1, 4,  'both', 2],
-      [1, 5,  'both', 6],
-      [2, 5,  'both', 2],
-      [2, 6,  'both', 5],
-      [3, 6,  'both', 2],
-      [3, 7,  'both', 4],
-      // col-B(4) → col-C(4)  (monotone same+down)
-      [4, 8,  'both', 3],
-      [4, 9,  'both', 7],
-      [5, 9,  'both', 2],
-      [5, 10, 'both', 6],
-      [6, 10, 'both', 2],
-      [6, 11, 'both', 5],
-      [7, 11, 'both', 2],
-      // col-C(4) → col-D(3)  (r0→top,mid ; r1→mid,bot ; r2→bot ; r3→bot)
-      [8,  12, 'both', 3],
-      [8,  13, 'both', 7],
-      [9,  13, 'both', 2],
-      [9,  14, 'both', 6],
-      [10, 14, 'both', 2],
-      [11, 14, 'both', 4],
+      [0, 1,  'forward', 3],
+      [0, 2,  'forward', 2],
+      [0, 3,  'forward', 5],
+      // col-A → col-B  (monotone same+down)
+      [1, 4,  'forward', 2],
+      [1, 5,  'forward', 6],
+      [2, 5,  'forward', 2],
+      [2, 6,  'forward', 5],
+      [3, 6,  'forward', 3],
+      [3, 7,  'forward', 4],
+      // col-B → col-C  (monotone same+down)
+      [4, 8,  'forward', 3],
+      [5, 9,  'forward', 2],
+      [5, 10, 'forward', 6],
+      [6, 10, 'forward', 2],
+      [7, 10, 'forward', 4],
+      // col-C → col-D
+      [8,  11, 'forward', 4],
+      [9,  11, 'forward', 2],
+      [9,  12, 'forward', 5],
+      [10, 12, 'forward', 3],
+      // forward out to far-right nodes (left-to-right)
+      [8,  13, 'forward', 2],
+      [12, 14, 'forward', 3],
+      // back-edges from far-right to col-B (right-to-left in directed mode)
+      [13, 5,  'forward', 8],
+      [14, 6,  'forward', 7],
     ],
   },
-  // 21 nodes: source + col-A(4) + col-B(4) + col-C(4) + col-D(4) + col-E(4).
+  // 19 nodes: source + col-A(4) + col-B(4) + col-C(4) + col-D(3) + col-E(3).
+  // col-E rows 0-1 are regular sinks; row 2 is a hook node — reachable via a forward edge
+  // from col-D row1 but its outgoing edge returns left to col-B row1, giving a right-to-left
+  // arrow when directed mode is toggled on.
   {
     id: 'weighted-preset-3',
     name: 'Preset 3',
     undirected: true,
     nodes: [
-      { x: 60,  y: 270 },  // 0  source
-      { x: 205, y: 60  },  // 1  col-A row0
-      { x: 205, y: 175 },  // 2  col-A row1
-      { x: 205, y: 295 },  // 3  col-A row2
-      { x: 205, y: 420 },  // 4  col-A row3
-      { x: 375, y: 60  },  // 5  col-B row0
-      { x: 375, y: 175 },  // 6  col-B row1
-      { x: 375, y: 295 },  // 7  col-B row2
-      { x: 375, y: 420 },  // 8  col-B row3
-      { x: 545, y: 60  },  // 9  col-C row0
-      { x: 545, y: 175 },  // 10 col-C row1
-      { x: 545, y: 295 },  // 11 col-C row2
-      { x: 545, y: 420 },  // 12 col-C row3
-      { x: 715, y: 75  },  // 13 col-D row0
-      { x: 715, y: 190 },  // 14 col-D row1
-      { x: 715, y: 310 },  // 15 col-D row2
-      { x: 715, y: 430 },  // 16 col-D row3
-      { x: 885, y: 90  },  // 17 col-E row0
-      { x: 885, y: 205 },  // 18 col-E row1
-      { x: 885, y: 325 },  // 19 col-E row2
-      { x: 885, y: 445 },  // 20 col-E row3
+      { x: 60,  y: 295 },  // 0  source
+      { x: 210, y: 55  },  // 1  col-A row0
+      { x: 210, y: 215 },  // 2  col-A row1
+      { x: 210, y: 375 },  // 3  col-A row2
+      { x: 210, y: 480 },  // 4  col-A row3
+      { x: 360, y: 55  },  // 5  col-B row0
+      { x: 360, y: 215 },  // 6  col-B row1  ← target of col-E hook back-edge
+      { x: 360, y: 285 },  // 7  col-B row2
+      { x: 360, y: 480 },  // 8  col-B row3
+      { x: 510, y: 55  },  // 9  col-C row0
+      { x: 510, y: 215 },  // 10 col-C row1
+      { x: 510, y: 375 },  // 11 col-C row2
+      { x: 510, y: 480 },  // 12 col-C row3
+      { x: 660, y: 55  },  // 13 col-D row0
+      { x: 660, y: 215 },  // 14 col-D row1  ← source of col-E hook forward edge
+      { x: 660, y: 375 },  // 15 col-D row2
+      { x: 810, y: 55  },  // 16 col-E row0  (sink)
+      { x: 810, y: 215 },  // 17 col-E row1  (sink)
+      { x: 810, y: 375 },  // 18 col-E row2  (hook → col-B row1, right-to-left)
     ],
     edges: [
       // source → col-A
-      [0,  1,  'both', 6],
-      [0,  2,  'both', 2],
-      [0,  3,  'both', 4],
-      [0,  4,  'both', 3],
+      [0,  1,  'forward', 6],
+      [0,  2,  'forward', 2],
+      [0,  3,  'forward', 4],
+      [0,  4,  'forward', 3],
       // col-A → col-B  (monotone same+down)
-      [1,  5,  'both', 2],
-      [1,  6,  'both', 5],
-      [2,  6,  'both', 3],
-      [2,  7,  'both', 2],
-      [3,  7,  'both', 4],
-      [3,  8,  'both', 6],
-      [4,  8,  'both', 2],
+      [1,  5,  'forward', 2],
+      [1,  6,  'forward', 5],
+      [2,  6,  'forward', 3],
+      [2,  7,  'forward', 2],
+      [3,  7,  'forward', 4],
+      [3,  8,  'forward', 6],
+      [4,  8,  'forward', 2],
       // col-B → col-C  (monotone same+down)
-      [5,  9,  'both', 5],
-      [5,  10, 'both', 2],
-      [6,  10, 'both', 4],
-      [6,  11, 'both', 3],
-      [7,  11, 'both', 2],
-      [7,  12, 'both', 6],
-      [8,  12, 'both', 3],
-      // col-C → col-D  (monotone same+down)
-      [9,  13, 'both', 2],
-      [9,  14, 'both', 6],
-      [10, 14, 'both', 3],
-      [10, 15, 'both', 2],
-      [11, 15, 'both', 5],
-      [11, 16, 'both', 3],
-      [12, 16, 'both', 4],
-      // col-D → col-E  (monotone same+down)
-      [13, 17, 'both', 3],
-      [13, 18, 'both', 5],
-      [14, 18, 'both', 2],
-      [14, 19, 'both', 4],
-      [15, 19, 'both', 3],
-      [15, 20, 'both', 2],
-      [16, 20, 'both', 5],
+      [5,  9,  'forward', 5],
+      [5,  10, 'forward', 2],
+      [6,  10, 'forward', 4],
+      [6,  11, 'forward', 3],
+      [7,  11, 'forward', 2],
+      [7,  12, 'forward', 6],
+      [8,  12, 'forward', 3],
+      // col-C → col-D  (row3 feeds col-D row2 since col-D row3 was removed)
+      [9,  13, 'forward', 2],
+      [9,  14, 'forward', 6],
+      [10, 14, 'forward', 3],
+      [10, 15, 'forward', 2],
+      [11, 15, 'forward', 5],
+      [12, 15, 'forward', 4],
+      // col-D → col-E sinks
+      [13, 16, 'forward', 3],
+      [14, 16, 'forward', 2],
+      [15, 17, 'forward', 4],
+      // forward out to col-E hook (left-to-right, diagonal)
+      [14, 18, 'forward', 2],
+      // back-edge from col-E hook to col-B row1 (right-to-left in directed mode)
+      [18, 6,  'forward', 9],
     ],
   },
 ]
@@ -453,7 +459,7 @@ export const buildPresetGraph = (
       id: `edge-${counter}`,
       fromNodeId: nodes[fromIndex].id,
       toNodeId: nodes[toIndex].id,
-      direction: direction ?? 'both',
+      direction: direction ?? 'forward',
       ...(weight !== undefined && { weight }),
     }
     counter += 1

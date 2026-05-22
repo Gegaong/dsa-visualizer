@@ -45,7 +45,7 @@ import {
 import { clampToRange, getVisibleCanvasRegion, isOverlapping } from './utils/geometry'
 import { buildPresetGraph } from './utils/presets'
 
-import type { TraversalStrategy } from './algorithms/algorithmstypes'
+import type { TraversalStrategy, WeightedAlgorithm } from './algorithms/algorithmstypes'
 
 import { useTraversalPlayback } from './hooks/useTraversalPlayback'
 import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPlayback'
@@ -496,9 +496,9 @@ function App() {
   }
 
   // Runs weighted pathfinding after leaving canvas edit modes.
-  const handleRunWPFromSidebar = (strategy: TraversalStrategy) => {
+  const handleRunWPFromSidebar = (algorithm: WeightedAlgorithm) => {
     exitCanvasInteractionModes()
-    weightedPathfinding.runWPFromSidebar(strategy)
+    weightedPathfinding.runWPFromSidebar(algorithm)
   }
 
   // Activates delete-node mode and clears conflicting modes and menus.
@@ -1006,6 +1006,8 @@ function App() {
           wpCostByNodeId={weightedPathfinding.wpCostByNodeId}
           wpCurrentEdgeId={weightedPathfinding.wpCurrentEdgeId}
           wpVisitedEdgeIds={weightedPathfinding.wpVisitedEdgeIds}
+          wpVisitedEdgeFwdIds={weightedPathfinding.wpVisitedEdgeFwdIds}
+          wpVisitedEdgeRevIds={weightedPathfinding.wpVisitedEdgeRevIds}
           wpPathEdgeIds={weightedPathfinding.wpPathEdgeIds}
           onCanvasRef={setCanvasElement}
           onCanvasClick={handleCanvasClick}
@@ -1069,6 +1071,8 @@ function App() {
             onToggleDetailedMode: weightedPathfinding.toggleDetailedMode,
             onRunWP: handleRunWPFromSidebar,
             onStopWP: weightedPathfinding.resetWPVisualization,
+            wpQueueSize: weightedPathfinding.wpQueueSize,
+            wpNodesSettled: weightedPathfinding.wpNodesSettled,
           }}
           canvasSetup={{
             blockGraphEdits: blockGraphInteraction,

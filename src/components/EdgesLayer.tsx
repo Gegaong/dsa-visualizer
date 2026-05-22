@@ -30,6 +30,8 @@ type EdgesLayerProps = {
   shortestPathEdgeIds: string[]
   // Weighted pathfinding: visited edges (orange), confirmed path edges (green), and active edge (glow).
   wpVisitedEdgeIds: string[]
+  wpVisitedEdgeFwdIds: string[]
+  wpVisitedEdgeRevIds: string[]
   wpPathEdgeIds: string[]
   wpCurrentEdgeId: string | null
   onToggleEdgeSelection: (edgeId: string) => void
@@ -54,6 +56,8 @@ export const EdgesLayer = ({
   cycleGoalEdgeIds,
   shortestPathEdgeIds,
   wpVisitedEdgeIds,
+  wpVisitedEdgeFwdIds,
+  wpVisitedEdgeRevIds,
   wpPathEdgeIds,
   wpCurrentEdgeId,
   onToggleEdgeSelection,
@@ -98,6 +102,7 @@ export const EdgesLayer = ({
       const isWpPathEdge = wpPathEdgeIds.includes(edge.id)
       const isWpCurrentEdge = wpCurrentEdgeId === edge.id
       const isWpVisitedEdge = !isWpPathEdge && !isWpCurrentEdge && wpVisitedEdgeIds.includes(edge.id)
+      const isBothEdge = edge.direction === 'both'
       const strokeColor = isWpPathEdge
         ? '#43a047'
         : isGoalEdge || isShortestPathEdge
@@ -107,6 +112,18 @@ export const EdgesLayer = ({
             : isTraversalVisitedPast || isWpVisitedEdge
               ? '#e07b39'
               : '#4a7c59'
+      // For both-edges: each arrowhead is only orange if that specific direction was traversed.
+      const baseEdgeColor = isWpPathEdge ? '#43a047'
+        : isGoalEdge || isShortestPathEdge ? '#2a4f9c'
+        : isCcEdge ? ccStroke
+        : isTraversalVisitedPast ? '#e07b39'
+        : '#4a7c59'
+      const fwdArrowColor = isBothEdge && isWpVisitedEdge && !wpVisitedEdgeFwdIds.includes(edge.id)
+        ? baseEdgeColor ?? '#4a7c59'
+        : strokeColor
+      const revArrowColor = isBothEdge && isWpVisitedEdge && !wpVisitedEdgeRevIds.includes(edge.id)
+        ? baseEdgeColor ?? '#4a7c59'
+        : strokeColor
       const strokeWidth = isWpPathEdge ? 2.5 : 2
       const showTraversalOutline = isTraversalActive && !isCcEdge && !isGoalEdge && !isShortestPathEdge && !isWpPathEdge
       const showWpCurrentOutline = isWpCurrentEdge && !isWpPathEdge
@@ -145,72 +162,31 @@ export const EdgesLayer = ({
       const markerIdLg = `arr-${idSafe}-lg`
       const markerIdSm = `arr-${idSafe}-sm`
       const markerIdTi = `arr-${idSafe}-ti`
-      const markerEndId =
-        geometry.edgeLength < TINY_EDGE_MARKER_EDGE_LENGTH
-          ? markerIdTi
-          : geometry.edgeLength < SHORT_EDGE_MARKER_EDGE_LENGTH
-            ? markerIdSm
-            : markerIdLg
-      const markerEnd = `url(#${markerEndId})`
+      const sizeKey = geometry.edgeLength < TINY_EDGE_MARKER_EDGE_LENGTH ? 'ti'
+        : geometry.edgeLength < SHORT_EDGE_MARKER_EDGE_LENGTH ? 'sm' : 'lg'
+      const markerEnd = `url(#arr-${idSafe}-${sizeKey})`
+      const markerEndFwd = isBothEdge ? `url(#arr-${idSafe}-fwd-${sizeKey})` : markerEnd
+      const markerEndRev = isBothEdge ? `url(#arr-${idSafe}-rev-${sizeKey})` : markerEnd
+
+      const makeMarkerPath = (id: string, w: string, h: string, rx: string, ry: string, vb: string, d: string, sw: string, color: string) => (
+        <marker id={id} markerWidth={w} markerHeight={h} refX={rx} refY={ry} orient="auto" markerUnits="strokeWidth" viewBox={vb}>
+          <path d={d} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="square" strokeLinejoin="miter" />
+        </marker>
+      )
+
       const edgeArrowMarkers = (
         <defs>
-          <marker
-            id={markerIdLg}
-            markerWidth="6"
-            markerHeight="6"
-            refX="5.5"
-            refY="3"
-            orient="auto"
-            markerUnits="strokeWidth"
-            viewBox="0 0 6 6"
-          >
-            <path
-              d="M0.5 0.5 L5.5 3 L0.5 5.5"
-              fill="none"
-              stroke={strokeColor}
-              strokeWidth="1"
-              strokeLinecap="square"
-              strokeLinejoin="miter"
-            />
-          </marker>
-          <marker
-            id={markerIdSm}
-            markerWidth="4.8"
-            markerHeight="4.8"
-            refX="4.4"
-            refY="2.4"
-            orient="auto"
-            markerUnits="strokeWidth"
-            viewBox="0 0 4.8 4.8"
-          >
-            <path
-              d="M0.4 0.4 L4.4 2.4 L0.4 4.4"
-              fill="none"
-              stroke={strokeColor}
-              strokeWidth="0.9"
-              strokeLinecap="square"
-              strokeLinejoin="miter"
-            />
-          </marker>
-          <marker
-            id={markerIdTi}
-            markerWidth="3.6"
-            markerHeight="3.6"
-            refX="3.3"
-            refY="1.8"
-            orient="auto"
-            markerUnits="strokeWidth"
-            viewBox="0 0 3.6 3.6"
-          >
-            <path
-              d="M0.3 0.3 L3.3 1.8 L0.3 3.3"
-              fill="none"
-              stroke={strokeColor}
-              strokeWidth="0.8"
-              strokeLinecap="square"
-              strokeLinejoin="miter"
-            />
-          </marker>
+          {makeMarkerPath(markerIdLg, "6", "6", "5.5", "3", "0 0 6 6", "M0.5 0.5 L5.5 3 L0.5 5.5", "1", strokeColor)}
+          {makeMarkerPath(markerIdSm, "4.8", "4.8", "4.4", "2.4", "0 0 4.8 4.8", "M0.4 0.4 L4.4 2.4 L0.4 4.4", "0.9", strokeColor)}
+          {makeMarkerPath(markerIdTi, "3.6", "3.6", "3.3", "1.8", "0 0 3.6 3.6", "M0.3 0.3 L3.3 1.8 L0.3 3.3", "0.8", strokeColor)}
+          {isBothEdge && (<>
+            {makeMarkerPath(`arr-${idSafe}-fwd-lg`, "6", "6", "5.5", "3", "0 0 6 6", "M0.5 0.5 L5.5 3 L0.5 5.5", "1", fwdArrowColor)}
+            {makeMarkerPath(`arr-${idSafe}-fwd-sm`, "4.8", "4.8", "4.4", "2.4", "0 0 4.8 4.8", "M0.4 0.4 L4.4 2.4 L0.4 4.4", "0.9", fwdArrowColor)}
+            {makeMarkerPath(`arr-${idSafe}-fwd-ti`, "3.6", "3.6", "3.3", "1.8", "0 0 3.6 3.6", "M0.3 0.3 L3.3 1.8 L0.3 3.3", "0.8", fwdArrowColor)}
+            {makeMarkerPath(`arr-${idSafe}-rev-lg`, "6", "6", "5.5", "3", "0 0 6 6", "M0.5 0.5 L5.5 3 L0.5 5.5", "1", revArrowColor)}
+            {makeMarkerPath(`arr-${idSafe}-rev-sm`, "4.8", "4.8", "4.4", "2.4", "0 0 4.8 4.8", "M0.4 0.4 L4.4 2.4 L0.4 4.4", "0.9", revArrowColor)}
+            {makeMarkerPath(`arr-${idSafe}-rev-ti`, "3.6", "3.6", "3.3", "1.8", "0 0 3.6 3.6", "M0.3 0.3 L3.3 1.8 L0.3 3.3", "0.8", revArrowColor)}
+          </>)}
         </defs>
       )
 
@@ -301,10 +277,10 @@ export const EdgesLayer = ({
                     y1={bioFwdStubY1}
                     x2={endX}
                     y2={endY}
-                    stroke={strokeColor}
+                    stroke={fwdArrowColor}
                     strokeWidth={strokeWidth}
-                    color={strokeColor}
-                    markerEnd={markerEnd}
+                    color={fwdArrowColor}
+                    markerEnd={markerEndFwd}
                     style={markerStrokeOrderStyle}
                   />
                 </>
@@ -356,10 +332,10 @@ export const EdgesLayer = ({
                 y1={bioRevStubY1}
                 x2={startX}
                 y2={startY}
-                stroke={strokeColor}
+                stroke={revArrowColor}
                 strokeWidth={strokeWidth}
-                color={strokeColor}
-                markerEnd={markerEnd}
+                color={revArrowColor}
+                markerEnd={markerEndRev}
                 style={markerStrokeOrderStyle}
               />
               {isDeleteEdgeMode && (

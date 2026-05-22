@@ -682,11 +682,14 @@
 	background: #fffdfb;
 }
 
-.field input:focus,
-.field select:focus {
+.field input:focus {
 	outline: none;
 	border-color: var(--accent);
 	box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.22);
+}
+
+.field select:focus {
+	outline: none;
 }
 
 .fill-actions {
