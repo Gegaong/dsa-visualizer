@@ -652,8 +652,9 @@ function App() {
   }
 
   // Opens the node context menu at a clamped screen position.
+  // In weighted mode, allowed even during runs so the heuristic value is always inspectable.
   const handleNodeContextMenu = (event: React.MouseEvent<HTMLDivElement>, node: GraphNode) => {
-    if (blockGraphInteraction) return
+    if (blockGraphInteraction && !isWeightedMode) return
     event.preventDefault()
     event.stopPropagation()
 
@@ -663,7 +664,15 @@ function App() {
     const x = Math.min(event.clientX, window.innerWidth - menuWidth - padding)
     const y = Math.min(event.clientY, window.innerHeight - menuHeight - padding)
 
-    setContextMenu({ nodeId: node.id, x, y })
+    let heuristic: number | undefined
+    if (isWeightedMode) {
+      const goalNode = nodes.find((n) => n.label === weightedPathfinding.goalNodeLabel)
+      if (goalNode) {
+        heuristic = Math.sqrt((node.x - goalNode.x) ** 2 + (node.y - goalNode.y) ** 2) / pixelsPerUnit
+      }
+    }
+
+    setContextMenu({ nodeId: node.id, x, y, heuristic })
   }
 
   // Updates the draft string while editing a node value in the floating input.
@@ -1292,6 +1301,7 @@ function App() {
         nodes={nodes}
         isDeleteMode={isDeleteMode}
         isWeightedMode={isWeightedMode}
+        blockActions={blockGraphInteraction}
         onClose={closeContextMenu}
         onEditValue={beginEditingNode}
         onDelete={deleteNode}

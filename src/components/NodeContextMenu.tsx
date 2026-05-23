@@ -5,6 +5,7 @@ type NodeContextMenuProps = {
   nodes: GraphNode[]
   isDeleteMode: boolean
   isWeightedMode: boolean
+  blockActions?: boolean
   onClose: () => void
   onEditValue: (node: GraphNode) => void
   onDelete: (nodeId: string) => void
@@ -19,6 +20,7 @@ export const NodeContextMenu = ({
   nodes,
   isDeleteMode,
   isWeightedMode,
+  blockActions = false,
   onClose,
   onEditValue,
   onDelete,
@@ -26,6 +28,15 @@ export const NodeContextMenu = ({
   if (!contextMenu) return null
   const node = nodes.find((n) => n.id === contextMenu.nodeId) ?? null
   if (!node) return null
+
+  const { heuristic } = contextMenu
+  let heuristicDisplay: string | null = null
+  if (heuristic !== undefined) {
+    const rawStr = heuristic.toString()
+    const dotIndex = rawStr.indexOf('.')
+    const isTruncated = dotIndex !== -1 && rawStr.length - dotIndex - 1 > 4
+    heuristicDisplay = parseFloat(heuristic.toFixed(4)).toString() + (isTruncated ? '...' : '')
+  }
 
   return (
     <div
@@ -49,6 +60,9 @@ export const NodeContextMenu = ({
               {node.value === 'empty' ? 'empty' : node.value}
             </span>
           )}
+          {heuristicDisplay !== null && (
+            <span className="context-value">h: {heuristicDisplay}</span>
+          )}
         </div>
         {!isDeleteMode && (
           <>
@@ -67,6 +81,7 @@ export const NodeContextMenu = ({
             <button
               className="context-action context-action--danger"
               type="button"
+              disabled={blockActions}
               onClick={() => {
                 onDelete(node.id)
                 onClose()

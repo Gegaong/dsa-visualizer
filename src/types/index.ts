@@ -17,6 +17,7 @@ export type ContextMenuState = {
   nodeId: string
   x: number
   y: number
+  heuristic?: number
 }
 
 export type GraphEdge = {
