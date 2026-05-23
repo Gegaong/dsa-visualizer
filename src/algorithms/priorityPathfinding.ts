@@ -46,6 +46,7 @@ function buildLookups(nodes: GraphNode[], edges: GraphEdge[]) {
 }
 
 function euclideanDistance(a: GraphNode, b: GraphNode, pixelsPerUnit: number): number {
+  if (pixelsPerUnit === 0) return 0
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2) / pixelsPerUnit
 }
 

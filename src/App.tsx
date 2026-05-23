@@ -114,7 +114,8 @@ function App() {
     [canvasZoom],
   )
 
-  const pixelsPerUnit = parseInt(heuristicPixelsPerUnit, 10) || 100
+  const rawPPU = parseInt(heuristicPixelsPerUnit, 10)
+  const pixelsPerUnit = isNaN(rawPPU) ? 0 : Math.max(0, rawPPU)
 
   // Edges used by algorithms and display: directions overridden to 'both' in undirected mode;
   // weights replaced with Euclidean distances (in coordinate units) when distance mode is on.
@@ -668,7 +669,9 @@ function App() {
     if (isWeightedMode) {
       const goalNode = nodes.find((n) => n.label === weightedPathfinding.goalNodeLabel)
       if (goalNode) {
-        heuristic = Math.sqrt((node.x - goalNode.x) ** 2 + (node.y - goalNode.y) ** 2) / pixelsPerUnit
+        heuristic = pixelsPerUnit === 0
+          ? 0
+          : Math.sqrt((node.x - goalNode.x) ** 2 + (node.y - goalNode.y) ** 2) / pixelsPerUnit
       }
     }
 
@@ -702,8 +705,8 @@ function App() {
 
   const syncHeuristicPixelsPerUnit = () => {
     const val = parseInt(heuristicPixelsPerUnit, 10)
-    if (isNaN(val)) setHeuristicPixelsPerUnit('100')
-    else setHeuristicPixelsPerUnit(String(Math.min(500, Math.max(1, val))))
+    if (isNaN(val)) setHeuristicPixelsPerUnit('0')
+    else setHeuristicPixelsPerUnit(String(Math.min(500, Math.max(0, val))))
   }
 
   // Sidebar: on Enter in fill min/max fields, normalizes order and blurs the active input.

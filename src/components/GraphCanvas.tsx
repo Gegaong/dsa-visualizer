@@ -309,7 +309,7 @@ export function GraphCanvas({
           className="canvas-content"
           style={{ transform: `scale(${canvasZoom})`, transformOrigin: 'center center' }}
         >
-          {isWeightedMode && <GridOverlay cellSize={heuristicPixelsPerUnit} />}
+          {isWeightedMode && heuristicPixelsPerUnit > 0 && <GridOverlay cellSize={heuristicPixelsPerUnit} />}
 
           <EdgesLayer
             nodes={nodes}
