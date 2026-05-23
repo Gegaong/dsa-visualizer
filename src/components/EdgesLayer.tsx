@@ -33,6 +33,7 @@ type EdgesLayerProps = {
   wpVisitedEdgeFwdIds: string[]
   wpVisitedEdgeRevIds: string[]
   wpPathEdgeIds: string[]
+  wpPathGuaranteed: boolean
   wpCurrentEdgeId: string | null
   onToggleEdgeSelection: (edgeId: string) => void
   onEdgeRightClick?: (edgeId: string, x: number, y: number) => void
@@ -59,11 +60,13 @@ export const EdgesLayer = ({
   wpVisitedEdgeFwdIds,
   wpVisitedEdgeRevIds,
   wpPathEdgeIds,
+  wpPathGuaranteed,
   wpCurrentEdgeId,
   onToggleEdgeSelection,
   onEdgeRightClick,
 }: EdgesLayerProps) => {
   const nodeById = new Map(nodes.map((n) => [n.id, n]))
+  const wpPathColor = wpPathGuaranteed ? '#43a047' : '#fdd835'
   return (
   <svg
     className="edges-layer"
@@ -104,7 +107,7 @@ export const EdgesLayer = ({
       const isWpVisitedEdge = !isWpPathEdge && !isWpCurrentEdge && wpVisitedEdgeIds.includes(edge.id)
       const isBothEdge = edge.direction === 'both'
       const strokeColor = isWpPathEdge
-        ? '#43a047'
+        ? wpPathColor
         : isGoalEdge || isShortestPathEdge
           ? '#2a4f9c'
           : isCcEdge
@@ -113,7 +116,7 @@ export const EdgesLayer = ({
               ? '#e07b39'
               : '#4a7c59'
       // For both-edges: each arrowhead is only orange if that specific direction was traversed.
-      const baseEdgeColor = isWpPathEdge ? '#43a047'
+      const baseEdgeColor = isWpPathEdge ? wpPathColor
         : isGoalEdge || isShortestPathEdge ? '#2a4f9c'
         : isCcEdge ? ccStroke
         : isTraversalVisitedPast ? '#e07b39'
@@ -214,7 +217,7 @@ export const EdgesLayer = ({
             {renderGlowOutline(startX, startY, endX, endY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
             {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isGoalEdge)}
             {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isShortestPathEdge)}
-            {renderGlowOutline(startX, startY, endX, endY, '#43a047', isWpPathEdge)}
+            {renderGlowOutline(startX, startY, endX, endY, wpPathColor, isWpPathEdge)}
             {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showTraversalOutline)}
             {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showWpCurrentOutline)}
             <line
@@ -258,7 +261,7 @@ export const EdgesLayer = ({
               {renderGlowOutline(startX, startY, endX, endY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
               {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isGoalEdge)}
               {renderGlowOutline(startX, startY, endX, endY, '#2a4f9c', isShortestPathEdge)}
-              {renderGlowOutline(startX, startY, endX, endY, '#43a047', isWpPathEdge)}
+              {renderGlowOutline(startX, startY, endX, endY, wpPathColor, isWpPathEdge)}
               {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showTraversalOutline)}
               {renderGlowOutline(startX, startY, endX, endY, '#3a6f5a', showWpCurrentOutline)}
               {edge.direction === 'both' ? (
@@ -370,7 +373,7 @@ export const EdgesLayer = ({
               {renderGlowOutline(endX, endY, startX, startY, ccStroke ?? '', isCcEdge && ccStroke !== null)}
               {renderGlowOutline(endX, endY, startX, startY, '#2a4f9c', isGoalEdge)}
               {renderGlowOutline(endX, endY, startX, startY, '#2a4f9c', isShortestPathEdge)}
-              {renderGlowOutline(endX, endY, startX, startY, '#43a047', isWpPathEdge)}
+              {renderGlowOutline(endX, endY, startX, startY, wpPathColor, isWpPathEdge)}
               {renderGlowOutline(endX, endY, startX, startY, '#3a6f5a', showTraversalOutline)}
               {renderGlowOutline(endX, endY, startX, startY, '#3a6f5a', showWpCurrentOutline)}
               <line

@@ -170,6 +170,7 @@ function App() {
   const weightedPathfinding = useWeightedPathfindingPlayback({
     nodes,
     edges: effectiveEdges,
+    pixelsPerUnit: parseInt(heuristicPixelsPerUnit, 10) || 100,
   })
 
   // Forwards the sidebar algorithm picker to all canvas-algorithm hooks so their refs stay in sync.
@@ -999,6 +1000,7 @@ function App() {
           shortestPathNodeIds={shortestPath.shortestPathNodeIds}
           wpSettledNodeIds={weightedPathfinding.wpSettledNodeIds}
           wpTentativeNodeIds={weightedPathfinding.wpTentativeNodeIds}
+          wpAssumedNodeIds={weightedPathfinding.wpAssumedNodeIds}
           wpCurrentNodeId={weightedPathfinding.wpCurrentNodeId}
           wpStartNodeId={weightedPathfinding.wpStartNodeId}
           wpGoalNodeId={weightedPathfinding.wpGoalNodeId}
@@ -1009,6 +1011,7 @@ function App() {
           wpVisitedEdgeFwdIds={weightedPathfinding.wpVisitedEdgeFwdIds}
           wpVisitedEdgeRevIds={weightedPathfinding.wpVisitedEdgeRevIds}
           wpPathEdgeIds={weightedPathfinding.wpPathEdgeIds}
+          wpPathGuaranteed={weightedPathfinding.wpPathGuaranteed}
           onCanvasRef={setCanvasElement}
           onCanvasClick={handleCanvasClick}
           onCanvasContextMenu={handleCanvasContextMenu}

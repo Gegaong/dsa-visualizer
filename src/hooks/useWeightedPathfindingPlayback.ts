@@ -22,7 +22,7 @@ import {
   getDirectedEdgeInfo,
 } from '../algorithms/weightedPathfinding'
 
-import { runDijkstra } from '../algorithms/priorityPathfinding'
+import { runDijkstra, runAStar, runGreedy } from '../algorithms/priorityPathfinding'
 
 import {
   buildWPCompletionStatus,
@@ -78,6 +78,8 @@ export type WPPlaybackHandle = {
   wpActiveStepTotal: number
   wpQueueSize: number | null
   wpNodesSettled: number
+  wpAssumedNodeIds: string[]
+  wpPathGuaranteed: boolean
 
   runWPFromSidebar: (algorithm: WeightedAlgorithm) => void
   resetWPVisualization: () => void
@@ -94,6 +96,7 @@ export type WPPlaybackHandle = {
 type UseWPPlaybackParams = {
   nodes: GraphNode[]
   edges: GraphEdge[]
+  pixelsPerUnit: number
 }
 
 function algorithmLabel(algorithm: WeightedAlgorithm): string {
@@ -107,6 +110,7 @@ function algorithmLabel(algorithm: WeightedAlgorithm): string {
 export function useWeightedPathfindingPlayback({
   nodes,
   edges,
+  pixelsPerUnit,
 }: UseWPPlaybackParams): WPPlaybackHandle {
   const [result, setResult] = useState<AnyResult | null>(null)
   const resultRef = useRef<AnyResult | null>(null)
@@ -122,6 +126,7 @@ export function useWeightedPathfindingPlayback({
   // Visual state derived on each step
   const [wpSettledNodeIds, setWpSettledNodeIds] = useState<string[]>([])
   const [wpTentativeNodeIds, setWpTentativeNodeIds] = useState<string[]>([])
+  const [wpAssumedNodeIds, setWpAssumedNodeIds] = useState<string[]>([])
   const [wpCurrentNodeId, setWpCurrentNodeId] = useState<string | null>(null)
   const [wpStartNodeId, setWpStartNodeId] = useState<string | null>(null)
   const [wpGoalNodeId, setWpGoalNodeId] = useState<string | null>(null)
@@ -150,6 +155,7 @@ export function useWeightedPathfindingPlayback({
         if (index < 0) {
           setWpSettledNodeIds([])
           setWpTentativeNodeIds([])
+          setWpAssumedNodeIds([])
           setWpCurrentNodeId(null)
           setWpCurrentEdgeId(null)
           setWpCostByNodeId(new Map())
@@ -246,6 +252,7 @@ export function useWeightedPathfindingPlayback({
         if (index < 0) {
           setWpSettledNodeIds([])
           setWpTentativeNodeIds([])
+          setWpAssumedNodeIds([])
           setWpCurrentNodeId(null)
           setWpCurrentEdgeId(null)
           setWpCostByNodeId(new Map())
@@ -265,6 +272,7 @@ export function useWeightedPathfindingPlayback({
         const currentStep = r.steps[bound]
         const visibleSteps = r.steps.slice(0, bound + 1)
         const settledSet = new Set<string>()
+        const assumedSet = new Set<string>()
         const tentativeMap = new Map<string, number>()
         const costByNodeId = new Map<string, number>()
 
@@ -273,8 +281,12 @@ export function useWeightedPathfindingPlayback({
             settledSet.add(step.nodeId)
             tentativeMap.delete(step.nodeId)
             costByNodeId.set(step.nodeId, step.gCost)
+          } else if (step.eventType === 'assumed') {
+            assumedSet.add(step.nodeId)
+            tentativeMap.delete(step.nodeId)
+            costByNodeId.set(step.nodeId, step.gCost)
           } else {
-            if (!settledSet.has(step.nodeId)) {
+            if (!settledSet.has(step.nodeId) && !assumedSet.has(step.nodeId)) {
               const existing = tentativeMap.get(step.nodeId)
               if (existing === undefined || step.gCost < existing) {
                 tentativeMap.set(step.nodeId, step.gCost)
@@ -302,16 +314,31 @@ export function useWeightedPathfindingPlayback({
           ? getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
           : null
 
-        const discoverMsg = currentStep.fromNodeId === null
-          ? `${currentStep.nodeLabel} queued — start node, cost 0 · ${label}`
-          : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${currentStep.edgeWeight}, total cost ${currentStep.gCost}) · ${label}`
-        const statusMsg = currentStep.eventType === 'settle'
+        const algo = algorithmRef.current
+        const h = currentStep.hCost.toFixed(1)
+        let discoverMsg: string
+        if (algo === 'greedy') {
+          discoverMsg = currentStep.fromNodeId === null
+            ? `${currentStep.nodeLabel} queued — start node (h = ${h}) · Greedy`
+            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (h = ${h}) · Greedy`
+        } else if (algo === 'astar') {
+          const f = currentStep.priority.toFixed(1)
+          discoverMsg = currentStep.fromNodeId === null
+            ? `${currentStep.nodeLabel} queued — start node (g = 0, h = ${h}, f = ${h}) · A*`
+            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${currentStep.edgeWeight}, g = ${currentStep.gCost}, h = ${h}, f = ${f}) · A*`
+        } else {
+          discoverMsg = currentStep.fromNodeId === null
+            ? `${currentStep.nodeLabel} queued — start node, cost 0 · ${label}`
+            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${currentStep.edgeWeight}, total cost ${currentStep.gCost}) · ${label}`
+        }
+        const statusMsg = currentStep.eventType === 'settle' || currentStep.eventType === 'assumed'
           ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${currentStep.gCost} · ${label}`)
           : discoverMsg
 
         setWpSettledNodeIds([...settledSet])
         setWpTentativeNodeIds([...tentativeMap.keys()])
-        setWpCurrentNodeId(currentStep.eventType === 'settle' ? null : currentStep.nodeId)
+        setWpAssumedNodeIds([...assumedSet])
+        setWpCurrentNodeId(currentStep.eventType === 'settle' || currentStep.eventType === 'assumed' ? null : currentStep.nodeId)
         setWpCurrentEdgeId(currentEdgeId)
         setWpCostByNodeId(costByNodeId)
         setWpVisitedEdgeIds([...visitedEdgeSet])
@@ -388,6 +415,7 @@ export function useWeightedPathfindingPlayback({
   const clearVisuals = useCallback(() => {
     setWpSettledNodeIds([])
     setWpTentativeNodeIds([])
+    setWpAssumedNodeIds([])
     setWpCurrentNodeId(null)
     setWpCurrentEdgeId(null)
     setWpStartNodeId(null)
@@ -437,8 +465,12 @@ export function useWeightedPathfindingPlayback({
       let r: AnyResult
       if (algorithm === 'bfs' || algorithm === 'dfs') {
         r = runWeightedPathfinding(nodes, edges, startNode.id, goalNode.id, algorithm)
-      } else {
+      } else if (algorithm === 'dijkstra') {
         r = runDijkstra(nodes, edges, startNode.id, goalNode.id)
+      } else if (algorithm === 'astar') {
+        r = runAStar(nodes, edges, startNode.id, goalNode.id, pixelsPerUnit)
+      } else {
+        r = runGreedy(nodes, edges, startNode.id, goalNode.id, pixelsPerUnit)
       }
 
       if (r.steps.length === 0) {
@@ -535,6 +567,7 @@ export function useWeightedPathfindingPlayback({
 
     wpSettledNodeIds,
     wpTentativeNodeIds,
+    wpAssumedNodeIds,
     wpCurrentNodeId,
     wpStartNodeId,
     wpGoalNodeId,
@@ -560,6 +593,7 @@ export function useWeightedPathfindingPlayback({
     wpActiveStepTotal: activeStepCount,
     wpQueueSize,
     wpNodesSettled: wpSettledNodeIds.length,
+    wpPathGuaranteed: result === null || result.kind === 'bfsdfs' || algorithmRef.current === 'dijkstra' || (algorithmRef.current === 'astar' && result.kind === 'priority' && result.heuristicAdmissible),
 
     runWPFromSidebar,
     resetWPVisualization,

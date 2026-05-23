@@ -51,10 +51,12 @@ type GraphNodeLayerProps = {
   // Weighted pathfinding visual state (null = inactive).
   wpSettledNodeIds: string[]
   wpTentativeNodeIds: string[]
+  wpAssumedNodeIds: string[]
   wpCurrentNodeId: string | null
   wpStartNodeId: string | null
   wpGoalNodeId: string | null
   wpPathNodeIds: string[]
+  wpPathGuaranteed: boolean
   wpCostByNodeId: Map<string, number>
   onNodeMouseDown: (event: MouseEvent<HTMLDivElement>, node: GraphNode) => void
   onConnectNodeClick: (nodeId: string) => void
@@ -92,10 +94,12 @@ export const GraphNodeLayer = ({
   bipartiteGroupBNodeIds,
   wpSettledNodeIds,
   wpTentativeNodeIds,
+  wpAssumedNodeIds,
   wpCurrentNodeId,
   wpStartNodeId,
   wpGoalNodeId,
   wpPathNodeIds,
+  wpPathGuaranteed,
   wpCostByNodeId,
   onNodeMouseDown,
   onConnectNodeClick,
@@ -137,11 +141,12 @@ export const GraphNodeLayer = ({
       // Weighted pathfinding visual state
       const wpActive = wpStartNodeId !== null || wpGoalNodeId !== null
       const isWpSettled = wpSettledNodeIds.includes(node.id)
-      const isWpTentative = !isWpSettled && wpTentativeNodeIds.includes(node.id)
       const isWpCurrent = wpCurrentNodeId === node.id
       const isWpStart = wpStartNodeId === node.id
       const isWpGoal = wpGoalNodeId === node.id
       const isWpPath = wpPathNodeIds.includes(node.id)
+      const isWpAssumed = !isWpSettled && wpAssumedNodeIds.includes(node.id)
+      const isWpTentative = !isWpSettled && !isWpAssumed && wpTentativeNodeIds.includes(node.id)
       const wpCost = wpCostByNodeId.get(node.id)
 
       const ccNodeStyle: CSSProperties | undefined =
@@ -157,11 +162,10 @@ export const GraphNodeLayer = ({
           }
           : undefined
 
-      // Build cost label shown inside the node circle during weighted pathfinding.
-      // Tentative nodes show "cost?" (e.g. "42?"); settled/path nodes show the exact cost.
+      // Show "?" when cost is unproven, but not on guaranteed path nodes (avoids ? on BFS/DFS goal).
       const wpCostLabel =
         wpActive && wpCost !== undefined
-          ? isWpTentative
+          ? (isWpTentative || isWpAssumed) && !(isWpPath && wpPathGuaranteed)
             ? `${wpCost}?`
             : String(wpCost)
           : null
@@ -176,7 +180,7 @@ export const GraphNodeLayer = ({
       return (
         <div
           key={node.id}
-          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal && !isBipartiteColored ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent && !isBipartiteCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline && !isBipartiteColored ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''} ${isBipartiteGroupA ? 'is-bipartite-group-a' : ''} ${isBipartiteGroupB ? 'is-bipartite-group-b' : ''} ${isBipartiteCurrent ? 'is-bipartite-current' : ''} ${wpActive && !isWpStart && !isWpGoal && !isWpSettled && !isWpTentative && !isWpPath ? 'is-wp-undiscovered' : ''} ${isWpTentative ? 'is-wp-tentative' : ''} ${isWpSettled && !isWpPath ? 'is-wp-settled' : ''} ${isWpPath ? 'is-wp-path' : ''} ${isWpCurrent ? 'is-wp-current' : ''} ${isWpStart ? 'is-traversal-start' : ''} ${isWpGoal ? 'is-traversal-goal' : ''}`}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal && !isBipartiteColored ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent && !isBipartiteCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline && !isBipartiteColored ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''} ${isBipartiteGroupA ? 'is-bipartite-group-a' : ''} ${isBipartiteGroupB ? 'is-bipartite-group-b' : ''} ${isBipartiteCurrent ? 'is-bipartite-current' : ''} ${wpActive && !isWpStart && !isWpGoal && !isWpSettled && !isWpAssumed && !isWpTentative && !isWpPath ? 'is-wp-undiscovered' : ''} ${isWpTentative ? 'is-wp-tentative' : ''} ${isWpAssumed ? 'is-wp-assumed' : ''} ${isWpSettled && !isWpPath ? 'is-wp-settled' : ''} ${isWpPath ? (wpPathGuaranteed ? 'is-wp-path' : 'is-wp-path-greedy') : ''} ${isWpCurrent ? 'is-wp-current' : ''} ${isWpStart ? 'is-traversal-start' : ''} ${isWpGoal ? 'is-traversal-goal' : ''}`}
           style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
         >
           <div

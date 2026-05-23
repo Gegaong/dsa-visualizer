@@ -49,6 +49,7 @@ type GraphCanvasProps = {
   bipartiteGroupBNodeIds: string[]
   wpSettledNodeIds: string[]
   wpTentativeNodeIds: string[]
+  wpAssumedNodeIds: string[]
   wpCurrentNodeId: string | null
   wpStartNodeId: string | null
   wpGoalNodeId: string | null
@@ -59,6 +60,7 @@ type GraphCanvasProps = {
   wpVisitedEdgeFwdIds: string[]
   wpVisitedEdgeRevIds: string[]
   wpPathEdgeIds: string[]
+  wpPathGuaranteed: boolean
   onCanvasRef: (el: HTMLDivElement | null) => void
   onCanvasClick: (event: MouseEvent<HTMLDivElement>) => void
   onCanvasContextMenu: (event: MouseEvent<HTMLDivElement>) => void
@@ -125,6 +127,7 @@ export function GraphCanvas({
   bipartiteGroupBNodeIds,
   wpSettledNodeIds,
   wpTentativeNodeIds,
+  wpAssumedNodeIds,
   wpCurrentNodeId,
   wpStartNodeId,
   wpGoalNodeId,
@@ -135,6 +138,7 @@ export function GraphCanvas({
   wpVisitedEdgeFwdIds,
   wpVisitedEdgeRevIds,
   wpPathEdgeIds,
+  wpPathGuaranteed,
   onCanvasRef,
   onCanvasClick,
   onCanvasContextMenu,
@@ -323,6 +327,7 @@ export function GraphCanvas({
             wpVisitedEdgeFwdIds={wpVisitedEdgeFwdIds}
             wpVisitedEdgeRevIds={wpVisitedEdgeRevIds}
             wpPathEdgeIds={wpPathEdgeIds}
+            wpPathGuaranteed={wpPathGuaranteed}
             onToggleEdgeSelection={onToggleEdgeSelection}
             onEdgeRightClick={onEdgeRightClick}
           />
@@ -377,10 +382,12 @@ export function GraphCanvas({
             bipartiteGroupBNodeIds={bipartiteGroupBNodeIds}
             wpSettledNodeIds={wpSettledNodeIds}
             wpTentativeNodeIds={wpTentativeNodeIds}
+            wpAssumedNodeIds={wpAssumedNodeIds}
             wpCurrentNodeId={wpCurrentNodeId}
             wpStartNodeId={wpStartNodeId}
             wpGoalNodeId={wpGoalNodeId}
             wpPathNodeIds={wpPathNodeIds}
+            wpPathGuaranteed={wpPathGuaranteed}
             wpCostByNodeId={wpCostByNodeId}
             onNodeMouseDown={onNodeMouseDown}
             onConnectNodeClick={onConnectNodeClick}

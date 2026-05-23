@@ -43,13 +43,23 @@ function buildLookups(nodes: GraphNode[], edges: GraphEdge[]) {
   return { nodeById, outNeighborsById, directedEdgeMap }
 }
 
-// Shared core for Dijkstra, A*, and Greedy. The caller supplies:
-//   priorityFn    — maps (g, h) to the queue ordering value: g for Dijkstra, g+h for A*, h for Greedy.
-//   heuristicFn   — estimates remaining cost from a node to the goal (always 0 for Dijkstra).
-//   algorithmLabel — shown in settle-reason text and status messages.
-//
-// Step sequence: one discover step when a node enters the queue, one settle step on pop.
-// Both settle and discover steps are written to the single steps array (no separate detailedSteps).
+function euclideanDistance(a: GraphNode, b: GraphNode, pixelsPerUnit: number): number {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2) / pixelsPerUnit
+}
+
+// Returns true if every edge's weight is >= the Euclidean distance between its endpoints.
+// This is a sufficient condition for Euclidean heuristic admissibility.
+function checkAdmissibility(nodes: GraphNode[], edges: GraphEdge[], pixelsPerUnit: number): boolean {
+  const nodeById = new Map(nodes.map((n) => [n.id, n]))
+  return edges.every((edge) => {
+    const from = nodeById.get(edge.fromNodeId)
+    const to = nodeById.get(edge.toNodeId)
+    if (!from || !to || edge.weight == null) return true
+    return edge.weight >= euclideanDistance(from, to, pixelsPerUnit)
+  })
+}
+
+// settleMode: 'confirmed' = green settle steps, 'assumed' = yellow-green assumed steps, 'none' = no settle steps.
 export function runPriorityPathfinding(
   nodes: GraphNode[],
   edges: GraphEdge[],
@@ -58,6 +68,8 @@ export function runPriorityPathfinding(
   priorityFn: (g: number, h: number) => number,
   heuristicFn: (node: GraphNode, goal: GraphNode) => number,
   algorithmLabel: string,
+  settleMode: 'confirmed' | 'assumed' | 'none' = 'confirmed',
+  heuristicAdmissible = true,
 ): PriorityPathResult {
   const empty: PriorityPathResult = {
     kind: 'priority',
@@ -67,6 +79,7 @@ export function runPriorityPathfinding(
     goalNodeId,
     pathFound: false,
     pathCost: null,
+    heuristicAdmissible,
   }
 
   if (nodes.length === 0) return empty
@@ -115,22 +128,27 @@ export function runPriorityPathfinding(
     const hCost = heuristicFn(settledNode, goalNode)
 
     const parentId = bestParent.get(nodeId) ?? null
-    const settleReason = `${settledNode.label} confirmed — cost ${gCost} is optimal (cheapest unvisited node) · ${algorithmLabel}`
 
-    steps.push({
-      nodeId,
-      nodeLabel: settledNode.label,
-      order: order++,
-      fromNodeId: parentId,
-      fromNodeLabel: parentId !== null ? (nodeById.get(parentId)?.label ?? null) : null,
-      edgeWeight: null,
-      gCost,
-      hCost,
-      priority: priorityFn(gCost, hCost),
-      eventType: 'settle',
-      queueSizeAfter: queueSizeAfterPop,
-      settleReason,
-    })
+    if (settleMode !== 'none') {
+      const isAssumed = settleMode === 'assumed'
+      const settleReason = isAssumed
+        ? `${settledNode.label} committed — cost ${gCost} assumed as best so far · ${algorithmLabel}`
+        : `${settledNode.label} confirmed — cost ${gCost} is optimal (lowest cost among all unconfirmed nodes) · ${algorithmLabel}`
+      steps.push({
+        nodeId,
+        nodeLabel: settledNode.label,
+        order: order++,
+        fromNodeId: parentId,
+        fromNodeLabel: parentId !== null ? (nodeById.get(parentId)?.label ?? null) : null,
+        edgeWeight: null,
+        gCost,
+        hCost,
+        priority: priorityFn(gCost, hCost),
+        eventType: isAssumed ? 'assumed' : 'settle',
+        queueSizeAfter: queueSizeAfterPop,
+        settleReason,
+      })
+    }
 
     if (nodeId === goalNodeId) break
 
@@ -186,6 +204,7 @@ export function runPriorityPathfinding(
     goalNodeId,
     pathFound: pathNodeIds.length > 0,
     pathCost: settled.has(goalNodeId) ? (bestGCost.get(goalNodeId) ?? null) : null,
+    heuristicAdmissible,
   }
 }
 
@@ -196,13 +215,28 @@ export function runDijkstra(
   startNodeId: string,
   goalNodeId: string,
 ): PriorityPathResult {
-  return runPriorityPathfinding(
-    nodes,
-    edges,
-    startNodeId,
-    goalNodeId,
-    (g) => g,
-    () => 0,
-    'Dijkstra',
-  )
+  return runPriorityPathfinding(nodes, edges, startNodeId, goalNodeId, (g) => g, () => 0, 'Dijkstra')
+}
+
+// Runs A*: priority = g + h (Euclidean). Optimal only when heuristic is admissible.
+export function runAStar(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  startNodeId: string,
+  goalNodeId: string,
+  pixelsPerUnit: number,
+): PriorityPathResult {
+  const heuristicAdmissible = checkAdmissibility(nodes, edges, pixelsPerUnit)
+  return runPriorityPathfinding(nodes, edges, startNodeId, goalNodeId, (g, h) => g + h, (a, b) => euclideanDistance(a, b, pixelsPerUnit), 'A*', heuristicAdmissible ? 'confirmed' : 'assumed', heuristicAdmissible)
+}
+
+// Runs Greedy Best-First: priority = h only. Fast but not optimal — assumed steps replace confirmed ones.
+export function runGreedy(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  startNodeId: string,
+  goalNodeId: string,
+  pixelsPerUnit: number,
+): PriorityPathResult {
+  return runPriorityPathfinding(nodes, edges, startNodeId, goalNodeId, (_g, h) => h, (a, b) => euclideanDistance(a, b, pixelsPerUnit), 'Greedy', 'assumed', false)
 }

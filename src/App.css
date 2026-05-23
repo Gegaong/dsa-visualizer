@@ -13,11 +13,10 @@
 	align-items: center;
 	gap: 12px;
 	padding: 16px 20px;
-	background: rgba(252, 250, 247, 0.9);
+	background: rgb(252, 250, 247);
 	border: 1px solid var(--border);
 	border-radius: 20px;
 	box-shadow: 0 14px 30px rgba(46, 32, 23, 0.08);
-	backdrop-filter: blur(8px);
 	text-align: center;
 }
 
@@ -366,7 +365,7 @@
 	transform: translate(-50%, -50%) rotate(var(--edge-angle, 0deg));
 	padding: 0;
 	box-shadow: none;
-	filter: drop-shadow(0 7px 12px rgba(24, 20, 16, 0.11));
+	box-shadow: 0 7px 12px rgba(24, 20, 16, 0.11);
 }
 
 .edge-toggle:hover {
@@ -1065,8 +1064,14 @@
 	box-shadow: 0 6px 14px rgba(46, 32, 23, 0.1);
 }
 
-.node-wrap.is-wp-settled .node,
-.node-wrap.is-wp-path .node {
+.node-wrap.is-wp-assumed .node {
+	background: rgba(160, 207, 70, 0.22);
+	border-color: #a0cf46;
+	border-width: 2px;
+	box-shadow: 0 6px 14px rgba(46, 32, 23, 0.1);
+}
+
+.node-wrap.is-wp-settled .node {
 	background: rgba(67, 160, 71, 0.24);
 	border-color: #43a047;
 	border-width: 2px;
@@ -1074,9 +1079,23 @@
 }
 
 .node-wrap.is-wp-path .node {
-	transform: scale(1.08);
+	background: rgba(67, 160, 71, 0.24);
+	border-color: #43a047;
 	border-width: 2px;
+	transform: scale(1.08);
 	box-shadow: 0 0 0 5px rgba(67, 160, 71, 0.3), 0 12px 22px rgba(46, 32, 23, 0.2);
+}
+
+/* Color from is-wp-assumed when present; fallback keeps the node visible if assumed is somehow absent */
+.node-wrap.is-wp-path-greedy .node {
+	background: rgba(160, 207, 70, 0.22);
+	border-color: #a0cf46;
+	border-width: 2px;
+	transform: scale(1.08);
+}
+
+.node-wrap.is-wp-assumed.is-wp-path-greedy .node {
+	box-shadow: 0 0 0 5px rgba(160, 207, 70, 0.35), 0 12px 22px rgba(46, 32, 23, 0.2);
 }
 
 .node-wrap.is-wp-current.is-wp-tentative .node,

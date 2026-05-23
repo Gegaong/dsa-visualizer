@@ -38,7 +38,10 @@ export function buildPriorityCompletionStatus(
   const pathLabels = result.pathNodeIds.map((id) => nodeById.get(id)?.label ?? '?').join(' → ')
   const edgeCount = result.pathNodeIds.length - 1
   const costStr = result.pathCost !== null ? ` (cost ${result.pathCost})` : ''
-  return `${label}: Path found${costStr}: ${pathLabels} — ${edgeCount} edge${edgeCount === 1 ? '' : 's'}`
+  const base = `${label}: Path found${costStr}: ${pathLabels} — ${edgeCount} edge${edgeCount === 1 ? '' : 's'}`
+  if (algorithm === 'greedy') return `${base} · this is a guess — not guaranteed to be the shortest path`
+  if (algorithm === 'astar' && !result.heuristicAdmissible) return `${base} · heuristic overestimates — result not guaranteed to be optimal`
+  return base
 }
 
 // Returns the ordered node labels along the priority-algorithm path, falling back to '?' for missing ids.

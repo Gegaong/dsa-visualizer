@@ -120,7 +120,8 @@ export type PriorityPathStep = {
   gCost: number        // actual cost from start
   hCost: number        // heuristic value (0 for Dijkstra)
   priority: number     // value used to order in the queue (g for Dijkstra, g+h for A*, h for Greedy)
-  eventType: 'discover' | 'settle'
+  // 'discover' = queued (yellow). 'settle' = confirmed optimal (green). 'assumed' = committed but unproven (yellow-green).
+  eventType: 'discover' | 'settle' | 'assumed'
   queueSizeAfter: number
   settleReason?: string
 }
@@ -133,4 +134,5 @@ export type PriorityPathResult = {
   goalNodeId: string
   pathFound: boolean
   pathCost: number | null
+  heuristicAdmissible: boolean
 }

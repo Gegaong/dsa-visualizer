@@ -128,6 +128,8 @@ export const WeightedPathfindingPanel = ({
               <option value="bfs">BFS (Breadth-First)</option>
               <option value="dfs">DFS (Depth-First)</option>
               <option value="dijkstra">Dijkstra</option>
+              <option value="astar">A* (Euclidean)</option>
+              <option value="greedy">Greedy Best-First (Euclidean)</option>
             </select>
           </label>
           <div className="algorithm-inputs-section">
