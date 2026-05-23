@@ -137,8 +137,7 @@ export const GraphNodeLayer = ({
       const isBipartiteGroupB = bipartiteGroupBNodeIds.includes(node.id)
       const isBipartiteColored = isBipartiteGroupA || isBipartiteGroupB
       const isBipartiteCurrent = isCurrent && isBipartiteColored
-      // Long values are truncated inside the circle; reveal the full value on hover.
-      const showHoverValue = typeof node.value === 'number' && String(node.value).length > 5
+      const showHoverValue = !isWeightedMode && typeof node.value === 'number'
 
       // Weighted pathfinding visual state
       const wpActive = wpStartNodeId !== null || wpGoalNodeId !== null
@@ -235,7 +234,7 @@ export const GraphNodeLayer = ({
             )}
           </div>
           <span className="node-label">{node.label}</span>
-          {!isWeightedMode && showHoverValue && <span className="node-hover-value">{node.value}</span>}
+          {showHoverValue && <span className="node-hover-value">{node.value}</span>}
         </div>
       )
     })}
