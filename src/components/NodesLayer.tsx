@@ -4,6 +4,8 @@ import type { GraphNode } from '../types'
 
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 
+import { formatCost } from '../utils/format'
+
 // Pick the right text + size class for a node's value.
 // 'empty' renders as a blank circle; numbers shrink (or get truncated to "...") to fit.
 const formatNodeValue = (value: number | 'empty') => {
@@ -166,8 +168,8 @@ export const GraphNodeLayer = ({
       const wpCostLabel =
         wpActive && wpCost !== undefined
           ? (isWpTentative || isWpAssumed) && !(isWpPath && wpPathGuaranteed)
-            ? `${wpCost}?`
-            : String(wpCost)
+            ? `${formatCost(wpCost)}?`
+            : formatCost(wpCost)
           : null
 
       const wpCostLabelSizeClass =

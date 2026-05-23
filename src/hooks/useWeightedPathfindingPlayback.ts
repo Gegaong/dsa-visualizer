@@ -22,6 +22,8 @@ import {
   getDirectedEdgeInfo,
 } from '../algorithms/weightedPathfinding'
 
+import { formatCost } from '../utils/format'
+
 import { runDijkstra, runAStar, runGreedy } from '../algorithms/priorityPathfinding'
 
 import {
@@ -325,14 +327,14 @@ export function useWeightedPathfindingPlayback({
           const f = currentStep.priority.toFixed(1)
           discoverMsg = currentStep.fromNodeId === null
             ? `${currentStep.nodeLabel} queued — start node (g = 0, h = ${h}, f = ${h}) · A*`
-            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${currentStep.edgeWeight}, g = ${currentStep.gCost}, h = ${h}, f = ${f}) · A*`
+            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${formatCost(currentStep.edgeWeight ?? 0)}, g = ${formatCost(currentStep.gCost)}, h = ${h}, f = ${f}) · A*`
         } else {
           discoverMsg = currentStep.fromNodeId === null
             ? `${currentStep.nodeLabel} queued — start node, cost 0 · ${label}`
-            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${currentStep.edgeWeight}, total cost ${currentStep.gCost}) · ${label}`
+            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${formatCost(currentStep.edgeWeight ?? 0)}, total cost ${formatCost(currentStep.gCost)}) · ${label}`
         }
         const statusMsg = currentStep.eventType === 'settle' || currentStep.eventType === 'assumed'
-          ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${currentStep.gCost} · ${label}`)
+          ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${formatCost(currentStep.gCost)} · ${label}`)
           : discoverMsg
 
         setWpSettledNodeIds([...settledSet])

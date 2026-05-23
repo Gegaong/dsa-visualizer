@@ -2,6 +2,8 @@ import type { GraphNode } from '../types'
 
 import type { PriorityPathResult, TraversalStrategy, WeightedAlgorithm, WeightedPathResult } from './algorithmstypes'
 
+import { formatCost } from '../utils/format'
+
 // Builds the completion status line shown after a BFS/DFS weighted pathfinding session ends.
 export function buildWPCompletionStatus(
   result: WeightedPathResult,
@@ -14,7 +16,7 @@ export function buildWPCompletionStatus(
   }
   const pathLabels = formatWPPathNodeLabels(result, nodes).join(' → ')
   const edgeCount = result.pathNodeIds.length - 1
-  const costStr = result.pathCost !== null ? ` (cost ${result.pathCost})` : ''
+  const costStr = result.pathCost !== null ? ` (cost ${formatCost(result.pathCost)})` : ''
   return `Path found${costStr}: ${pathLabels} — ${edgeCount} edge${edgeCount === 1 ? '' : 's'}`
 }
 
@@ -37,7 +39,7 @@ export function buildPriorityCompletionStatus(
   const nodeById = new Map(nodes.map((n) => [n.id, n]))
   const pathLabels = result.pathNodeIds.map((id) => nodeById.get(id)?.label ?? '?').join(' → ')
   const edgeCount = result.pathNodeIds.length - 1
-  const costStr = result.pathCost !== null ? ` (cost ${result.pathCost})` : ''
+  const costStr = result.pathCost !== null ? ` (cost ${formatCost(result.pathCost)})` : ''
   const base = `${label}: Path found${costStr}: ${pathLabels} — ${edgeCount} edge${edgeCount === 1 ? '' : 's'}`
   if (algorithm === 'greedy') return `${base} · this is a guess — not guaranteed to be the shortest path`
   if (algorithm === 'astar' && !result.heuristicAdmissible) return `${base} · heuristic overestimates — result not guaranteed to be optimal`

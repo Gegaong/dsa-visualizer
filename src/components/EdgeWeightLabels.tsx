@@ -73,7 +73,7 @@ export const EdgeWeightLabels = ({
       }
 
       const weightStr = edge.weight !== undefined ? String(edge.weight) : '1'
-      const displayWeight = weightStr.length > 4 ? '…' : weightStr
+      const displayWeight = weightStr.length > 5 ? weightStr.slice(0, 5).replace(/\.$/, '') : weightStr
 
       const isEditing = editingEdgeId === edge.id
 
@@ -85,6 +85,7 @@ export const EdgeWeightLabels = ({
             style={inputStyle}
             value={draftWeight}
             autoFocus
+            inputMode="decimal"
             onChange={(e) => onWeightChange(e.target.value)}
             onKeyDown={(e) => onWeightKeyDown(e, edge.id)}
             onBlur={() => onCommitWeight(edge.id, draftWeight)}

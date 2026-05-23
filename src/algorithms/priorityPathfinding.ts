@@ -6,6 +6,8 @@ import { buildNeighborsMap } from './graphAdjacency'
 
 import { sortIdsByLabel } from './sortIdsByLabel'
 
+import { formatCost } from '../utils/format'
+
 type PQItem = {
   nodeId: string
   gCost: number
@@ -132,8 +134,8 @@ export function runPriorityPathfinding(
     if (settleMode !== 'none') {
       const isAssumed = settleMode === 'assumed'
       const settleReason = isAssumed
-        ? `${settledNode.label} committed — cost ${gCost} assumed as best so far · ${algorithmLabel}`
-        : `${settledNode.label} confirmed — cost ${gCost} is optimal (lowest cost among all unconfirmed nodes) · ${algorithmLabel}`
+        ? `${settledNode.label} committed — cost ${formatCost(gCost)} assumed as best so far · ${algorithmLabel}`
+        : `${settledNode.label} confirmed — cost ${formatCost(gCost)} is optimal (lowest cost among all unconfirmed nodes) · ${algorithmLabel}`
       steps.push({
         nodeId,
         nodeLabel: settledNode.label,

@@ -34,7 +34,9 @@ import type { AlgorithmMode, SidebarPage } from './components/sidebar/sidebarTyp
 
 import {
   sanitizeNumericInput,
+  sanitizeDecimalInput,
   parseNumberInput,
+  parseEdgeWeightInput,
   getRandomIntInclusive,
   reindexNodes,
 } from './utils/format'
@@ -276,12 +278,12 @@ function App() {
 
   // Updates the draft weight string while typing in the inline input.
   const handleEdgeWeightChange = (value: string) => {
-    setDraftEdgeWeight(sanitizeNumericInput(value))
+    setDraftEdgeWeight(sanitizeDecimalInput(value))
   }
 
   // Commits the typed weight to the edge; falls back to 0 if empty.
   const handleCommitEdgeWeight = (edgeId: string, rawValue: string) => {
-    const parsed = parseNumberInput(rawValue)
+    const parsed = parseEdgeWeightInput(rawValue)
     setEdges((prev) =>
       prev.map((e) =>
         e.id === edgeId ? { ...e, weight: parsed !== null ? parsed : 0 } : e,
