@@ -85,6 +85,7 @@ function App() {
   const [editingEdgeWeightId, setEditingEdgeWeightId] = useState<string | null>(null)
   const [draftEdgeWeight, setDraftEdgeWeight] = useState('')
   const [edgeContextMenu, setEdgeContextMenu] = useState<EdgeContextMenuState | null>(null)
+  const [distanceMode, setDistanceMode] = useState(false)
 
   const isWeightedMode = canvasType === 'weighted-graph'
 
@@ -113,15 +114,31 @@ function App() {
     [canvasZoom],
   )
 
-  // Edges used by algorithms: all directions overridden to 'both' in undirected mode.
-  // The real edges state is never mutated so directions survive toggling back to directed.
-  const effectiveEdges = isUndirectedMode
-    ? edges.map((edge) => ({ ...edge, direction: 'both' as const }))
+  const pixelsPerUnit = parseInt(heuristicPixelsPerUnit, 10) || 100
+
+  // Edges used by algorithms and display: directions overridden to 'both' in undirected mode;
+  // weights replaced with Euclidean distances (in coordinate units) when distance mode is on.
+  const undirectedEdges = isUndirectedMode
+    ? edges.map((e) => ({ ...e, direction: 'both' as const }))
     : edges
+
+  // Only WP algorithms and canvas display need distance-computed weights.
+  // Non-WP hooks receive undirectedEdges so they don't re-run effects on every drag frame.
+  const effectiveEdges = distanceMode && isWeightedMode
+    ? (() => {
+        const nodeById = new Map(nodes.map((n) => [n.id, n]))
+        return undirectedEdges.map((edge) => {
+          const from = nodeById.get(edge.fromNodeId)
+          const to = nodeById.get(edge.toNodeId)
+          if (!from || !to) return edge
+          return { ...edge, weight: Math.sqrt((from.x - to.x) ** 2 + (from.y - to.y) ** 2) / pixelsPerUnit }
+        })
+      })()
+    : undirectedEdges
 
   const traversal = useTraversalPlayback({
     nodes,
-    edges: effectiveEdges,
+    edges: undirectedEdges,
     algorithmTab,
     onClearOtherGraphAlgorithms: () => {
       cc.clearConnectedComponentsAlgorithmStateOnly()
@@ -140,7 +157,7 @@ function App() {
 
   const cc = useConnectedComponentsPlayback({
     nodes,
-    edges: effectiveEdges,
+    edges: undirectedEdges,
     isUndirectedMode,
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
@@ -148,7 +165,7 @@ function App() {
 
   const cycleDetection = useCycleDetectionPlayback({
     nodes,
-    edges: effectiveEdges,
+    edges: undirectedEdges,
     isUndirectedMode,
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
@@ -156,14 +173,14 @@ function App() {
 
   const shortestPath = useShortestPathPlayback({
     nodes,
-    edges: effectiveEdges,
+    edges: undirectedEdges,
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
   })
 
   const bipartite = useBipartitePlayback({
     nodes,
-    edges: effectiveEdges,
+    edges: undirectedEdges,
     isUndirectedMode,
     traversalVisualSetters,
     onResetTraversal: () => traversal.resetTraversalVisualization(),
@@ -172,7 +189,7 @@ function App() {
   const weightedPathfinding = useWeightedPathfindingPlayback({
     nodes,
     edges: effectiveEdges,
-    pixelsPerUnit: parseInt(heuristicPixelsPerUnit, 10) || 100,
+    pixelsPerUnit,
   })
 
   // Forwards the sidebar algorithm picker to all canvas-algorithm hooks so their refs stay in sync.
@@ -269,11 +286,19 @@ function App() {
 
   // Opens inline weight editing for an edge, pre-filling the current weight.
   const handleEdgeWeightClick = (edgeId: string) => {
+    if (distanceMode) return
     const edge = edges.find((e) => e.id === edgeId)
     if (!edge) return
     setEditingEdgeWeightId(edgeId)
     setDraftEdgeWeight(edge.weight !== undefined ? String(edge.weight) : '1')
     setEdgeContextMenu(null)
+  }
+
+  const handleDistanceModeChange = (checked: boolean) => {
+    setDistanceMode(checked)
+    setEditingEdgeWeightId(null)
+    setDraftEdgeWeight('')
+    weightedPathfinding.resetWPVisualization()
   }
 
   // Updates the draft weight string while typing in the inline input.
@@ -972,7 +997,7 @@ function App() {
       <div className="workspace">
         <GraphCanvas
           nodes={nodes}
-          edges={edges}
+          edges={effectiveEdges}
           isConnectMode={isConnectMode}
           isDeleteMode={isDeleteMode}
           isDeleteEdgeMode={isDeleteEdgeMode}
@@ -1037,7 +1062,8 @@ function App() {
           isUndirectedMode={isUndirectedMode}
           onUndirectedModeToggle={handleUndirectedModeToggle}
           isWeightedMode={isWeightedMode}
-          heuristicPixelsPerUnit={parseInt(heuristicPixelsPerUnit, 10) || 100}
+          heuristicPixelsPerUnit={pixelsPerUnit}
+          distanceMode={distanceMode}
           editingEdgeWeightId={editingEdgeWeightId}
           draftEdgeWeight={draftEdgeWeight}
           onEdgeWeightClick={handleEdgeWeightClick}
@@ -1097,6 +1123,8 @@ function App() {
             heuristicPixelsPerUnit,
             onHeuristicPixelsPerUnitChange: (e) => setHeuristicPixelsPerUnit(e.target.value.replace(/[^0-9]/g, '')),
             onHeuristicPixelsPerUnitBlur: syncHeuristicPixelsPerUnit,
+            distanceMode,
+            onDistanceModeChange: handleDistanceModeChange,
           }}
           traversal={{
             blockGraphEdits: blockGraphInteraction,
@@ -1271,10 +1299,11 @@ function App() {
 
       <EdgeContextMenu
         contextMenu={edgeContextMenu}
-        edges={edges}
+        edges={effectiveEdges}
         nodes={nodes}
         isUndirectedMode={isUndirectedMode}
         isWeightedMode={isWeightedMode}
+        distanceMode={distanceMode}
         onClose={closeEdgeContextMenu}
         onEditWeight={handleEditWeightFromContextMenu}
         onDelete={handleDeleteEdgeFromContextMenu}

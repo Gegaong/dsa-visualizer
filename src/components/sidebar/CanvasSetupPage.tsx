@@ -21,6 +21,8 @@ export const CanvasSetupPage = ({
   heuristicPixelsPerUnit,
   onHeuristicPixelsPerUnitChange,
   onHeuristicPixelsPerUnitBlur,
+  distanceMode,
+  onDistanceModeChange,
 }: CanvasSetupPageProps) => (
   <div className="sidebar-page-body">
     {isWeightedMode && (
@@ -39,6 +41,19 @@ export const CanvasSetupPage = ({
             />
             <span className="field-unit-suffix">px</span>
           </div>
+        </label>
+        <label className="field-toggle">
+          <input
+            className="toggle-input"
+            type="checkbox"
+            checked={distanceMode}
+            onChange={(e) => onDistanceModeChange(e.target.checked)}
+            disabled={blockGraphEdits}
+          />
+          <span className="toggle-label">Use node distances as weights</span>
+          <span className="toggle-track">
+            <span className="toggle-thumb" />
+          </span>
         </label>
       </div>
     )}
@@ -74,7 +89,7 @@ export const CanvasSetupPage = ({
           className="btn btn-primary"
           type="button"
           onClick={onFillEmptyValues}
-          disabled={!canFillEmpty || blockGraphEdits}
+          disabled={!canFillEmpty || blockGraphEdits || distanceMode}
         >
           {isWeightedMode ? 'Randomize default weights' : 'Fill empty values'}
         </button>
@@ -82,7 +97,7 @@ export const CanvasSetupPage = ({
           className="btn"
           type="button"
           onClick={onEmptyAllValues}
-          disabled={!canEmptyAll || blockGraphEdits}
+          disabled={!canEmptyAll || blockGraphEdits || distanceMode}
         >
           {isWeightedMode ? 'Reset all weights to 1' : 'Empty all values'}
         </button>

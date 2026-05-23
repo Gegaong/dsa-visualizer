@@ -233,8 +233,8 @@ export function useWeightedPathfindingPlayback({
           : null
 
         const statusMsg = detailed && currentStep.eventType === 'settle'
-          ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${currentStep.costToNode}`)
-          : `Visiting ${currentStep.nodeLabel} · current path cost ${currentStep.costToNode} (step ${bound + 1}/${activeSteps.length}) · ${label}`
+          ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${formatCost(currentStep.costToNode)}`)
+          : `Visiting ${currentStep.nodeLabel} · current path cost ${formatCost(currentStep.costToNode)} (step ${bound + 1}/${activeSteps.length}) · ${label}`
 
         setWpSettledNodeIds([...settledSet])
         setWpTentativeNodeIds([...tentativeMap.keys()])
@@ -317,14 +317,14 @@ export function useWeightedPathfindingPlayback({
           : null
 
         const algo = algorithmRef.current
-        const h = currentStep.hCost.toFixed(1)
+        const h = formatCost(currentStep.hCost)
         let discoverMsg: string
         if (algo === 'greedy') {
           discoverMsg = currentStep.fromNodeId === null
             ? `${currentStep.nodeLabel} queued — start node (h = ${h}) · Greedy`
             : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (h = ${h}) · Greedy`
         } else if (algo === 'astar') {
-          const f = currentStep.priority.toFixed(1)
+          const f = formatCost(currentStep.priority)
           discoverMsg = currentStep.fromNodeId === null
             ? `${currentStep.nodeLabel} queued — start node (g = 0, h = ${h}, f = ${h}) · A*`
             : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${formatCost(currentStep.edgeWeight ?? 0)}, g = ${formatCost(currentStep.gCost)}, h = ${h}, f = ${f}) · A*`

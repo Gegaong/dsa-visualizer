@@ -8,6 +8,7 @@ type EdgeContextMenuProps = {
   nodes: GraphNode[]
   isUndirectedMode: boolean
   isWeightedMode: boolean
+  distanceMode?: boolean
   onClose: () => void
   onEditWeight: (edgeId: string) => void
   onDelete: (edgeId: string) => void
@@ -23,6 +24,7 @@ export const EdgeContextMenu = ({
   nodes,
   isUndirectedMode,
   isWeightedMode,
+  distanceMode = false,
   onClose,
   onEditWeight,
   onDelete,
@@ -46,7 +48,11 @@ export const EdgeContextMenu = ({
     connectionLabel = `${toNode.label} → ${fromNode.label}`
   }
 
-  const weightDisplay = edge.weight !== undefined ? edge.weight : 1
+  const rawWeight = edge.weight !== undefined ? edge.weight : 1
+  const rawStr = rawWeight.toString()
+  const dotIndex = rawStr.indexOf('.')
+  const isTruncated = dotIndex !== -1 && rawStr.length - dotIndex - 1 > 4
+  const weightDisplay = parseFloat(rawWeight.toFixed(4)).toString() + (isTruncated ? '...' : '')
 
   return (
     <div
@@ -88,6 +94,7 @@ export const EdgeContextMenu = ({
           <button
             className="context-action"
             type="button"
+            disabled={distanceMode}
             onClick={() => onEditWeight(edge.id)}
           >
             Edit weight

@@ -51,7 +51,7 @@ export const Sidebar = ({
   }, [effectivePage, onSidebarSectionChange])
 
   return (
-    <aside className={`sidebar ${PAGE_CLASS[effectivePage]}`}>
+    <aside className={`sidebar ${PAGE_CLASS[effectivePage]}${isWeightedMode ? ' is-weighted-mode' : ''}`}>
       <div className="sidebar-page-switch">
         <button
           className={`sidebar-page-tab ${effectivePage === 'canvas' ? 'is-active' : ''}`}

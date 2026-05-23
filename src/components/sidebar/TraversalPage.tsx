@@ -156,7 +156,7 @@ export const TraversalPage = ({
           </p>
         )}
         <p className="hint">{traversalStatusText}</p>
-ho      </div>
+      </div>
     </div>
   )
 }

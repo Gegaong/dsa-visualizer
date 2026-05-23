@@ -21,6 +21,7 @@ type EdgeWeightLabelsProps = {
   onWeightKeyDown: (event: React.KeyboardEvent<HTMLInputElement>, edgeId: string) => void
   onCommitWeight: (edgeId: string, rawValue: string) => void
   onEdgeRightClick: (edgeId: string, x: number, y: number) => void
+  distanceMode?: boolean
 }
 
 // Absolutely-positioned weight badges rendered over each edge in weighted graph mode.
@@ -35,6 +36,7 @@ export const EdgeWeightLabels = ({
   onWeightKeyDown,
   onCommitWeight,
   onEdgeRightClick,
+  distanceMode = false,
 }: EdgeWeightLabelsProps) => (
   <>
     {edges.map((edge) => {
@@ -97,9 +99,10 @@ export const EdgeWeightLabels = ({
       return (
         <button
           key={`weight-badge-${edge.id}`}
-          className="edge-weight-badge"
+          className={`edge-weight-badge${distanceMode ? ' is-distance-mode' : ''}`}
           style={badgeStyle}
           type="button"
+          disabled={distanceMode}
           onClick={(e) => {
             e.stopPropagation()
             onWeightClick(edge.id)

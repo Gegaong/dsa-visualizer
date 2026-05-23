@@ -92,6 +92,7 @@ type GraphCanvasProps = {
   onEdgeWeightKeyDown: (event: React.KeyboardEvent<HTMLInputElement>, edgeId: string) => void
   onCommitEdgeWeight: (edgeId: string, rawValue: string) => void
   onEdgeRightClick: (edgeId: string, x: number, y: number) => void
+  distanceMode: boolean
 }
 
 // Canvas panel: header with graph editing actions, zoom controls, and all rendering layers.
@@ -170,6 +171,7 @@ export function GraphCanvas({
   onEdgeWeightKeyDown,
   onCommitEdgeWeight,
   onEdgeRightClick,
+  distanceMode,
 }: GraphCanvasProps) {
   return (
     <section className="canvas-panel">
@@ -356,6 +358,7 @@ export function GraphCanvas({
               onWeightKeyDown={onEdgeWeightKeyDown}
               onCommitWeight={onCommitEdgeWeight}
               onEdgeRightClick={onEdgeRightClick}
+              distanceMode={distanceMode}
             />
           )}
 

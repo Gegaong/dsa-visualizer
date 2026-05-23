@@ -281,13 +281,13 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
       { x: 370, y: 55  },  // 4  col-B row0
       { x: 370, y: 215 },  // 5  col-B row1  ← target of far-top back-edge
       { x: 370, y: 375 },  // 6  col-B row2  ← target of far-bot back-edge
-      { x: 370, y: 535 },  // 7  col-B row3
+      { x: 370, y: 505 },  // 7  col-B row3
       { x: 530, y: 60  },  // 8  col-C top   ← source of far-top forward edge
       { x: 530, y: 295 },  // 9  col-C mid
-      { x: 530, y: 530 },  // 10 col-C bot
+      { x: 530, y: 500 },  // 10 col-C bot
       { x: 680, y: 195 },  // 11 col-D top
       { x: 680, y: 435 },  // 12 col-D bot  ← source of far-bot forward edge
-      { x: 800, y: 50  },  // 13 far-right top  (← col-C top, → col-B row1, right-to-left)
+      { x: 800, y: 100 },  // 13 far-right top  (← col-C top, → col-B row1, right-to-left)
       { x: 800, y: 510 },  // 14 far-right bot  (← col-D bot,  → col-B row2, right-to-left)
     ],
     edges: [

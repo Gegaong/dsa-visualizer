@@ -42,6 +42,8 @@ export type CanvasSetupPageProps = {
   heuristicPixelsPerUnit: string
   onHeuristicPixelsPerUnitChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onHeuristicPixelsPerUnitBlur: () => void
+  distanceMode: boolean
+  onDistanceModeChange: (checked: boolean) => void
 }
 
 export type TraversalPageProps = SidebarSharedState & {
