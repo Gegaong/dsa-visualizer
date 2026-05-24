@@ -1380,7 +1380,7 @@
 	background: var(--panel);
 	border: 1px solid var(--border);
 	border-radius: 10px;
-	padding: 12px 14px;
+	padding: 14px 16px;
 	z-index: 1000;
 	box-shadow: 0 6px 24px rgba(46, 32, 23, 0.18);
 }
@@ -1399,16 +1399,16 @@
 }
 
 .detail-mode-help-popup-title {
-	font-size: 13px;
+	font-size: 14px;
 	font-weight: 700;
 	color: var(--ink);
-	margin: 0 0 8px 0;
+	margin: 0 0 9px 0;
 }
 
 .detail-mode-help-popup p {
-	font-size: 12px;
+	font-size: 13px;
 	color: var(--muted);
-	margin: 0 0 6px 0;
+	margin: 0 0 7px 0;
 	line-height: 1.5;
 }
 
@@ -1418,6 +1418,44 @@
 
 .detail-mode-help-popup strong {
 	color: var(--ink);
+}
+
+.detail-mode-help-popup--below {
+	top: calc(100% + 10px);
+	bottom: auto;
+}
+
+.detail-mode-help-popup--below::before {
+	top: -6px;
+	bottom: auto;
+	border-right: none;
+	border-bottom: none;
+	border-left: 1px solid var(--border);
+	border-top: 1px solid var(--border);
+}
+
+.wp-legend {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0 0 8px 0;
+}
+
+.wp-legend-item {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	font-size: 14px;
+	color: var(--muted);
+	line-height: 1.4;
+}
+
+.wp-legend-dot {
+	flex-shrink: 0;
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	border: 1.5px solid transparent;
 }
 
 .hint {

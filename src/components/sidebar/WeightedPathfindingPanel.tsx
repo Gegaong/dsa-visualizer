@@ -77,6 +77,9 @@ export const WeightedPathfindingPanel = ({
   const [showHelp, setShowHelp] = useState(false)
   const helpBtnRef = useRef<HTMLButtonElement>(null)
   const helpPopupRef = useRef<HTMLDivElement>(null)
+  const [showNodeHelp, setShowNodeHelp] = useState(false)
+  const nodeHelpBtnRef = useRef<HTMLButtonElement>(null)
+  const nodeHelpPopupRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!showHelp) return
@@ -89,6 +92,18 @@ export const WeightedPathfindingPanel = ({
     document.addEventListener('mousedown', handleOutsideClick)
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [showHelp])
+
+  useEffect(() => {
+    if (!showNodeHelp) return
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as Node
+      const inBtn = nodeHelpBtnRef.current?.contains(target) ?? false
+      const inPopup = nodeHelpPopupRef.current?.contains(target) ?? false
+      if (!inBtn && !inPopup) setShowNodeHelp(false)
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [showNodeHelp])
 
   const toggleHelp = () => setShowHelp((v) => !v)
 
@@ -116,7 +131,63 @@ export const WeightedPathfindingPanel = ({
   return (
     <div className="sidebar-page-body sidebar-page-body--pathfinder">
       <div className="sidebar-section algorithm-config-section">
-        <h3>Pathfinder</h3>
+        <div className="detail-mode-row">
+          <h3>Pathfinder</h3>
+          <button
+            ref={nodeHelpBtnRef}
+            type="button"
+            className="detail-mode-help-btn"
+            onClick={() => setShowNodeHelp((v) => !v)}
+            aria-label="Node color legend"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.5 9a2.5 2.5 0 0 1 4.9 0.7c0 1.7-2.4 1.7-2.4 3.3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </button>
+          {showNodeHelp && (
+            <div ref={nodeHelpPopupRef} className="detail-mode-help-popup detail-mode-help-popup--below" role="tooltip">
+              <p className="detail-mode-help-popup-title">Node colors — during a run</p>
+              <div className="wp-legend">
+                <div className="wp-legend-item">
+                  <span className="wp-legend-dot" style={{ background: 'rgba(229,57,53,0.2)', borderColor: '#e53935' }} />
+                  <span>Not yet reached</span>
+                </div>
+                <div className="wp-legend-item">
+                  <span className="wp-legend-dot" style={{ background: 'rgba(253,216,53,0.28)', borderColor: '#fdd835' }} />
+                  <span>In queue — best cost so far (may still decrease)</span>
+                </div>
+                <div className="wp-legend-item">
+                  <span className="wp-legend-dot" style={{ background: 'rgba(160,207,70,0.22)', borderColor: '#a0cf46' }} />
+                  <span>In queue — assumed via heuristic (A* / Greedy)</span>
+                </div>
+                <div className="wp-legend-item">
+                  <span className="wp-legend-dot" style={{ background: 'rgba(67,160,71,0.24)', borderColor: '#43a047' }} />
+                  <span>Settled — cost is final</span>
+                </div>
+                <div className="wp-legend-item">
+                  <span className="wp-legend-dot" style={{ background: 'rgba(67,160,71,0.24)', borderColor: '#43a047', transform: 'scale(1.3)' }} />
+                  <span>On the final path (enlarged on canvas)</span>
+                </div>
+                <div className="wp-legend-item">
+                  <span className="wp-legend-dot" style={{ background: 'rgba(160,207,70,0.22)', borderColor: '#a0cf46', transform: 'scale(1.3)' }} />
+                  <span>Greedy path — not guaranteed optimal</span>
+                </div>
+                <div className="wp-legend-item">
+                  <span className="wp-legend-dot" style={{ background: 'transparent', borderColor: '#2f7d32', borderWidth: 2 }} />
+                  <span>Start node</span>
+                </div>
+                <div className="wp-legend-item">
+                  <span className="wp-legend-dot" style={{ background: 'rgba(42,79,156,0.22)', borderColor: '#2a4f9c' }} />
+                  <span>Goal node</span>
+                </div>
+              </div>
+              <p className="detail-mode-help-popup-title" style={{ marginTop: 10 }}>? in the cost label</p>
+              <p>The cost shown is not yet locked in — a cheaper path to this node may still be found.</p>
+            </div>
+          )}
+        </div>
         <div className="algorithm-config-content">
           <label className="field">
             <span>Method</span>
