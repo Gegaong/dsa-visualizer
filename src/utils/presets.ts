@@ -250,7 +250,7 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
     edges: [
       // source → col-A
       [0, 1, 'forward', 3],
-      [0, 2, 'forward', 2],
+      [0, 2, 'forward', 3],
       // col-A → col-B  (monotone: row0→row0,row1 ; row1→row1,row2)
       [1, 3, 'forward', 5],
       [1, 4, 'forward', 4],
@@ -306,7 +306,7 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
       [4, 8,  'forward', 3],
       [5, 9,  'forward', 2],
       [5, 10, 'forward', 6],
-      [6, 10, 'forward', 2],
+      [6, 10, 'forward', 3],
       [7, 10, 'forward', 4],
       // col-C → col-D
       [8,  11, 'forward', 4],
@@ -314,7 +314,7 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
       [9,  12, 'forward', 5],
       [10, 12, 'forward', 3],
       // forward out to far-right nodes (left-to-right)
-      [8,  13, 'forward', 2],
+      [8,  13, 'forward', 3],
       [12, 14, 'forward', 3],
       // back-edges from far-right to col-B (right-to-left in directed mode)
       [13, 5,  'forward', 8],
@@ -366,7 +366,7 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
       [4,  8,  'forward', 2],
       // col-B → col-C  (monotone same+down)
       [5,  9,  'forward', 5],
-      [5,  10, 'forward', 2],
+      [5,  10, 'forward', 3],
       [6,  10, 'forward', 4],
       [6,  11, 'forward', 3],
       [7,  11, 'forward', 2],
@@ -376,15 +376,15 @@ export const WEIGHTED_GRAPH_PRESETS: GraphPreset[] = [
       [9,  13, 'forward', 2],
       [9,  14, 'forward', 6],
       [10, 14, 'forward', 3],
-      [10, 15, 'forward', 2],
+      [10, 15, 'forward', 3],
       [11, 15, 'forward', 5],
       [12, 15, 'forward', 4],
       // col-D → col-E sinks
       [13, 16, 'forward', 3],
-      [14, 16, 'forward', 2],
+      [14, 16, 'forward', 3],
       [15, 17, 'forward', 4],
       // forward out to col-E hook (left-to-right, diagonal)
-      [14, 18, 'forward', 2],
+      [14, 18, 'forward', 3],
       // back-edge from col-E hook to col-B row1 (right-to-left in directed mode)
       [18, 6,  'forward', 9],
     ],
