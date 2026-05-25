@@ -67,9 +67,10 @@
 	position: relative;
 	flex: 1;
 	overflow: hidden;
+	cursor: crosshair;
 	border-radius: 12px;
 	border: 1px solid var(--border);
-	background: #fffdfb;
+	background: #6BB5CC;
 	min-height: 560px;
 }
 
@@ -102,6 +103,12 @@
 	flex-direction: column;
 	gap: 4px;
 	max-width: 620px;
+}
+
+.canvas-copy-with-zoom {
+	display: flex;
+	align-items: center;
+	gap: 16px;
 }
 
 .canvas-header h2 {
