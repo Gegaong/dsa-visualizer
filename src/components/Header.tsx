@@ -5,7 +5,6 @@ type HeaderProps = {
   onCanvasTypeChange: (type: CanvasType) => void
 }
 
-// Top bar with brand identity and the structure-type tabs.
 export const Header = ({ activeCanvas, onCanvasTypeChange }: HeaderProps) => (
   <header className="topbar">
     <div className="brand">
@@ -27,7 +26,11 @@ export const Header = ({ activeCanvas, onCanvasTypeChange }: HeaderProps) => (
       >
         Weighted Graph
       </button>
-      <button className="btn btn-pill" type="button" disabled>
+      <button
+        className={`btn btn-pill ${activeCanvas === 'grid' ? 'btn-active' : ''}`}
+        type="button"
+        onClick={() => onCanvasTypeChange('grid')}
+      >
         Grid
       </button>
       <button className="btn btn-pill" type="button" disabled>

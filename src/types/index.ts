@@ -28,7 +28,7 @@ export type GraphEdge = {
   weight?: number
 }
 
-export type CanvasType = 'graph' | 'weighted-graph'
+export type CanvasType = 'graph' | 'weighted-graph' | 'grid'
 
 export type EdgeContextMenuState = {
   edgeId: string

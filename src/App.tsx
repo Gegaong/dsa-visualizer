@@ -22,10 +22,15 @@ import {
   CANVAS_ZOOM_MIN,
   CANVAS_ZOOM_MAX,
   CANVAS_ZOOM_STEP,
+  GRID_ROWS_DEFAULT,
+  GRID_ROWS_MIN,
+  GRID_ROWS_MAX,
+  GRID_ZOOM_STEP,
 } from './utils/constants'
 
 import { EdgeContextMenu } from './components/EdgeContextMenu'
 import { GraphCanvas } from './components/GraphCanvas'
+import { GridCanvas } from './components/GridCanvas'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
 import { NodeContextMenu } from './components/NodeContextMenu'
@@ -79,6 +84,7 @@ function App() {
   const [connectionSource, setConnectionSource] = useState<string | null>(null)
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   const [canvasZoom, setCanvasZoom] = useState(1)
+  const [gridRows, setGridRows] = useState(GRID_ROWS_DEFAULT)
   const [isUndirectedMode, setIsUndirectedMode] = useState(false)
   const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
   const [canvasType, setCanvasType] = useState<CanvasType>('graph')
@@ -263,17 +269,30 @@ function App() {
   const handleCanvasTypeChange = (type: CanvasType) => {
     if (type === canvasType) return
 
-    // Save current canvas state
-    const outgoing = canvasType === 'graph' ? savedGraphState : savedWeightedState
-    outgoing.current = { nodes, edges, nextId: nextId.current, isUndirectedMode, canvasZoom }
+    // Save current graph canvas state (grid has no node/edge state to save).
+    if (canvasType === 'graph') {
+      savedGraphState.current = { nodes, edges, nextId: nextId.current, isUndirectedMode, canvasZoom }
+    } else if (canvasType === 'weighted-graph') {
+      savedWeightedState.current = { nodes, edges, nextId: nextId.current, isUndirectedMode, canvasZoom }
+    }
 
-    // Restore incoming canvas state
-    const incoming = type === 'graph' ? savedGraphState : savedWeightedState
-    setNodes(incoming.current.nodes)
-    setEdges(incoming.current.edges)
-    nextId.current = incoming.current.nextId
-    setIsUndirectedMode(incoming.current.isUndirectedMode)
-    setCanvasZoom(type === 'weighted-graph' ? 1 : incoming.current.canvasZoom)
+    // Restore incoming canvas state.
+    if (type === 'graph') {
+      setNodes(savedGraphState.current.nodes)
+      setEdges(savedGraphState.current.edges)
+      nextId.current = savedGraphState.current.nextId
+      setIsUndirectedMode(savedGraphState.current.isUndirectedMode)
+      setCanvasZoom(savedGraphState.current.canvasZoom)
+    } else if (type === 'weighted-graph') {
+      setNodes(savedWeightedState.current.nodes)
+      setEdges(savedWeightedState.current.edges)
+      nextId.current = savedWeightedState.current.nextId
+      setIsUndirectedMode(savedWeightedState.current.isUndirectedMode)
+      setCanvasZoom(1)
+    } else {
+      setNodes([])
+      setEdges([])
+    }
 
     setCanvasType(type)
     setEditingEdgeWeightId(null)
@@ -375,6 +394,9 @@ function App() {
     event.stopPropagation()
     setCanvasZoom((prev) => clampCanvasZoom(prev - CANVAS_ZOOM_STEP))
   }
+
+  const handleGridZoomIn = () => setGridRows((r) => Math.max(GRID_ROWS_MIN, r - GRID_ZOOM_STEP))
+  const handleGridZoomOut = () => setGridRows((r) => Math.min(GRID_ROWS_MAX, r + GRID_ZOOM_STEP))
 
   // Switches BFS/DFS traversal tab and resets traversal playback for the new strategy.
   const handleAlgorithmTabChange = (tab: TraversalStrategy) => {
@@ -1007,7 +1029,16 @@ function App() {
       <Header activeCanvas={canvasType} onCanvasTypeChange={handleCanvasTypeChange} />
 
       <div className="workspace">
-        <GraphCanvas
+        {canvasType === 'grid' && (
+          <GridCanvas
+            rows={gridRows}
+            onZoomIn={handleGridZoomIn}
+            onZoomOut={handleGridZoomOut}
+            canZoomIn={gridRows > GRID_ROWS_MIN}
+            canZoomOut={gridRows < GRID_ROWS_MAX}
+          />
+        )}
+        {canvasType !== 'grid' && <GraphCanvas
           nodes={nodes}
           edges={effectiveEdges}
           isConnectMode={isConnectMode}
@@ -1083,9 +1114,10 @@ function App() {
           onEdgeWeightKeyDown={handleEdgeWeightKeyDown}
           onCommitEdgeWeight={handleCommitEdgeWeight}
           onEdgeRightClick={handleEdgeRightClick}
-        />
+        />}
 
-        <Sidebar
+        {canvasType === 'grid' && <aside className="canvas-panel grid-sidebar-placeholder" />}
+        {canvasType !== 'grid' && <Sidebar
           onSidebarSectionChange={handleSidebarSectionChange}
           isWeightedMode={isWeightedMode}
           pathfinder={{
@@ -1269,7 +1301,7 @@ function App() {
             bipartiteStepTotal: bipartite.bipartiteResult?.steps.length ?? 0,
             bipartiteCurrentExplanation: bipartite.bipartiteCurrentExplanation,
           }}
-        />
+        />}
       </div>
 
       <ConfirmModal

@@ -45,12 +45,36 @@
 	justify-content: center;
 }
 
+.grid-zoom-inline {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 8px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: rgba(255, 253, 251, 0.94);
+}
+
 
 .workspace {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
 	gap: 24px;
 	align-items: start;
+}
+
+.grid-canvas-area {
+	position: relative;
+	flex: 1;
+	overflow: hidden;
+	border-radius: 12px;
+	border: 1px solid var(--border);
+	background: #fffdfb;
+	min-height: 560px;
+}
+
+.grid-sidebar-placeholder {
+	min-height: unset;
 }
 
 .canvas-panel {
