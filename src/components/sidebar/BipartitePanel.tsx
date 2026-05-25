@@ -4,6 +4,10 @@ import type { BipartiteOutput } from '../../hooks/useBipartitePlayback'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+
+import { StepExplanation } from './StepExplanation'
+
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 export type BipartitePanelProps = {
@@ -29,6 +33,7 @@ export type BipartitePanelProps = {
   bipartiteOutput: BipartiteOutput
   bipartiteStepIndex: number
   bipartiteStepTotal: number
+  bipartiteCurrentExplanation: string
   onRunBipartite: (strategy: TraversalStrategy) => void
   onStopBipartite: () => void
   bipartiteStartNodeLabel: string
@@ -66,6 +71,7 @@ export const BipartitePanel = ({
   bipartiteOutput,
   bipartiteStepIndex,
   bipartiteStepTotal,
+  bipartiteCurrentExplanation,
   onRunBipartite,
   onStopBipartite,
   bipartiteStartNodeLabel,
@@ -126,6 +132,7 @@ export const BipartitePanel = ({
               />
             </label>
           </div>
+          <AlgorithmInfoCard infoKey={algorithmTraversal === 'bfs' ? 'bipartite-bfs' : 'bipartite-dfs'} />
         </div>
       </div>
 
@@ -150,6 +157,7 @@ export const BipartitePanel = ({
           onSpeedChange={onBipartitePlaybackSpeedChange}
         />
         <p className="hint">{hint}</p>
+        <StepExplanation text={bipartiteCurrentExplanation} />
       </div>
 
       <div className="sidebar-section">

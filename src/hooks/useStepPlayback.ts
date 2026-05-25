@@ -25,7 +25,7 @@ export function useStepPlayback({
   stepCount,
   minDelay,
   maxDelay,
-  initialSpeed = 55,
+  initialSpeed = 81,
   resetSignal = 0,
   onStepIndexChange,
   onComplete,

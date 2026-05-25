@@ -102,7 +102,7 @@ export const prepareTraversalRunInputs = (
 // Build the final status line after BFS or DFS traversal completes.
 export const buildTraversalCompletionStatus = (result: BfsResult, nodes: GraphNode[]) => {
   if (!result.foundNodeLabel) {
-    return 'Done. Goal not found in reachable nodes.'
+    return 'Goal not found among reachable nodes.'
   }
 
   if (result.goalType === 'max-value' || result.goalType === 'min-value') {
@@ -112,15 +112,19 @@ export const buildTraversalCompletionStatus = (result: BfsResult, nodes: GraphNo
       .map((node) => node.label)
 
     if (result.foundValue === null || nodeLabels.length === 0) {
-      return `Done. ${valueLabel} value search over reachable nodes finished.`
+      return `${valueLabel} value search complete.`
+    }
+
+    if (nodeLabels.length === 1) {
+      return `${valueLabel} value among reachable nodes: ${result.foundValue} at node ${nodeLabels[0]}.`
     }
 
     if (nodeLabels.length <= 4) {
-      return `${valueLabel} value among reachable nodes is ${result.foundValue} at node(s): ${nodeLabels.join(', ')}.`
+      return `${valueLabel} value among reachable nodes: ${result.foundValue}, shared by ${nodeLabels.join(', ')}.`
     }
 
-    return `${valueLabel} value among reachable nodes is ${result.foundValue}, shared by ${nodeLabels.length} nodes.`
+    return `${valueLabel} value among reachable nodes: ${result.foundValue}, shared by ${nodeLabels.length} nodes.`
   }
 
-  return `Done. Goal reached at node ${result.foundNodeLabel}.`
+  return `Goal node ${result.foundNodeLabel} reached.`
 }

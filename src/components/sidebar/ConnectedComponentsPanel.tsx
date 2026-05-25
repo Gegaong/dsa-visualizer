@@ -4,6 +4,10 @@ import type { ConnectedComponentsOutput } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+
+import { StepExplanation } from './StepExplanation'
+
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 export type ConnectedComponentsPanelProps = {
@@ -29,6 +33,7 @@ export type ConnectedComponentsPanelProps = {
   connectedComponentsOutput: ConnectedComponentsOutput
   connectedComponentsStepIndex: number
   connectedComponentsStepTotal: number
+  connectedComponentsCurrentExplanation: string
   onRunConnectedComponents: (strategy: TraversalStrategy) => void
   onStopConnectedComponents: () => void
   ccStartNodeLabel: string
@@ -66,6 +71,7 @@ export const ConnectedComponentsPanel = ({
   connectedComponentsOutput,
   connectedComponentsStepIndex,
   connectedComponentsStepTotal,
+  connectedComponentsCurrentExplanation,
   onRunConnectedComponents,
   onStopConnectedComponents,
   ccStartNodeLabel,
@@ -128,6 +134,7 @@ export const ConnectedComponentsPanel = ({
               />
             </label>
           </div>
+          <AlgorithmInfoCard infoKey={algorithmTraversal === 'bfs' ? 'cc-bfs' : 'cc-dfs'} />
         </div>
       </div>
 
@@ -152,6 +159,7 @@ export const ConnectedComponentsPanel = ({
           onSpeedChange={onConnectedComponentsPlaybackSpeedChange}
         />
         <p className="hint">{hint}</p>
+        <StepExplanation text={connectedComponentsCurrentExplanation} />
       </div>
 
       <div className="sidebar-section">

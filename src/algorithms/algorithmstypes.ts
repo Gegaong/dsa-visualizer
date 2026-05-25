@@ -19,6 +19,8 @@ export type BfsStep = {
   order: number
   fromNodeId: string | null
   runningBest?: number | null
+  // Internal narration shown in the sidebar during playback (what just happened inside the algorithm).
+  explanation?: string
 }
 
 export type BfsResult = {
@@ -92,6 +94,8 @@ export type WeightedPathStep = {
   eventType: 'discover' | 'settle'
   // Human-readable explanation of why this node turned green. Only on settle steps.
   settleReason?: string
+  // Internal narration shown in the sidebar during playback (what just happened inside the algorithm).
+  explanation?: string
 }
 
 export type WeightedPathResult = {
@@ -124,6 +128,8 @@ export type PriorityPathStep = {
   eventType: 'discover' | 'settle' | 'assumed'
   queueSizeAfter: number
   settleReason?: string
+  // Internal narration shown in the sidebar during playback (what just happened inside the algorithm).
+  explanation?: string
 }
 
 export type PriorityPathResult = {

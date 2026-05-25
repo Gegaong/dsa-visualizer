@@ -17,7 +17,7 @@ export function buildWPCompletionStatus(
   const pathLabels = formatWPPathNodeLabels(result, nodes).join(' → ')
   const edgeCount = result.pathNodeIds.length - 1
   const costStr = result.pathCost !== null ? ` (cost ${formatCost(result.pathCost)})` : ''
-  return `Path found${costStr}: ${pathLabels} — ${edgeCount} edge${edgeCount === 1 ? '' : 's'}`
+  return `${label}: Path found${costStr}: ${pathLabels} — ${edgeCount} edge${edgeCount === 1 ? '' : 's'}`
 }
 
 // Returns the ordered node labels along the BFS/DFS path, falling back to '?' for missing ids.

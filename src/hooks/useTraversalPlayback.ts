@@ -70,6 +70,8 @@ export type TraversalPlaybackHandle = {
   traversalStatusText: string
   isTraversalRunning: boolean
   traversalResult: BfsResult | null
+  // Currently-displayed step's internal explanation (empty before/after playback).
+  traversalCurrentExplanation: string
 
   isPlaying: boolean
   playbackSpeed: number
@@ -91,7 +93,6 @@ export type TraversalPlaybackHandle = {
   handleTraversalPlaybackSpeedChange: (value: number) => void
   sidebarTraversalStatusText: string
   canRunTraversal: boolean
-  traversalRunningBest: number | null
 }
 
 export function useTraversalPlayback({
@@ -387,6 +388,18 @@ export function useTraversalPlayback({
     handleTraversalPlaybackSpeedChange,
     sidebarTraversalStatusText,
     canRunTraversal,
-    traversalRunningBest: traversalResult?.steps[traversalPlayback.stepIndex]?.runningBest ?? null,
+    traversalCurrentExplanation: (() => {
+      const stepExplanation = traversalResult?.steps[traversalPlayback.stepIndex]?.explanation ?? ''
+      if (!traversalPlayback.isPlaybackComplete || !traversalResult) return stepExplanation
+
+      const completionMessage = traversalResult.foundNodeId
+        ? ` ✓ Goal reached: ${traversalResult.foundNodeLabel}.`
+        : traversalResult.foundNodeIds.length > 0
+          ? ` ✓ Search complete. Found: ${traversalResult.foundNodeIds.map(id => traversalResult!.steps.find(s => s.nodeId === id)?.nodeLabel ?? id).join(', ')}.`
+          : (traversalResult.goalType === 'max-value' || traversalResult.goalType === 'min-value')
+            ? ` ✓ Search complete. No more nodes to explore.`
+            : ` ✗ Goal not found. Traversal complete.`
+      return stepExplanation + completionMessage
+    })(),
   }
 }

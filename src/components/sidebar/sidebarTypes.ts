@@ -72,7 +72,7 @@ export type TraversalPageProps = SidebarSharedState & {
   canStepBackward: boolean
   canTogglePlay: boolean
   isTraversalPlaybackComplete: boolean
-  traversalRunningBest: number | null
+  traversalCurrentExplanation: string
 }
 
 export type ConnectedComponentsOutput = {
@@ -129,6 +129,7 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   connectedComponentsOutput: ConnectedComponentsOutput
   connectedComponentsStepIndex: number
   connectedComponentsStepTotal: number
+  connectedComponentsCurrentExplanation: string
 
   onRunCycleDetection: (strategy: TraversalStrategy) => void
   onStopCycleDetection: () => void
@@ -150,6 +151,7 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   cycleDetectionOutput: CycleDetectionOutput
   cycleDetectionStepIndex: number
   cycleDetectionStepTotal: number
+  cycleDetectionCurrentExplanation: string
 
   onRunShortestPath: (strategy: TraversalStrategy) => void
   onStopShortestPath: () => void
@@ -173,7 +175,7 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   shortestPathOutput: ShortestPathOutput
   shortestPathStepIndex: number
   shortestPathStepTotal: number
-  shortestPathDfsBestLength: number | null
+  shortestPathCurrentExplanation: string
 
   onRunBipartite: (strategy: TraversalStrategy) => void
   onStopBipartite: () => void
@@ -195,6 +197,7 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   bipartiteOutput: BipartiteOutput
   bipartiteStepIndex: number
   bipartiteStepTotal: number
+  bipartiteCurrentExplanation: string
 }
 
 export type SidebarProps = {

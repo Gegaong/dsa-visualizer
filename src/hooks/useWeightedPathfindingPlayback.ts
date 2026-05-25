@@ -82,6 +82,8 @@ export type WPPlaybackHandle = {
   wpNodesSettled: number
   wpAssumedNodeIds: string[]
   wpPathGuaranteed: boolean
+  // Currently-displayed step's internal explanation (empty before/after playback).
+  wpCurrentExplanation: string
 
   runWPFromSidebar: (algorithm: WeightedAlgorithm) => void
   resetWPVisualization: () => void
@@ -121,6 +123,7 @@ export function useWeightedPathfindingPlayback({
   const [startNodeLabel, setStartNodeLabel] = useState('')
   const [goalNodeLabel, setGoalNodeLabel] = useState('')
   const algorithmRef = useRef<WeightedAlgorithm>('bfs')
+  const [wpAlgorithm, setWpAlgorithm] = useState<WeightedAlgorithm>('bfs')
   const [playbackSession, setPlaybackSession] = useState(0)
   const [isDetailedMode, setIsDetailedMode] = useState(false)
   const isDetailedModeRef = useRef(false)
@@ -446,6 +449,7 @@ export function useWeightedPathfindingPlayback({
       playback.stopPlayback()
       resetWPVisualization()
       algorithmRef.current = algorithm
+      setWpAlgorithm(algorithm)
 
       if (nodes.length === 0) {
         setStatusText('Add nodes to the canvas first.')
@@ -488,7 +492,7 @@ export function useWeightedPathfindingPlayback({
       setWpGoalNodeId(goalNode.id)
       setStatusText(`Pathfinder (${label}) ready. Press Play or step through manually.`)
     },
-    [playback, resetWPVisualization, nodes, edges, startNodeLabel, goalNodeLabel],
+    [playback, resetWPVisualization, nodes, edges, startNodeLabel, goalNodeLabel, pixelsPerUnit],
   )
 
   const handleStartNodeLabelChange = useCallback((value: string) => {
@@ -560,6 +564,24 @@ export function useWeightedPathfindingPlayback({
       }
     : null
 
+  const currentExplanation: string = (() => {
+    if (!result) return ''
+    let explanation: string
+    if (result.kind === 'priority') {
+      explanation = result.steps[playback.stepIndex]?.explanation ?? ''
+    } else {
+      const active = isDetailedMode ? result.detailedSteps : result.steps
+      explanation = active[playback.stepIndex]?.explanation ?? ''
+    }
+
+    if (!playback.isPlaybackComplete) return explanation
+
+    const completionMessage = result.pathFound
+      ? ` ✓ Path found: cost ${result.pathCost}.`
+      : ` ✗ No path exists.`
+    return explanation + completionMessage
+  })()
+
   return {
     isWPRunning: isRunning,
     wpResult: result,
@@ -595,7 +617,7 @@ export function useWeightedPathfindingPlayback({
     wpActiveStepTotal: activeStepCount,
     wpQueueSize,
     wpNodesSettled: wpSettledNodeIds.length,
-    wpPathGuaranteed: result === null || result.kind === 'bfsdfs' || algorithmRef.current === 'dijkstra' || (algorithmRef.current === 'astar' && result.kind === 'priority' && result.heuristicAdmissible),
+    wpPathGuaranteed: result === null || result.kind === 'bfsdfs' || wpAlgorithm === 'dijkstra' || (wpAlgorithm === 'astar' && result.kind === 'priority' && result.heuristicAdmissible),
 
     runWPFromSidebar,
     resetWPVisualization,
@@ -607,5 +629,6 @@ export function useWeightedPathfindingPlayback({
     pauseWP,
     handleWPPlaybackSpeedChange: playback.setPlaybackSpeed,
     toggleDetailedMode,
+    wpCurrentExplanation: currentExplanation,
   }
 }

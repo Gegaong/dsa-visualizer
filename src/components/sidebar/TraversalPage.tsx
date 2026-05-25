@@ -4,6 +4,10 @@ import type { TraversalPageProps } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+
+import { StepExplanation } from './StepExplanation'
+
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 // Sidebar page: BFS/DFS goal-traversal — strategy pills, goal inputs, playback, status line.
@@ -37,7 +41,7 @@ export const TraversalPage = ({
   canStepBackward,
   canTogglePlay,
   isTraversalPlaybackComplete,
-  traversalRunningBest,
+  traversalCurrentExplanation,
 }: TraversalPageProps) => {
   const algoShort = algorithmTab === 'dfs' ? 'DFS' : 'BFS'
 
@@ -64,6 +68,8 @@ export const TraversalPage = ({
           </button>
         </div>
       </div>
+
+      <AlgorithmInfoCard infoKey={algorithmTab === 'bfs' ? 'traversal-bfs' : 'traversal-dfs'} />
 
       <div className="sidebar-section algorithm-inputs-section">
         <h3>Inputs</h3>
@@ -150,12 +156,8 @@ export const TraversalPage = ({
       </div>
 
       <div className="sidebar-traversal-status">
-        {(goalType === 'max-value' || goalType === 'min-value') && isTraversalRunning && !isTraversalPlaybackComplete && traversalRunningBest !== null && (
-          <p className="hint">
-            Current {goalType === 'max-value' ? 'max' : 'min'}: <strong>{traversalRunningBest}</strong>
-          </p>
-        )}
         <p className="hint">{traversalStatusText}</p>
+        <StepExplanation text={traversalCurrentExplanation} />
       </div>
     </div>
   )

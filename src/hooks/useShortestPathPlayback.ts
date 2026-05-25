@@ -54,6 +54,7 @@ export type ShortestPathPlaybackHandle = {
   isShortestPathRunning: boolean
   // Status text ready for display; includes field-missing warnings before any run.
   shortestPathStatusText: string
+  shortestPathCurrentExplanation: string
   startNodeLabel: string
   goalNodeLabel: string
   // Intermediate nodes on the found path (excludes start and goal).
@@ -270,6 +271,17 @@ export function useShortestPathPlayback({
     shortestPathResult: pb.result,
     isShortestPathRunning: pb.isRunning,
     shortestPathStatusText,
+    shortestPathCurrentExplanation: (() => {
+      const stepExplanation = pb.result?.steps[pb.stepIndex]?.explanation ?? ''
+      if (!pb.isPlaybackComplete || !pb.result) return stepExplanation
+      const completionMessage = pb.result.pathFound
+        ? (() => {
+            const pathLength = pb.result!.pathNodeIds.length - 1
+            return ` ✓ Shortest path: ${pathLength} edge${pathLength === 1 ? '' : 's'}.`
+          })()
+        : ` ✗ No path exists from start to goal.`
+      return stepExplanation + completionMessage
+    })(),
     startNodeLabel,
     goalNodeLabel,
     shortestPathNodeIds,

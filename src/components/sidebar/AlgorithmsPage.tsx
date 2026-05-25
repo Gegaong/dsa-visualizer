@@ -42,6 +42,7 @@ export const AlgorithmsPage = ({
   connectedComponentsOutput,
   connectedComponentsStepIndex,
   connectedComponentsStepTotal,
+  connectedComponentsCurrentExplanation,
   onRunCycleDetection,
   onStopCycleDetection,
   canRunCycleDetection,
@@ -62,6 +63,7 @@ export const AlgorithmsPage = ({
   cycleDetectionOutput,
   cycleDetectionStepIndex,
   cycleDetectionStepTotal,
+  cycleDetectionCurrentExplanation,
   onRunShortestPath,
   onStopShortestPath,
   canRunShortestPath,
@@ -84,7 +86,7 @@ export const AlgorithmsPage = ({
   shortestPathOutput,
   shortestPathStepIndex,
   shortestPathStepTotal,
-  shortestPathDfsBestLength,
+  shortestPathCurrentExplanation,
   onRunBipartite,
   onStopBipartite,
   canRunBipartite,
@@ -105,6 +107,7 @@ export const AlgorithmsPage = ({
   bipartiteOutput,
   bipartiteStepIndex,
   bipartiteStepTotal,
+  bipartiteCurrentExplanation,
 }: AlgorithmsPageProps) => {
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>('components')
   const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
@@ -166,6 +169,7 @@ export const AlgorithmsPage = ({
           connectedComponentsOutput={connectedComponentsOutput}
           connectedComponentsStepIndex={connectedComponentsStepIndex}
           connectedComponentsStepTotal={connectedComponentsStepTotal}
+          connectedComponentsCurrentExplanation={connectedComponentsCurrentExplanation}
           onRunConnectedComponents={onRunConnectedComponents}
           onStopConnectedComponents={onStopConnectedComponents}
           ccStartNodeLabel={ccStartNodeLabel}
@@ -194,6 +198,7 @@ export const AlgorithmsPage = ({
           cycleDetectionOutput={cycleDetectionOutput}
           cycleDetectionStepIndex={cycleDetectionStepIndex}
           cycleDetectionStepTotal={cycleDetectionStepTotal}
+          cycleDetectionCurrentExplanation={cycleDetectionCurrentExplanation}
           onRunCycleDetection={onRunCycleDetection}
           onStopCycleDetection={onStopCycleDetection}
           cycleDetectionStartNodeLabel={cycleDetectionStartNodeLabel}
@@ -225,7 +230,7 @@ export const AlgorithmsPage = ({
           shortestPathOutput={shortestPathOutput}
           shortestPathStepIndex={shortestPathStepIndex}
           shortestPathStepTotal={shortestPathStepTotal}
-          shortestPathDfsBestLength={shortestPathDfsBestLength}
+          shortestPathCurrentExplanation={shortestPathCurrentExplanation}
           onRunShortestPath={onRunShortestPath}
           onStopShortestPath={onStopShortestPath}
         />
@@ -252,6 +257,7 @@ export const AlgorithmsPage = ({
           bipartiteOutput={bipartiteOutput}
           bipartiteStepIndex={bipartiteStepIndex}
           bipartiteStepTotal={bipartiteStepTotal}
+          bipartiteCurrentExplanation={bipartiteCurrentExplanation}
           onRunBipartite={onRunBipartite}
           onStopBipartite={onStopBipartite}
           bipartiteStartNodeLabel={bipartiteStartNodeLabel}

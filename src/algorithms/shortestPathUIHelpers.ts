@@ -17,8 +17,9 @@ export function buildShortestPathCompletionStatus(
   if (!result.pathFound) {
     return `No path from ${startLabel} to ${goalLabel}.`
   }
+  const pathLabels = result.pathNodeIds.map((id) => nodeLabel(nodes, id)).join(' → ')
   const edgeCount = result.pathNodeIds.length - 1
-  return `Path found — ${edgeCount} edge${edgeCount === 1 ? '' : 's'} from ${startLabel} to ${goalLabel}.`
+  return `Path found: ${pathLabels} — ${edgeCount} edge${edgeCount === 1 ? '' : 's'}.`
 }
 
 // Returns the ordered sequence of node labels along the shortest path.

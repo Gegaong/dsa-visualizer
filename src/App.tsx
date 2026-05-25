@@ -1116,6 +1116,7 @@ function App() {
             onStopWP: weightedPathfinding.resetWPVisualization,
             wpQueueSize: weightedPathfinding.wpQueueSize,
             wpNodesSettled: weightedPathfinding.wpNodesSettled,
+            wpCurrentExplanation: weightedPathfinding.wpCurrentExplanation,
           }}
           canvasSetup={{
             blockGraphEdits: blockGraphInteraction,
@@ -1170,7 +1171,7 @@ function App() {
             canStepBackward: traversal.canStepBackward,
             canTogglePlay: traversal.canTogglePlay,
             isTraversalPlaybackComplete: traversal.isPlaybackComplete,
-            traversalRunningBest: traversal.traversalRunningBest,
+            traversalCurrentExplanation: traversal.traversalCurrentExplanation,
           }}
           algorithms={{
             blockGraphEdits: blockGraphInteraction,
@@ -1201,6 +1202,7 @@ function App() {
             connectedComponentsOutput: cc.ccOutput,
             connectedComponentsStepIndex: cc.stepIndex,
             connectedComponentsStepTotal: cc.connectedComponentsResult?.steps.length ?? 0,
+            connectedComponentsCurrentExplanation: cc.connectedComponentsCurrentExplanation,
             onRunCycleDetection: handleRunCycleDetectionFromSidebar,
             onStopCycleDetection: cycleDetection.resetCycleDetectionVisualization,
             canRunCycleDetection: cycleDetection.canRunCycleDetection,
@@ -1221,6 +1223,7 @@ function App() {
             cycleDetectionOutput: cycleDetection.cycleOutput,
             cycleDetectionStepIndex: cycleDetection.stepIndex,
             cycleDetectionStepTotal: cycleDetection.cycleDetectionResult?.steps.length ?? 0,
+            cycleDetectionCurrentExplanation: cycleDetection.cycleDetectionCurrentExplanation,
             onRunShortestPath: handleRunShortestPathFromSidebar,
             onStopShortestPath: shortestPath.resetShortestPathVisualization,
             canRunShortestPath: shortestPath.canRunShortestPath,
@@ -1239,7 +1242,7 @@ function App() {
             shortestPathOutput: shortestPath.shortestPathOutput,
             shortestPathStepIndex: shortestPath.stepIndex,
             shortestPathStepTotal: shortestPath.shortestPathResult?.steps.length ?? 0,
-            shortestPathDfsBestLength: shortestPath.dfsBestPathLength,
+            shortestPathCurrentExplanation: shortestPath.shortestPathCurrentExplanation,
             shortestPathStartNodeLabel: shortestPath.startNodeLabel,
             shortestPathGoalNodeLabel: shortestPath.goalNodeLabel,
             onShortestPathStartNodeLabelChange: shortestPath.handleStartNodeLabelChange,
@@ -1264,6 +1267,7 @@ function App() {
             bipartiteOutput: bipartite.bipartiteOutput,
             bipartiteStepIndex: bipartite.stepIndex,
             bipartiteStepTotal: bipartite.bipartiteResult?.steps.length ?? 0,
+            bipartiteCurrentExplanation: bipartite.bipartiteCurrentExplanation,
           }}
         />
       </div>

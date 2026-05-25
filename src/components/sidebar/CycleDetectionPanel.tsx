@@ -4,6 +4,10 @@ import type { CycleDetectionOutput } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+
+import { StepExplanation } from './StepExplanation'
+
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 export type CycleDetectionPanelProps = {
@@ -29,6 +33,7 @@ export type CycleDetectionPanelProps = {
   cycleDetectionOutput: CycleDetectionOutput
   cycleDetectionStepIndex: number
   cycleDetectionStepTotal: number
+  cycleDetectionCurrentExplanation: string
   onRunCycleDetection: (strategy: TraversalStrategy) => void
   onStopCycleDetection: () => void
   cycleDetectionStartNodeLabel: string
@@ -66,6 +71,7 @@ export const CycleDetectionPanel = ({
   cycleDetectionOutput,
   cycleDetectionStepIndex,
   cycleDetectionStepTotal,
+  cycleDetectionCurrentExplanation,
   onRunCycleDetection,
   onStopCycleDetection,
   cycleDetectionStartNodeLabel,
@@ -134,6 +140,7 @@ export const CycleDetectionPanel = ({
               />
             </label>
           </div>
+          <AlgorithmInfoCard infoKey={algorithmTraversal === 'bfs' ? 'cycle-bfs' : 'cycle-dfs'} />
         </div>
       </div>
 
@@ -158,6 +165,7 @@ export const CycleDetectionPanel = ({
           onSpeedChange={onCycleDetectionPlaybackSpeedChange}
         />
         <p className="hint">{hint}</p>
+        <StepExplanation text={cycleDetectionCurrentExplanation} />
       </div>
 
       <div className="sidebar-section">

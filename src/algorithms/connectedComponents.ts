@@ -40,17 +40,43 @@ export function runConnectedComponents(
   const components: string[][] = []
   const steps: ConnectedComponentsStep[] = []
   let order = 1
+  let componentIndex = 0
 
   // Appends one CC step (with component root) and bumps global step order.
   const emitVisit = (nodeId: string, componentRootId: string, fromNodeId: string | null) => {
     const node = nodeById.get(nodeId)
     if (!node) return
+    const sortedNeighbors = sortIdsByLabel(neighborsById.get(nodeId) ?? [], nodeById)
+    const unseenLabels = sortedNeighbors
+      .filter((id) => !globalVisited.has(id) || id === nodeId)
+      .filter((id) => id !== nodeId)
+      .map((id) => nodeById.get(id)?.label)
+      .filter((label): label is string => !!label)
+
+    let explanation: string
+    if (fromNodeId === null) {
+      const neighborPart = unseenLabels.length === 0
+        ? 'No neighbors to explore — this is an isolated node (its own component).'
+        : `${strategy === 'bfs' ? 'Enqueuing' : 'Pushing'} ${unseenLabels.join(', ')} to explore within this component.`
+      explanation = `No visited node could reach here — this begins component #${componentIndex + 1}. All nodes reachable from it will be labeled the same component. ${neighborPart}`
+    } else {
+      const neighborPart = unseenLabels.length === 0
+        ? `${strategy === 'bfs' ? 'Queue' : 'Stack'} is empty for this branch — moving to the next node.`
+        : strategy === 'bfs'
+          ? `Enqueuing unseen neighbors ${unseenLabels.join(', ')} — they belong to the same component.`
+          : `Pushing ${unseenLabels.join(', ')} — depth-first, these are explored before the ones already waiting.`
+      explanation = strategy === 'bfs'
+        ? `Queue dequeued ${node.label} — discovered earlier, now being processed. ${neighborPart}`
+        : `Stack popped ${node.label} — most recently pushed, so explored first. ${neighborPart}`
+    }
+
     steps.push({
       nodeId: node.id,
       nodeLabel: node.label,
       order,
       componentRootNodeId: componentRootId,
       fromNodeId,
+      explanation,
     })
     order += 1
   }
@@ -75,6 +101,7 @@ export function runConnectedComponents(
     })
 
     components.push(componentNodes)
+    componentIndex += 1
   }
 
   for (const id of sortedRoots) {

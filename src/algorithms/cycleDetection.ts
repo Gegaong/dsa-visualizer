@@ -47,10 +47,12 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
   const steps: CycleDetectionStep[] = []
   let order = 1
 
-  const emitVisit = (nodeId: string, fromNodeId: string | null) => {
+  const labelOf = (id: string) => nodeById.get(id)?.label ?? '?'
+
+  const emitVisit = (nodeId: string, fromNodeId: string | null, explanation: string) => {
     const node = nodeById.get(nodeId)
     if (!node) return
-    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId })
+    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId, explanation })
     order += 1
   }
 
@@ -79,14 +81,26 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
       globalVisited.add(id)
       inStack.add(id)
       pathStack.push(id)
-      emitVisit(id, frame.parentId)
-      frames.push({ id, phase: 'exit', parentId: null })
 
       const neighbors = outNeighborsById.get(id) ?? []
       const backEdgeTarget = neighbors.find((neighborId) => inStack.has(neighborId))
       if (backEdgeTarget !== undefined) {
+        emitVisit(id, frame.parentId, `Back edge detected: ${labelOf(id)} → ${labelOf(backEdgeTarget)} leads to a node still on the active DFS path (inStack). In a DFS tree, a back edge always means a directed cycle — the cycle is the portion of the stack from ${labelOf(backEdgeTarget)} down to here.`)
         return { steps, cycleNodeIds: pathStack.slice(pathStack.indexOf(backEdgeTarget)) }
       }
+
+      const unseenLabels = neighbors
+        .filter((nid) => !globalVisited.has(nid))
+        .map(labelOf)
+      const neighborSentence = unseenLabels.length === 0
+        ? `No unvisited out-neighbors here — this branch ends, moving to the next node.`
+        : `Pushing ${unseenLabels.join(', ')} — each will be checked for back edges when entered.`
+      const inStackNote = frame.parentId === null
+        ? `The 'inStack' set now tracks the active path. Any edge pointing back into it is a cycle witness.`
+        : `Added to inStack. Any out-edge from here to an inStack node is a back edge → cycle.`
+      emitVisit(id, frame.parentId, `${inStackNote} ${neighborSentence}`)
+      frames.push({ id, phase: 'exit', parentId: null })
+
       // Push unvisited neighbors in reverse so the smallest-label one is entered first.
       for (let i = neighbors.length - 1; i >= 0; i -= 1) {
         const neighborId = neighbors[i]
@@ -94,6 +108,14 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
           frames.push({ id: neighborId, phase: 'enter', parentId: id })
         }
       }
+    }
+  }
+
+  // Update final step's explanation if algorithm terminated without finding a cycle
+  if (steps.length > 0) {
+    const lastStep = steps[steps.length - 1]
+    if (lastStep.explanation && lastStep.explanation.includes('Pushing')) {
+      lastStep.explanation = `Popped ${lastStep.nodeLabel}. Stack is empty — no cycle found.`
     }
   }
 
@@ -139,12 +161,14 @@ function extractCycleFromLeftovers(
   return [reversedCycle[0], ...reversedCycle.slice(1).reverse()]
 }
 
-// BFS approach: Kahn's algorithm (repeatedly remove in-degree-0 nodes; FIFO queue, label-tie-broken).
+// BFS approach: Kahn's algorithm (repeatedly remove in-degree-0 nodes; queue, label-tie-broken).
 // Visit steps are the removal order; any node that never gets removed sits behind a cycle.
 // When a cycle exists, one cycle is reconstructed from the leftovers and its nodes are appended
 // as the final visit steps — that is all we report, so the walk stops there.
 function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
   const { nodeById, outNeighborsById, sortedNodeIds } = lookups
+
+  const labelOf = (id: string) => nodeById.get(id)?.label ?? '?'
 
   const inDegree = new Map<string, number>()
   sortedNodeIds.forEach((id) => inDegree.set(id, 0))
@@ -160,10 +184,10 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
   const steps: CycleDetectionStep[] = []
   let order = 1
 
-  const emitVisit = (nodeId: string, fromNodeId: string | null) => {
+  const emitVisit = (nodeId: string, fromNodeId: string | null, explanation: string) => {
     const node = nodeById.get(nodeId)
     if (!node) return
-    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId })
+    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId, explanation })
     order += 1
   }
 
@@ -171,7 +195,7 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
     const id = queue.shift()
     if (id === undefined) continue
     removed.add(id)
-    emitVisit(id, parentById.get(id) ?? null)
+    const droppedTo0: string[] = []
     for (const neighborId of outNeighborsById.get(id) ?? []) {
       const next = (inDegree.get(neighborId) ?? 0) - 1
       inDegree.set(neighborId, next)
@@ -180,8 +204,16 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
           parentById.set(neighborId, id)
         }
         queue.push(neighborId)
+        droppedTo0.push(labelOf(neighborId))
       }
     }
+    const decrementNote = (outNeighborsById.get(id)?.length ?? 0) === 0
+      ? `No out-edges, nothing to decrement.`
+      : `Removing it eliminates its contribution to out-neighbors' in-degrees.`
+    const enqueueNote = droppedTo0.length === 0
+      ? `No neighbor reached in-degree 0.`
+      : `Releasing ${droppedTo0.join(', ')} — their in-degree just hit 0, safe to remove next.`
+    emitVisit(id, parentById.get(id) ?? null, `Kahn's invariant: only in-degree-0 nodes are safe to remove — they have no dependencies and cannot be part of a cycle. ${decrementNote} ${enqueueNote} Any node that never reaches in-degree 0 is behind a cycle.`)
   }
 
   if (removed.size === sortedNodeIds.length) {
@@ -193,7 +225,10 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
   if (cycleNodeIds.length > 0) {
     cycleNodeIds.forEach((id, index) => {
       const parentIndex = (index - 1 + cycleNodeIds.length) % cycleNodeIds.length
-      emitVisit(id, cycleNodeIds[parentIndex])
+      const reconstructionNote = index === 0
+        ? `Every remaining node had in-degree > 0 — each depends on another remaining node, forming a loop. Walking predecessor edges backward to find where the cycle closes.`
+        : `Tracing the cycle: this edge exists in the original graph. The cycle closes when the walk revisits a node already seen.`
+      emitVisit(id, cycleNodeIds[parentIndex], reconstructionNote)
     })
   }
   return { steps, cycleNodeIds }

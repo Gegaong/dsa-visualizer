@@ -85,7 +85,7 @@ type PathItem = {
 }
 
 // Both BFS and DFS explore every acyclic path using a frontier of (path, cost) pairs.
-// BFS uses a FIFO queue; DFS uses a LIFO stack.
+// BFS uses a queue; DFS uses a stack.
 //
 // Two step sequences are produced:
 //   steps        — discover steps only; settlement inferred via minPendingCostAfter.
@@ -114,6 +114,8 @@ export function runWeightedPathfinding(
   const startNode = nodeById.get(startNodeId)
   if (!startNode) return empty
 
+  const containerWord = strategy === 'bfs' ? 'queue' : 'stack'
+
   const steps: WeightedPathStep[] = []
   const detailedSteps: WeightedPathStep[] = []
   let order = 1
@@ -133,6 +135,9 @@ export function runWeightedPathfinding(
     costToNode: 0,
     minPendingCostAfter: Infinity,
     eventType: 'discover',
+    explanation: strategy === 'bfs'
+      ? `Cost 0 by definition. BFS uses a queue — neighbors are explored in the order they are discovered, not by cost. Every acyclic path is eventually tried, so the cheapest one to the goal will be found, but not necessarily first.`
+      : `Cost 0 by definition. DFS uses a stack — the most-recently-pushed path is explored next, diving deep before backtracking. May reach the goal quickly, but explores every acyclic path to guarantee the cheapest.`,
   }
   steps.push(startDiscover)
   detailedSteps.push({ ...startDiscover, order: detailedOrder++ })
@@ -163,6 +168,7 @@ export function runWeightedPathfinding(
       nodeLabel: string
       fromNodeId: string
       costToNode: number
+      prevCost: number | undefined
     }
     const pendingDiscovers: PendingDiscover[] = []
 
@@ -174,7 +180,8 @@ export function runWeightedPathfinding(
 
       if (newCost >= bestGoalCost) continue
 
-      if (newCost < (bestKnownCost.get(neighborId) ?? Infinity)) {
+      const prevCost = bestKnownCost.get(neighborId)
+      if (newCost < (prevCost ?? Infinity)) {
         bestKnownCost.set(neighborId, newCost)
         bestParent.set(neighborId, nodeId)
 
@@ -185,6 +192,7 @@ export function runWeightedPathfinding(
             nodeLabel: neighborNode.label,
             fromNodeId: nodeId,
             costToNode: newCost,
+            prevCost,
           })
         }
 
@@ -204,11 +212,19 @@ export function runWeightedPathfinding(
 
     // Emit discover steps for this iteration's neighbors.
     for (const d of pendingDiscovers) {
+      const improvementNote = d.prevCost === undefined
+        ? `First path to this node — no prior entry in the ${containerWord}.`
+        : `Improves on previous best: ${d.costToNode} < ${d.prevCost} — old entry remains in the ${containerWord} but will be skipped when popped (lazy deletion).`
+      const queueNote = strategy === 'bfs'
+        ? `Added to the back of the queue — explored only after all currently-waiting paths.`
+        : `Pushed to the top of the stack — this path will be explored next.`
+      const explanation = `${improvementNote} ${queueNote} ${containerWord} now holds ${frontier.length} item${frontier.length !== 1 ? 's' : ''}.`
       const discoverStep: WeightedPathStep = {
         ...d,
         order: order++,
         minPendingCostAfter: minPendingCost,
         eventType: 'discover',
+        explanation,
       }
       steps.push(discoverStep)
       detailedSteps.push({ ...discoverStep, order: detailedOrder++ })
@@ -225,6 +241,10 @@ export function runWeightedPathfinding(
           ? `${n.label} confirmed at cost ${knownCost} — queue is empty, no more paths to explore`
           : `${n.label} confirmed at cost ${knownCost} — cheapest queued path costs ${minPendingCost}, so ${n.label} cannot be reached for less`
 
+        const settleExplanation = minPendingCost === Infinity
+          ? `${containerWord} is exhausted — no alternative paths remain. The best known cost is now final; no cheaper route can arrive.`
+          : `Confirmation rule: any path that could still arrive here must first traverse something in the ${containerWord}, costing at least ${minPendingCost} before even reaching this node. Since best known cost ≤ ${minPendingCost}, no remaining path can undercut it.`
+
         detailedSteps.push({
           nodeId: id,
           nodeLabel: n.label,
@@ -234,8 +254,18 @@ export function runWeightedPathfinding(
           minPendingCostAfter: minPendingCost,
           eventType: 'settle',
           settleReason: reason,
+          explanation: settleExplanation,
         })
       }
+    }
+  }
+
+  // Update final step's explanation if algorithm terminated without finding goal
+  if (steps.length > 0 && bestGoalPath.length === 0) {
+    const lastStep = steps[steps.length - 1]
+    if (lastStep.explanation && (lastStep.explanation.includes('Added to') || lastStep.explanation.includes('Pushed to'))) {
+      const action = strategy === 'bfs' ? 'Dequeued' : 'Popped'
+      lastStep.explanation = `${action} ${lastStep.nodeLabel}. Queue is empty — search complete.`
     }
   }
 

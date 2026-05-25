@@ -40,6 +40,7 @@ export type BipartitePlaybackHandle = {
   bipartiteResult: BipartiteResult | null
   isBipartiteRunning: boolean
   bipartiteStatusText: string
+  bipartiteCurrentExplanation: string
   bipartiteGroupANodeIds: string[]
   bipartiteGroupBNodeIds: string[]
   bipartiteStartNodeLabel: string
@@ -215,6 +216,14 @@ export function useBipartitePlayback({
     bipartiteResult: pb.result,
     isBipartiteRunning: pb.isRunning,
     bipartiteStatusText: statusText,
+    bipartiteCurrentExplanation: (() => {
+      const stepExplanation = pb.result?.steps[pb.stepIndex]?.explanation ?? ''
+      if (!pb.isPlaybackComplete || !pb.result) return stepExplanation
+      const completionMessage = pb.result.isBipartite
+        ? ` ✓ Graph is bipartite.`
+        : ` ✗ Graph is not bipartite. Odd cycle detected.`
+      return stepExplanation + completionMessage
+    })(),
     bipartiteGroupANodeIds,
     bipartiteGroupBNodeIds,
     bipartiteStartNodeLabel: startNodeLabel,

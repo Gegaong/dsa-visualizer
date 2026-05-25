@@ -67,6 +67,41 @@ export function runDirectedGoalTraversal(
   let extremeValue: number | null = null
   let extremeNodes: GraphNode[] = []
 
+  const strategyLabel = strategy === 'bfs' ? 'BFS' : 'DFS'
+  const popWord = strategy === 'bfs' ? 'Dequeued' : 'Popped'
+
+  const buildExplanation = (currentNode: GraphNode, parentId: string | null): string => {
+    const sortedNeighbors = sortIdsByLabel(neighborsById.get(currentNode.id) ?? [], nodeById)
+    const unseen = sortedNeighbors.filter((id) => !visited.has(id))
+    const unseenLabels = unseen
+      .map((id) => nodeById.get(id)?.label)
+      .filter((label): label is string => !!label)
+
+    let goalCheck = ''
+    if (input.goal.type === 'target-node' && matchesGoal(currentNode, input.goal)) {
+      goalCheck = ` Target node matched — traversal stops immediately.`
+    } else if (input.goal.type === 'target-value' && matchesGoal(currentNode, input.goal)) {
+      goalCheck = ` Value matches the target — traversal stops immediately.`
+    }
+
+    let neighborSentence: string
+    if (unseenLabels.length === 0) {
+      neighborSentence = strategy === 'bfs'
+        ? `No unseen neighbors — all outgoing edges already visited. Returning to the queue (traversal ends if no more nodes).`
+        : `No unseen neighbors — continuing with the next node from the stack.`
+    } else if (strategy === 'bfs') {
+      neighborSentence = `Enqueuing ${unseenLabels.join(', ')} at the back of the queue — processed only after all already-waiting nodes, preserving level-by-level order.`
+    } else {
+      neighborSentence = `Pushing ${unseenLabels.join(', ')} on top of the stack — they are explored before any waiting siblings, driving the search deeper first.`
+    }
+
+    const arrivalNote = parentId === null
+      ? `${strategyLabel} starts here — this is the seed node.${goalCheck} ${neighborSentence}`
+      : `${popWord} ${currentNode.label}.${goalCheck} ${neighborSentence}`
+
+    return arrivalNote
+  }
+
   traverseReachableFrom({
     neighborsById,
     startId: startNode.id,
@@ -78,23 +113,36 @@ export function runDirectedGoalTraversal(
       if (!currentNode) return
 
       if (input.goal.type === 'max-value' || input.goal.type === 'min-value') {
+        let valueChangeNote = ''
         if (typeof currentNode.value === 'number') {
+          const prevValue = extremeValue
           if (extremeValue === null) {
             extremeValue = currentNode.value
             extremeNodes = [currentNode]
           } else if (input.goal.type === 'max-value' && currentNode.value > extremeValue) {
             extremeValue = currentNode.value
             extremeNodes = [currentNode]
+            valueChangeNote = ` Max improved: ${currentNode.value} > ${prevValue}.`
           } else if (input.goal.type === 'min-value' && currentNode.value < extremeValue) {
             extremeValue = currentNode.value
             extremeNodes = [currentNode]
+            valueChangeNote = ` Min improved: ${currentNode.value} < ${prevValue}.`
           } else if (currentNode.value === extremeValue) {
             extremeNodes.push(currentNode)
+            valueChangeNote = input.goal.type === 'max-value'
+              ? ` Ties current max: ${currentNode.value} = ${extremeValue}.`
+              : ` Ties current min: ${currentNode.value} = ${extremeValue}.`
+          } else {
+            valueChangeNote = input.goal.type === 'max-value'
+              ? ` Below current max: ${currentNode.value} < ${extremeValue}.`
+              : ` Above current min: ${currentNode.value} > ${extremeValue}.`
           }
         }
-        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, runningBest: extremeValue })
+        const explanation = buildExplanation(currentNode, parentId) + valueChangeNote
+        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, runningBest: extremeValue, explanation })
       } else {
-        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId })
+        const explanation = buildExplanation(currentNode, parentId)
+        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, explanation })
         if (matchesGoal(currentNode, input.goal)) {
           foundNode = currentNode
           order += 1
@@ -127,6 +175,24 @@ export function runDirectedGoalTraversal(
     foundValue = extremeValue
   } else if (finalNode) {
     foundNodeIds = [finalNode.id]
+  }
+
+  // Update final step's explanation if algorithm terminated (no goal found, queue is now empty)
+  if (steps.length > 0 && !foundNode) {
+    const lastStep = steps[steps.length - 1]
+    if (lastStep.explanation && (lastStep.explanation.includes('Enqueuing') || lastStep.explanation.includes('Pushing'))) {
+      const action = strategy === 'bfs' ? 'Dequeued' : 'Popped'
+      lastStep.explanation = `${action} ${lastStep.nodeLabel}. Queue is empty — traversal complete.`
+    }
+  }
+
+  // If goal was found, remove the neighbor-pushing sentence from the final step since traversal stops immediately
+  if (steps.length > 0 && foundNode) {
+    const lastStep = steps[steps.length - 1]
+    if (lastStep.explanation && (lastStep.explanation.includes('Pushing') || lastStep.explanation.includes('Enqueuing'))) {
+      const action = strategy === 'bfs' ? 'Dequeued' : 'Popped'
+      lastStep.explanation = `${action} ${lastStep.nodeLabel}. Goal matched — traversal stops.`
+    }
   }
 
   return {

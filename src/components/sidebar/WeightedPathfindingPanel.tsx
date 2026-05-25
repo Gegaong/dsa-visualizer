@@ -2,11 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { WeightedAlgorithm } from '../../algorithms/algorithmstypes'
 
+import type { AlgorithmInfoKey } from '../../algorithms/algorithmInfo'
+
 import type { WPOutput } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+
+import { StepExplanation } from './StepExplanation'
+
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+
+const WP_INFO_KEY: Record<WeightedAlgorithm, AlgorithmInfoKey> = {
+  bfs: 'wp-bfs',
+  dfs: 'wp-dfs',
+  dijkstra: 'wp-dijkstra',
+  astar: 'wp-astar',
+  greedy: 'wp-greedy',
+}
 
 export type WeightedPathfindingPanelProps = {
   isWPSessionActive: boolean
@@ -36,6 +50,7 @@ export type WeightedPathfindingPanelProps = {
   onStopWP: () => void
   wpQueueSize: number | null
   wpNodesSettled: number
+  wpCurrentExplanation: string
 }
 
 function formatStepDisplay(sessionActive: boolean, stepIndex: number, stepTotal: number): string {
@@ -72,6 +87,7 @@ export const WeightedPathfindingPanel = ({
   onStopWP,
   wpQueueSize,
   wpNodesSettled,
+  wpCurrentExplanation,
 }: WeightedPathfindingPanelProps) => {
   const [algorithm, setAlgorithm] = useState<WeightedAlgorithm>('bfs')
   const [showHelp, setShowHelp] = useState(false)
@@ -229,6 +245,7 @@ export const WeightedPathfindingPanel = ({
               />
             </label>
           </div>
+          <AlgorithmInfoCard infoKey={WP_INFO_KEY[algorithm]} />
         </div>
       </div>
 
@@ -313,6 +330,7 @@ export const WeightedPathfindingPanel = ({
           </div>
         )}
         <p className="hint">{wpStatusText}</p>
+        <StepExplanation text={wpCurrentExplanation} />
       </div>
 
       <div className="sidebar-section">

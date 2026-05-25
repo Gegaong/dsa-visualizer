@@ -30,5 +30,6 @@ export const buildConnectedComponentsCompletionStatus = (
 
   const groupSummary = formatWeakCCGroupsDisplay(result, nodes)
 
-  return `Done. ${result.componentCount} connected component(s); largest size ${result.largestComponentSize}. Groups: ${groupSummary}`
+  const plural = result.componentCount === 1 ? 'component' : 'components'
+  return `${result.componentCount} connected ${plural} found, largest has ${result.largestComponentSize} node${result.largestComponentSize === 1 ? '' : 's'}. Groups: ${groupSummary}`
 }

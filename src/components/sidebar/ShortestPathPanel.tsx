@@ -4,6 +4,10 @@ import type { ShortestPathOutput } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
+import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+
+import { StepExplanation } from './StepExplanation'
+
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 export type ShortestPathPanelProps = {
@@ -32,7 +36,7 @@ export type ShortestPathPanelProps = {
   shortestPathOutput: ShortestPathOutput
   shortestPathStepIndex: number
   shortestPathStepTotal: number
-  shortestPathDfsBestLength: number | null
+  shortestPathCurrentExplanation: string
   onRunShortestPath: (strategy: TraversalStrategy) => void
   onStopShortestPath: () => void
 }
@@ -71,7 +75,7 @@ export const ShortestPathPanel = ({
   shortestPathOutput,
   shortestPathStepIndex,
   shortestPathStepTotal,
-  shortestPathDfsBestLength,
+  shortestPathCurrentExplanation,
   onRunShortestPath,
   onStopShortestPath,
 }: ShortestPathPanelProps) => {
@@ -147,6 +151,7 @@ export const ShortestPathPanel = ({
               />
             </label>
           </div>
+          <AlgorithmInfoCard infoKey={algorithmTraversal === 'bfs' ? 'sp-bfs' : 'sp-dfs'} />
         </div>
       </div>
 
@@ -170,10 +175,8 @@ export const ShortestPathPanel = ({
           speed={shortestPathPlaybackSpeed}
           onSpeedChange={onShortestPathPlaybackSpeedChange}
         />
-        {algorithmTraversal === 'dfs' && (
-          <p className="hint">Shortest path so far: {isShortestPathSessionActive && !isShortestPathPlaybackComplete && shortestPathDfsBestLength !== null && <strong>{shortestPathDfsBestLength} edge{shortestPathDfsBestLength === 1 ? '' : 's'}</strong>}</p>
-        )}
         <p className="hint">{shortestPathStatusText}</p>
+        <StepExplanation text={shortestPathCurrentExplanation} />
       </div>
 
       <div className="sidebar-section">
