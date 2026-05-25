@@ -74,9 +74,6 @@
 	min-height: 560px;
 }
 
-.grid-sidebar-placeholder {
-	min-height: unset;
-}
 
 .canvas-panel {
 	background: var(--panel);
@@ -486,8 +483,13 @@
 	overflow: hidden;
 }
 
-.sidebar.is-traversal-setup {
+.sidebar.is-traversal-setup,
+.sidebar.is-grid-search {
 	height: 680px;
+}
+
+.sidebar.is-grid-search .sidebar-page-tab {
+	font-size: 16px;
 }
 
 .sidebar-page-root {

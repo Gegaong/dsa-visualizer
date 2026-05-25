@@ -2,6 +2,8 @@
 // V = number of nodes, E = number of edges.
 
 export type AlgorithmInfoKey =
+  | 'grid-bfs'
+  | 'grid-dfs'
   | 'traversal-bfs'
   | 'traversal-dfs'
   | 'cc-bfs'
@@ -31,6 +33,32 @@ const BFS_DFS_GENERIC_TIME = 'O(V + E)'
 const BFS_DFS_GENERIC_SPACE = 'O(V)'
 
 export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
+  'grid-bfs': {
+    name: 'Island Search — BFS',
+    time: 'O(M × N)',
+    space: 'O(M × N)',
+    summary: 'Floods outward from each start cell in expanding rings, visiting all 4-directional land neighbors layer by layer. Every cell is visited at most once.',
+    pros: [
+      'Explores islands evenly outward from the start',
+      'Queue size stays bounded by the frontier width',
+    ],
+    cons: [
+      'Queue can hold the entire island in the worst case',
+    ],
+  },
+  'grid-dfs': {
+    name: 'Island Search — DFS',
+    time: 'O(M × N)',
+    space: 'O(M × N)',
+    summary: 'Dives deep into one branch of land cells before backtracking, recursively flooding all 4-directional neighbors. Every cell is visited at most once.',
+    pros: [
+      'Simple recursive structure',
+      'Naturally traces the full extent of one island branch first',
+    ],
+    cons: [
+      'Stack depth proportional to island size — can be deep on large islands',
+    ],
+  },
   'traversal-bfs': {
     name: 'BFS — Breadth-First Search',
     time: BFS_DFS_GENERIC_TIME,

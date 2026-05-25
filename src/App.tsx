@@ -31,6 +31,7 @@ import {
 import { EdgeContextMenu } from './components/EdgeContextMenu'
 import { GraphCanvas } from './components/GraphCanvas'
 import { GridCanvas } from './components/GridCanvas'
+import { GridSidebar } from './components/sidebar/GridSidebar'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
 import { NodeContextMenu } from './components/NodeContextMenu'
@@ -1116,7 +1117,7 @@ function App() {
           onEdgeRightClick={handleEdgeRightClick}
         />}
 
-        {canvasType === 'grid' && <aside className="canvas-panel grid-sidebar-placeholder" />}
+        {canvasType === 'grid' && <GridSidebar />}
         {canvasType !== 'grid' && <Sidebar
           onSidebarSectionChange={handleSidebarSectionChange}
           isWeightedMode={isWeightedMode}
