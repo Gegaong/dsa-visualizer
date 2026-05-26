@@ -15,22 +15,25 @@ export const GridSidebar = () => {
         </button>
       </div>
       <div className="sidebar-page-body">
-        <div className="sidebar-section">
-          <div className="pill-group">
-            <button
-              className={`btn btn-pill ${algorithm === 'bfs' ? 'btn-active' : ''}`}
-              type="button"
-              onClick={() => setAlgorithm('bfs')}
-            >
-              BFS
-            </button>
-            <button
-              className={`btn btn-pill ${algorithm === 'dfs' ? 'btn-active' : ''}`}
-              type="button"
-              onClick={() => setAlgorithm('dfs')}
-            >
-              DFS
-            </button>
+        <div className="sidebar-section algorithm-config-section">
+          <h3>Search algorithm</h3>
+          <div className="algorithm-config-content">
+            <div className="pill-group algorithm-traversal-buttons">
+              <button
+                className={`btn btn-pill ${algorithm === 'bfs' ? 'btn-active' : ''}`}
+                type="button"
+                onClick={() => setAlgorithm('bfs')}
+              >
+                BFS
+              </button>
+              <button
+                className={`btn btn-pill ${algorithm === 'dfs' ? 'btn-active' : ''}`}
+                type="button"
+                onClick={() => setAlgorithm('dfs')}
+              >
+                DFS
+              </button>
+            </div>
           </div>
         </div>
 

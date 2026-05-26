@@ -14,6 +14,7 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [islands, setIslands] = useState<Set<string>>(new Set())
   const [startCells, setStartCells] = useState<Set<string>>(new Set())
+  const [connectivity, setConnectivity] = useState<4 | 8>(8)
   const [removeMode, setRemoveMode] = useState(false)
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
   const isPainting = useRef(false)
@@ -123,10 +124,28 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
       />
       <section className="canvas-panel">
         <div className="canvas-header">
-          <div className="canvas-copy-with-zoom">
-            <div className="canvas-copy">
-              <h2>Grid Canvas</h2>
-              <p>Draw islands, then run BFS or DFS to locate them.</p>
+          <div className="canvas-copy">
+            <h2>Grid Canvas</h2>
+            <p>Draw islands, then run BFS or DFS to locate them.</p>
+          </div>
+          <div className="canvas-actions">
+            <div className="grid-connectivity-toggle">
+              <button
+                className={connectivity === 4 ? 'active' : ''}
+                type="button"
+                onClick={() => setConnectivity(4)}
+                title="4-directional (up, down, left, right)"
+              >
+                4-dir
+              </button>
+              <button
+                className={connectivity === 8 ? 'active' : ''}
+                type="button"
+                onClick={() => setConnectivity(8)}
+                title="8-directional (includes diagonals)"
+              >
+                8-dir
+              </button>
             </div>
             <div className="grid-zoom-inline">
               <button
@@ -149,8 +168,6 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
                 +
               </button>
             </div>
-          </div>
-          <div className="canvas-actions">
             <button
               className={`btn btn-pill connect-toggle-btn ${removeMode ? 'btn-active' : ''}`}
               type="button"
