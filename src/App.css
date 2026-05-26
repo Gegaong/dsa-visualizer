@@ -552,7 +552,8 @@
 }
 
 .sidebar-page-body--algorithms,
-.sidebar-page-body--pathfinder {
+.sidebar-page-body--pathfinder,
+.sidebar-page-body--grid {
 	overflow-x: hidden;
 	overflow-y: auto;
 	scrollbar-gutter: stable;
@@ -561,15 +562,21 @@
 	scrollbar-width: thin;
 }
 
+.sidebar-page-body--grid > * {
+	flex-shrink: 0;
+}
+
 .sidebar::-webkit-scrollbar,
 .sidebar-page-body--algorithms::-webkit-scrollbar,
-.sidebar-page-body--pathfinder::-webkit-scrollbar {
+.sidebar-page-body--pathfinder::-webkit-scrollbar,
+.sidebar-page-body--grid::-webkit-scrollbar {
 	width: 8px;
 }
 
 .sidebar::-webkit-scrollbar-thumb,
 .sidebar-page-body--algorithms::-webkit-scrollbar-thumb,
-.sidebar-page-body--pathfinder::-webkit-scrollbar-thumb {
+.sidebar-page-body--pathfinder::-webkit-scrollbar-thumb,
+.sidebar-page-body--grid::-webkit-scrollbar-thumb {
 	background: rgba(46, 34, 23, 0.28);
 	border-radius: 999px;
 	border: 2px solid transparent;
@@ -578,7 +585,8 @@
 
 .sidebar::-webkit-scrollbar-thumb:hover,
 .sidebar-page-body--algorithms::-webkit-scrollbar-thumb:hover,
-.sidebar-page-body--pathfinder::-webkit-scrollbar-thumb:hover {
+.sidebar-page-body--pathfinder::-webkit-scrollbar-thumb:hover,
+.sidebar-page-body--grid::-webkit-scrollbar-thumb:hover {
 	background: rgba(46, 34, 23, 0.42);
 	border: 2px solid transparent;
 	background-clip: padding-box;
@@ -877,6 +885,56 @@
 .algorithm-config-content {
 	display: grid;
 	gap: 10px;
+}
+
+.scan-start-row {
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+}
+
+.scan-direction-toggle {
+	width: fit-content;
+}
+
+.scan-corner-picker {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	width: fit-content;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+	background: rgba(255, 253, 251, 0.94);
+}
+
+.scan-corner-btn {
+	width: 38px;
+	height: 34px;
+	font-size: 15px;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	transition: background 120ms ease, color 120ms ease;
+}
+
+.scan-corner-btn:nth-child(1),
+.scan-corner-btn:nth-child(2) {
+	border-bottom: 1px solid var(--border);
+}
+
+.scan-corner-btn:nth-child(1),
+.scan-corner-btn:nth-child(3) {
+	border-right: 1px solid var(--border);
+}
+
+.scan-corner-btn.active {
+	background: var(--accent);
+	color: var(--accent-ink);
+}
+
+.scan-corner-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
 }
 
 .algorithm-traversal-buttons {

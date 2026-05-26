@@ -1,24 +1,51 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ConfirmModal } from './Modals'
+import type { IslandHSL } from '../utils/gridIslandColors'
 
 type GridCanvasProps = {
   rows: number
+  islands: Set<string>
+  onIslandsChange: (s: Set<string>) => void
+  connectivity: 4 | 8
+  onConnectivityChange: (c: 4 | 8) => void
+  onColsChange: (cols: number) => void
   onZoomIn: () => void
   onZoomOut: () => void
   canZoomIn: boolean
   canZoomOut: boolean
+  isBlocked: boolean
+  visitedCells: string[]
+  frontierCells: string[]
+  currentCell: string | null
+  islandColorByCellKey: Map<string, IslandHSL> | null
 }
 
-export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }: GridCanvasProps) => {
+export const GridCanvas = ({
+  rows,
+  islands,
+  onIslandsChange,
+  connectivity,
+  onConnectivityChange,
+  onColsChange,
+  onZoomIn,
+  onZoomOut,
+  canZoomIn,
+  canZoomOut,
+  isBlocked,
+  visitedCells,
+  frontierCells,
+  currentCell,
+  islandColorByCellKey,
+}: GridCanvasProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
-  const [islands, setIslands] = useState<Set<string>>(new Set())
-  const [startCells, setStartCells] = useState<Set<string>>(new Set())
-  const [connectivity, setConnectivity] = useState<4 | 8>(8)
   const [removeMode, setRemoveMode] = useState(false)
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
   const isPainting = useRef(false)
   const paintMode = useRef<'add' | 'remove'>('add')
+
+  const onColsChangeRef = useRef(onColsChange)
+  useLayoutEffect(() => { onColsChangeRef.current = onColsChange })
 
   useLayoutEffect(() => {
     const el = containerRef.current
@@ -43,6 +70,10 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
   const cellW = containerSize.width > 0 ? containerSize.width / cols : 0
   const cellH = containerSize.height > 0 ? containerSize.height / rows : 0
 
+  useEffect(() => {
+    if (cols > 0) onColsChangeRef.current(cols)
+  }, [cols])
+
   const getCellKey = (e: React.MouseEvent<HTMLDivElement>): string | null => {
     const el = containerRef.current
     if (!el || cellW === 0 || cellH === 0) return null
@@ -55,26 +86,18 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
 
   const applyPaint = (key: string) => {
     const mode = paintMode.current
-    setIslands(prev => {
-      if (mode === 'add' && prev.has(key)) return prev
-      if (mode === 'remove' && !prev.has(key)) return prev
-      const next = new Set(prev)
+    onIslandsChange((() => {
+      if (mode === 'add' && islands.has(key)) return islands
+      if (mode === 'remove' && !islands.has(key)) return islands
+      const next = new Set(islands)
       if (mode === 'add') next.add(key)
       else next.delete(key)
       return next
-    })
-    if (mode === 'remove') {
-      setStartCells(prev => {
-        if (!prev.has(key)) return prev
-        const next = new Set(prev)
-        next.delete(key)
-        return next
-      })
-    }
+    })())
   }
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return
+    if (e.button !== 0 || isBlocked) return
     e.preventDefault()
     const key = getCellKey(e)
     if (!key) return
@@ -89,27 +112,41 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
     if (key) applyPaint(key)
   }
 
-  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    const key = getCellKey(e)
-    if (!key) return
-    setStartCells(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
   const handleClearClick = () => {
-    if (islands.size === 0 && startCells.size === 0) return
+    if (islands.size === 0) return
     setClearConfirmOpen(true)
   }
 
   const handleClearConfirm = () => {
-    setIslands(new Set())
-    setStartCells(new Set())
+    onIslandsChange(new Set())
     setClearConfirmOpen(false)
+  }
+
+  const { visitedWater, visitedIsland } = useMemo(() => {
+    const visitedWater: string[] = []
+    const visitedIsland: string[] = []
+    for (const k of visitedCells) {
+      if (islands.has(k)) visitedIsland.push(k)
+      else visitedWater.push(k)
+    }
+    return { visitedWater, visitedIsland }
+  }, [visitedCells, islands])
+
+  const frontierSet = useMemo(() => new Set(frontierCells), [frontierCells])
+
+  const cellStyle = (r: number, c: number, bg: string) => ({
+    position: 'absolute' as const,
+    left: c * cellW,
+    top: r * cellH,
+    width: cellW,
+    height: cellH,
+    background: bg,
+    pointerEvents: 'none' as const,
+  })
+
+  const parseKey = (key: string) => {
+    const [r, c] = key.split(',').map(Number)
+    return { r, c, valid: r < rows && c < cols }
   }
 
   return (
@@ -126,14 +163,14 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
         <div className="canvas-header">
           <div className="canvas-copy">
             <h2>Grid Canvas</h2>
-            <p>Draw islands, then run BFS or DFS to locate them.</p>
+            <p>Draw islands, then pick a search strategy to locate them.</p>
           </div>
           <div className="canvas-actions">
             <div className="grid-connectivity-toggle">
               <button
                 className={connectivity === 4 ? 'active' : ''}
                 type="button"
-                onClick={() => setConnectivity(4)}
+                onClick={() => !isBlocked && onConnectivityChange(4)}
                 title="4-directional (up, down, left, right)"
               >
                 4-dir
@@ -141,36 +178,21 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
               <button
                 className={connectivity === 8 ? 'active' : ''}
                 type="button"
-                onClick={() => setConnectivity(8)}
+                onClick={() => !isBlocked && onConnectivityChange(8)}
                 title="8-directional (includes diagonals)"
               >
                 8-dir
               </button>
             </div>
             <div className="grid-zoom-inline">
-              <button
-                className="canvas-zoom-btn"
-                type="button"
-                onClick={onZoomOut}
-                disabled={!canZoomOut}
-                aria-label="Zoom out"
-              >
-                −
-              </button>
+              <button className="canvas-zoom-btn" type="button" onClick={onZoomOut} disabled={isBlocked || !canZoomOut} aria-label="Zoom out">−</button>
               <span className="canvas-zoom-value">{cols}×{rows}</span>
-              <button
-                className="canvas-zoom-btn"
-                type="button"
-                onClick={onZoomIn}
-                disabled={!canZoomIn}
-                aria-label="Zoom in"
-              >
-                +
-              </button>
+              <button className="canvas-zoom-btn" type="button" onClick={onZoomIn} disabled={isBlocked || !canZoomIn} aria-label="Zoom in">+</button>
             </div>
             <button
               className={`btn btn-pill connect-toggle-btn ${removeMode ? 'btn-active' : ''}`}
               type="button"
+              disabled={isBlocked}
               onClick={() => setRemoveMode(r => !r)}
             >
               {removeMode ? 'Cancel remove' : 'Remove'}
@@ -179,6 +201,7 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
               className="btn btn-clear"
               style={{ marginLeft: '8px' }}
               type="button"
+              disabled={isBlocked}
               onClick={handleClearClick}
             >
               Clear grid
@@ -190,46 +213,40 @@ export const GridCanvas = ({ rows, onZoomIn, onZoomOut, canZoomIn, canZoomOut }:
           className="grid-canvas-area"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
-          onContextMenu={handleContextMenu}
         >
           {[...islands].map(key => {
-            const [r, c] = key.split(',').map(Number)
-            if (r >= rows || c >= cols) return null
-            return (
-              <div
-                key={key}
-                style={{
-                  position: 'absolute',
-                  left: c * cellW,
-                  top: r * cellH,
-                  width: cellW,
-                  height: cellH,
-                  background: '#4CAF50',
-                  pointerEvents: 'none',
-                }}
-              />
-            )
+            const { r, c, valid } = parseKey(key)
+            if (!valid) return null
+            return <div key={key} style={cellStyle(r, c, '#4CAF50')} />
           })}
-          {[...startCells].map(key => {
-            const [r, c] = key.split(',').map(Number)
-            if (r >= rows || c >= cols) return null
-            const size = Math.min(cellW, cellH) * 0.45
-            return (
-              <div
-                key={key}
-                style={{
-                  position: 'absolute',
-                  left: c * cellW + cellW / 2 - size / 2,
-                  top: r * cellH + cellH / 2 - size / 2,
-                  width: size,
-                  height: size,
-                  borderRadius: '50%',
-                  background: '#FACC15',
-                  pointerEvents: 'none',
-                }}
-              />
-            )
+
+          {visitedWater.map(key => {
+            const { r, c, valid } = parseKey(key)
+            if (!valid) return null
+            return <div key={`vw-${key}`} style={cellStyle(r, c, '#FACC15')} />
           })}
+
+          {visitedIsland.map(key => {
+            if (frontierSet.has(key)) return null
+            const { r, c, valid } = parseKey(key)
+            if (!valid) return null
+            const hsl = islandColorByCellKey?.get(key)
+            if (!hsl) return null
+            return <div key={`vi-${key}`} style={cellStyle(r, c, `hsl(${hsl.h},${hsl.s}%,${hsl.l}%)`)} />
+          })}
+
+          {frontierCells.map(key => {
+            const { r, c, valid } = parseKey(key)
+            if (!valid) return null
+            return <div key={`f-${key}`} style={cellStyle(r, c, '#FB923C')} />
+          })}
+
+          {currentCell && (() => {
+            const { r, c, valid } = parseKey(currentCell)
+            if (!valid) return null
+            return <div style={cellStyle(r, c, '#1e40af')} />
+          })()}
+
           <div
             style={{
               position: 'absolute',

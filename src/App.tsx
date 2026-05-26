@@ -62,6 +62,7 @@ import { useShortestPathPlayback } from './hooks/useShortestPathPlayback'
 import { useBipartitePlayback } from './hooks/useBipartitePlayback'
 import { useWeightedPathfindingPlayback } from './hooks/useWeightedPathfindingPlayback'
 import { useNodeDragging } from './hooks/useNodeDragging'
+import { useForLoopBFSPlayback } from './hooks/useForLoopBFSPlayback'
 
 // Root component: owns all graph and algorithm state, wires hooks, renders layout.
 function App() {
@@ -86,6 +87,9 @@ function App() {
   const [newEdgeDirection, setNewEdgeDirection] = useState<GraphEdge['direction']>('both')
   const [canvasZoom, setCanvasZoom] = useState(1)
   const [gridRows, setGridRows] = useState(GRID_ROWS_DEFAULT)
+  const [gridIslands, setGridIslands] = useState<Set<string>>(new Set())
+  const [gridConnectivity, setGridConnectivity] = useState<4 | 8>(8)
+  const [gridCols, setGridCols] = useState(0)
   const [isUndirectedMode, setIsUndirectedMode] = useState(false)
   const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
   const [canvasType, setCanvasType] = useState<CanvasType>('graph')
@@ -198,6 +202,13 @@ function App() {
     nodes,
     edges: effectiveEdges,
     pixelsPerUnit,
+  })
+
+  const gridSearch = useForLoopBFSPlayback({
+    islands: gridIslands,
+    rows: gridRows,
+    cols: gridCols,
+    connectivity: gridConnectivity,
   })
 
   // Forwards the sidebar algorithm picker to all canvas-algorithm hooks so their refs stay in sync.
@@ -1033,10 +1044,20 @@ function App() {
         {canvasType === 'grid' && (
           <GridCanvas
             rows={gridRows}
+            islands={gridIslands}
+            onIslandsChange={setGridIslands}
+            connectivity={gridConnectivity}
+            onConnectivityChange={setGridConnectivity}
+            onColsChange={setGridCols}
             onZoomIn={handleGridZoomIn}
             onZoomOut={handleGridZoomOut}
             canZoomIn={gridRows > GRID_ROWS_MIN}
             canZoomOut={gridRows < GRID_ROWS_MAX}
+            isBlocked={gridSearch.isRunning}
+            visitedCells={gridSearch.visitedCells}
+            frontierCells={gridSearch.frontierCells}
+            currentCell={gridSearch.currentCell}
+            islandColorByCellKey={gridSearch.islandColorByCellKey}
           />
         )}
         {canvasType !== 'grid' && <GraphCanvas
@@ -1117,7 +1138,33 @@ function App() {
           onEdgeRightClick={handleEdgeRightClick}
         />}
 
-        {canvasType === 'grid' && <GridSidebar />}
+        {canvasType === 'grid' && (
+          <GridSidebar
+            isRunning={gridSearch.isRunning}
+            canRun={gridSearch.canRun}
+            statusText={gridSearch.statusText}
+            currentExplanation={gridSearch.currentExplanation}
+            gridOutput={gridSearch.gridOutput}
+            stepIndex={gridSearch.stepIndex}
+            stepCount={gridSearch.stepCount}
+            isPlaying={gridSearch.isPlaying}
+            playbackSpeed={gridSearch.playbackSpeed}
+            isPlaybackComplete={gridSearch.isPlaybackComplete}
+            canStepBackward={gridSearch.canStepBackward}
+            canStepForward={gridSearch.canStepForward}
+            canTogglePlay={gridSearch.canTogglePlay}
+            onRun={(mode, scanMode) => {
+              if (mode.startsWith('for')) {
+                gridSearch.run(scanMode, mode.endsWith('bfs') ? 'bfs' : 'dfs')
+              }
+            }}
+            onStop={gridSearch.stop}
+            onStepForward={gridSearch.stepForward}
+            onStepBackward={gridSearch.stepBackward}
+            onTogglePlay={gridSearch.togglePlay}
+            onSpeedChange={gridSearch.setPlaybackSpeed}
+          />
+        )}
         {canvasType !== 'grid' && <Sidebar
           onSidebarSectionChange={handleSidebarSectionChange}
           isWeightedMode={isWeightedMode}

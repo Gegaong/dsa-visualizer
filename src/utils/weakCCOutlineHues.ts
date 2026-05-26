@@ -3,7 +3,7 @@ export type WeakCCOutlineHSL = { h: number; s: number; l: number }
 const GOLDEN_RATIO = 0.6180339887
 
 // The most perceptually distinct colors first, in order.
-const DISTINCT_PALETTE: WeakCCOutlineHSL[] = [
+export const DISTINCT_PALETTE: WeakCCOutlineHSL[] = [
   { h: 0,   s: 85, l: 55 },  // red
   { h: 210, s: 85, l: 55 },  // blue
   { h: 120, s: 65, l: 42 },  // green
