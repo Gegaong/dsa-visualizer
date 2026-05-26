@@ -41,6 +41,7 @@ type GraphNodeLayerProps = {
   traversalCurrentNodeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
+  traversalFrontierNodeIds: string[]
   // Intermediate nodes on the shortest path (excludes start and goal); styled with lighter blue.
   shortestPathNodeIds: string[]
   // Full connected-component outline color (HSL per component); applied when enabled and visited.
@@ -88,6 +89,7 @@ export const GraphNodeLayer = ({
   traversalCurrentNodeId,
   traversalStartNodeId,
   traversalGoalNodeIds,
+  traversalFrontierNodeIds,
   shortestPathNodeIds,
   weakCCOutlineHslByNodeId,
   weakCCOutlineActive,
@@ -122,6 +124,7 @@ export const GraphNodeLayer = ({
       const isConnectionSource = connectionSource === node.id
       const isVisited = traversalVisitedNodeIds.includes(node.id)
       const isCurrent = traversalCurrentNodeId === node.id
+      const isFrontier = !isCurrent && traversalFrontierNodeIds.includes(node.id)
       const isStart = traversalStartNodeId === node.id
       const isGoal = traversalGoalNodeIds.includes(node.id)
       const isShortestPath = shortestPathNodeIds.includes(node.id)
@@ -181,7 +184,7 @@ export const GraphNodeLayer = ({
       return (
         <div
           key={node.id}
-          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal && !isBipartiteColored ? 'is-traversal-visited' : ''} ${isCurrent && !isCcCurrent && !isBipartiteCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline && !isBipartiteColored ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''} ${isBipartiteGroupA ? 'is-bipartite-group-a' : ''} ${isBipartiteGroupB ? 'is-bipartite-group-b' : ''} ${isBipartiteCurrent ? 'is-bipartite-current' : ''} ${wpActive && !isWpStart && !isWpGoal && !isWpSettled && !isWpAssumed && !isWpTentative && !isWpPath ? 'is-wp-undiscovered' : ''} ${isWpTentative ? 'is-wp-tentative' : ''} ${isWpAssumed ? 'is-wp-assumed' : ''} ${isWpSettled && !isWpPath ? 'is-wp-settled' : ''} ${isWpPath ? (wpPathGuaranteed ? 'is-wp-path' : 'is-wp-path-greedy') : ''} ${isWpCurrent ? 'is-wp-current' : ''} ${isWpStart ? 'is-traversal-start' : ''} ${isWpGoal ? 'is-traversal-goal' : ''}`}
+          className={`node-wrap ${isConnectMode ? 'is-connect' : ''} ${isDeleteMode ? 'is-select' : ''} ${isSelected ? 'is-selected' : ''} ${isConnectionSource ? 'is-source' : ''} ${draggingNodeId === node.id ? 'is-dragging' : ''} ${editingNodeId === node.id ? 'is-editing' : ''} ${isVisited && !ccOutline && !weakCcColored && !isShortestPath && !isGoal && !isBipartiteColored ? 'is-traversal-visited' : ''} ${isFrontier && !ccOutline && !isBipartiteColored ? 'is-traversal-frontier' : ''} ${isCurrent && !isCcCurrent && !isBipartiteCurrent ? 'is-traversal-current' : ''} ${isStart && !ccOutline && !isBipartiteColored ? 'is-traversal-start' : ''} ${isGoal && !ccOutline ? 'is-traversal-goal' : ''} ${isShortestPath && !isGoal ? 'is-shortest-path' : ''} ${isBipartiteGroupA ? 'is-bipartite-group-a' : ''} ${isBipartiteGroupB ? 'is-bipartite-group-b' : ''} ${isBipartiteCurrent ? 'is-bipartite-current' : ''} ${wpActive && !isWpStart && !isWpGoal && !isWpSettled && !isWpAssumed && !isWpTentative && !isWpPath ? 'is-wp-undiscovered' : ''} ${isWpTentative ? 'is-wp-tentative' : ''} ${isWpAssumed ? 'is-wp-assumed' : ''} ${isWpSettled && !isWpPath ? 'is-wp-settled' : ''} ${isWpPath ? (wpPathGuaranteed ? 'is-wp-path' : 'is-wp-path-greedy') : ''} ${isWpCurrent ? 'is-wp-current' : ''} ${isWpStart ? 'is-traversal-start' : ''} ${isWpGoal ? 'is-traversal-goal' : ''}`}
           style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
         >
           <div

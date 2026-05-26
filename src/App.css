@@ -1134,6 +1134,13 @@
 	box-shadow: 0 6px 14px rgba(46, 32, 23, 0.1);
 }
 
+.node-wrap.is-traversal-frontier .node {
+	background: rgba(34, 211, 238, 0.18);
+	border-color: #22d3ee;
+	border-width: 2px;
+	box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2), 0 8px 16px rgba(46, 32, 23, 0.12);
+}
+
 .node-wrap.is-traversal-start .node {
 	border-color: #2f7d32;
 	box-shadow: 0 0 0 4px rgba(47, 125, 50, 0.2), 0 10px 20px rgba(46, 32, 23, 0.14);

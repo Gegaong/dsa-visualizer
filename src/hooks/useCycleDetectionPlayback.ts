@@ -95,6 +95,7 @@ export function useCycleDetectionPlayback({
     setTraversalVisitedEdgeIds,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
+    setTraversalFrontierNodeIds,
   } = traversalVisualSetters
 
   const [statusText, setStatusText] = useState(IDLE_STATUS)
@@ -117,6 +118,7 @@ export function useCycleDetectionPlayback({
         setTraversalCurrentEdgeId(null)
         setTraversalVisitedNodeIds([])
         setTraversalVisitedEdgeIds([])
+        setTraversalFrontierNodeIds([])
         setTraversalStartNodeId(null)
         setTraversalGoalNodeIds([])
         setCycleGoalEdgeIds([])
@@ -146,6 +148,7 @@ export function useCycleDetectionPlayback({
       setTraversalCurrentEdgeId(currentEdgeId)
       setTraversalVisitedNodeIds(visitedIds)
       setTraversalVisitedEdgeIds([...visitedEdgeIds])
+      setTraversalFrontierNodeIds(currentStep.frontierNodeIds)
       setTraversalStartNodeId(null)
       setTraversalGoalNodeIds([])
       setStatusText(

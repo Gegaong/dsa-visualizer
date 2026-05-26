@@ -61,6 +61,7 @@ export function runDirectedGoalTraversal(
   const neighborsById = buildNeighborsMap(input.nodes, input.edges)
   const visited = new Set<string>()
   const steps: BfsStep[] = []
+  const frontierIds = new Set<string>([startNode.id])
 
   let order = 1
   let foundNode: GraphNode | null = null
@@ -112,6 +113,11 @@ export function runDirectedGoalTraversal(
       const currentNode = nodeById.get(currentId)
       if (!currentNode) return
 
+      frontierIds.delete(currentId)
+      const newNeighbors = sortIdsByLabel(neighborsById.get(currentId) ?? [], nodeById).filter(id => !visited.has(id))
+      for (const id of newNeighbors) frontierIds.add(id)
+      const stepFrontierNodeIds = [...frontierIds]
+
       if (input.goal.type === 'max-value' || input.goal.type === 'min-value') {
         let valueChangeNote = ''
         if (typeof currentNode.value === 'number') {
@@ -139,10 +145,10 @@ export function runDirectedGoalTraversal(
           }
         }
         const explanation = buildExplanation(currentNode, parentId) + valueChangeNote
-        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, runningBest: extremeValue, explanation })
+        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, runningBest: extremeValue, frontierNodeIds: stepFrontierNodeIds, explanation })
       } else {
         const explanation = buildExplanation(currentNode, parentId)
-        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, explanation })
+        steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, frontierNodeIds: stepFrontierNodeIds, explanation })
         if (matchesGoal(currentNode, input.goal)) {
           foundNode = currentNode
           order += 1

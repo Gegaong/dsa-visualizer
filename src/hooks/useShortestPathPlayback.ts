@@ -101,6 +101,7 @@ export function useShortestPathPlayback({
     setTraversalVisitedEdgeIds,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
+    setTraversalFrontierNodeIds,
   } = traversalVisualSetters
 
   const [statusText, setStatusText] = useState(IDLE_STATUS)
@@ -126,6 +127,7 @@ export function useShortestPathPlayback({
         setTraversalCurrentEdgeId(null)
         setTraversalVisitedNodeIds([])
         setTraversalVisitedEdgeIds([])
+        setTraversalFrontierNodeIds([])
         setTraversalStartNodeId(result.startNodeId)
         setTraversalGoalNodeIds([result.goalNodeId])
         setShortestPathNodeIds([])
@@ -156,6 +158,7 @@ export function useShortestPathPlayback({
       setTraversalCurrentEdgeId(currentEdgeId)
       setTraversalVisitedNodeIds(visitedIds)
       setTraversalVisitedEdgeIds([...visitedEdgeIds])
+      setTraversalFrontierNodeIds(currentStep.frontierNodeIds)
       setTraversalStartNodeId(result.startNodeId)
       setTraversalGoalNodeIds([result.goalNodeId])
       setShortestPathNodeIds([])

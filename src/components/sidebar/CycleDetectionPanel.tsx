@@ -126,20 +126,22 @@ export const CycleDetectionPanel = ({
               DFS
             </button>
           </div>
-          <div className="algorithm-inputs-section">
-            <label className="field">
-              <span>
-                Start node <span className="optional-indicator">(optional)</span>
-              </span>
-              <input
-                type="text"
-                value={cycleDetectionStartNodeLabel}
-                onChange={(e) => onCycleDetectionStartNodeLabelChange(e.target.value)}
-                onKeyDown={confirmNodeLabelFieldOnEnter}
-                disabled={algorithmPickerFrozen}
-              />
-            </label>
-          </div>
+          {algorithmTraversal === 'dfs' && (
+            <div className="algorithm-inputs-section">
+              <label className="field">
+                <span>
+                  Start node <span className="optional-indicator">(optional)</span>
+                </span>
+                <input
+                  type="text"
+                  value={cycleDetectionStartNodeLabel}
+                  onChange={(e) => onCycleDetectionStartNodeLabelChange(e.target.value)}
+                  onKeyDown={confirmNodeLabelFieldOnEnter}
+                  disabled={algorithmPickerFrozen}
+                />
+              </label>
+            </div>
+          )}
           <AlgorithmInfoCard infoKey={algorithmTraversal === 'bfs' ? 'cycle-bfs' : 'cycle-dfs'} />
         </div>
       </div>

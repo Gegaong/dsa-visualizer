@@ -36,7 +36,7 @@ type Coloring = {
 // BFS 2-coloring: assigns alternating colors level by level; emits a step when each node is colored.
 function colorBfs(
   lookups: GraphLookups,
-  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string) => void,
+  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string, frontierNodeIds: string[]) => void,
 ): Coloring {
   const { neighborsById, sortedNodeIds } = lookups
   const colorMap: ColorMap = new Map()
@@ -45,8 +45,8 @@ function colorBfs(
   for (const rootId of sortedNodeIds) {
     if (colorMap.has(rootId)) continue
     colorMap.set(rootId, 0)
-    emitStep(rootId, 0, null, `New component — group A assigned arbitrarily. All neighbors will get group B, their neighbors group A, and so on. A conflict (neighbor forced to the same group) would prove a cycle of odd length exists.`)
     const queue: string[] = [rootId]
+    emitStep(rootId, 0, null, `New component — group A assigned arbitrarily. All neighbors will get group B, their neighbors group A, and so on. A conflict (neighbor forced to the same group) would prove a cycle of odd length exists.`, [])
 
     while (queue.length > 0) {
       const id = queue.shift()!
@@ -55,13 +55,14 @@ function colorBfs(
         if (!colorMap.has(neighborId)) {
           const neighborColor = (1 - nodeColor) as 0 | 1
           colorMap.set(neighborId, neighborColor)
+          queue.push(neighborId)
           emitStep(
             neighborId,
             neighborColor,
             id,
             `Must be opposite group to its neighbor — same group neighbors would mean an odd-length cycle exists, which proves non-bipartite. If already colored the same as its neighbor, the check fails.`,
+            [...queue],
           )
-          queue.push(neighborId)
         } else if (colorMap.get(neighborId) === nodeColor) {
           isBipartite = false
         }
@@ -76,7 +77,7 @@ function colorBfs(
 // Neighbors pushed in reverse so the smallest-label neighbor is explored first (deterministic).
 function colorDfs(
   lookups: GraphLookups,
-  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string) => void,
+  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string, frontierNodeIds: string[]) => void,
 ): Coloring {
   const { neighborsById, sortedNodeIds } = lookups
   const colorMap: ColorMap = new Map()
@@ -100,13 +101,15 @@ function colorDfs(
       const explanation = parentId === null
         ? `New component — group A assigned arbitrarily. All neighbors will get group B, their neighbors group A, and so on. A conflict (neighbor forced to the same group) would prove a cycle of odd length exists.`
         : `Must be opposite group to its neighbor — same group neighbors would mean an odd-length cycle exists, which proves non-bipartite. If already colored the same as its neighbor, the check fails.`
-      emitStep(id, targetColor, parentId, explanation)
 
       const oppositeColor = (1 - targetColor) as 0 | 1
       const neighbors = neighborsById.get(id) ?? []
       for (let i = neighbors.length - 1; i >= 0; i -= 1) {
         stack.push({ id: neighbors[i], targetColor: oppositeColor, parentId: id })
       }
+
+      const frontierNodeIds = [...new Set(stack.filter(f => !colorMap.has(f.id)).map(f => f.id))]
+      emitStep(id, targetColor, parentId, explanation, frontierNodeIds)
     }
   }
 
@@ -130,10 +133,10 @@ export function runBipartiteCheck(
   const steps: BipartiteStep[] = []
   let order = 1
 
-  const emitStep = (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string) => {
+  const emitStep = (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string, frontierNodeIds: string[]) => {
     const node = lookups.nodeById.get(nodeId)
     if (!node) return
-    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId, color, explanation })
+    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId, color, frontierNodeIds, explanation })
     order += 1
   }
 

@@ -70,6 +70,7 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
         nodeLabel: node.label,
         order,
         fromNodeId: parentId,
+        frontierNodeIds: [...queue],
         explanation: `BFS processes nodes in non-decreasing distance order. This is the first time the goal was dequeued — by BFS invariant, distance ${myDist} is the minimum possible. Any path arriving later must be at least this long.`,
       })
       return { steps, pathNodeIds: reconstructPath(parentById, startId, goalId) }
@@ -95,6 +96,7 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
       nodeLabel: node.label,
       order,
       fromNodeId: parentId,
+      frontierNodeIds: [...queue],
       explanation,
     })
     order += 1
@@ -135,6 +137,7 @@ function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): Pa
         order,
         fromNodeId: fromId,
         dfsBestPathLength: bestLenAfter,
+        frontierNodeIds: [],
         explanation: `${pathComparison} DFS continues exploring all remaining branches to ensure this is truly the shortest.`,
       })
       order += 1
@@ -163,6 +166,7 @@ function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): Pa
       order,
       fromNodeId: fromId,
       dfsBestPathLength: dfsBest,
+      frontierNodeIds: [],
       explanation,
     })
     order += 1
@@ -209,6 +213,7 @@ export function runShortestPath(
       nodeLabel: node?.label ?? '',
       order: 1,
       fromNodeId: null,
+      frontierNodeIds: [],
       explanation: `Start and goal are the same node — path length is 0 by definition, no traversal needed.`,
     }
     return {

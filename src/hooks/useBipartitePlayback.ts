@@ -83,6 +83,7 @@ export function useBipartitePlayback({
     setTraversalVisitedEdgeIds,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
+    setTraversalFrontierNodeIds,
   } = traversalVisualSetters
 
   const [statusText, setStatusText] = useState(IDLE_STATUS)
@@ -107,6 +108,7 @@ export function useBipartitePlayback({
         setTraversalCurrentEdgeId(null)
         setTraversalVisitedNodeIds([])
         setTraversalVisitedEdgeIds([])
+        setTraversalFrontierNodeIds([])
         setTraversalStartNodeId(null)
         setTraversalGoalNodeIds([])
         setBipartiteGroupANodeIds([])
@@ -148,6 +150,7 @@ export function useBipartitePlayback({
       setTraversalCurrentEdgeId(currentEdgeId)
       setTraversalVisitedNodeIds(visitedIds)
       setTraversalVisitedEdgeIds([...visitedEdgeIds])
+      setTraversalFrontierNodeIds(currentStep.frontierNodeIds)
       setTraversalStartNodeId(null)
       setTraversalGoalNodeIds([])
       setBipartiteGroupANodeIds(groupA)

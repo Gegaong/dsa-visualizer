@@ -165,6 +165,7 @@ function App() {
     setTraversalCurrentEdgeId: traversal.setTraversalCurrentEdgeId,
     setTraversalStartNodeId: traversal.setTraversalStartNodeId,
     setTraversalGoalNodeIds: traversal.setTraversalGoalNodeIds,
+    setTraversalFrontierNodeIds: traversal.setTraversalFrontierNodeIds,
   }
 
   const cc = useConnectedComponentsPlayback({
@@ -1081,6 +1082,7 @@ function App() {
           traversalCurrentEdgeId={traversal.traversalCurrentEdgeId}
           traversalStartNodeId={traversal.traversalStartNodeId}
           traversalGoalNodeIds={traversal.traversalGoalNodeIds}
+          traversalFrontierNodeIds={traversal.traversalFrontierNodeIds}
           weakCCOutlineHslByNodeId={cc.weakCCOutlineHslByNodeId}
           weakCCOutlineActive={cc.weakCCOutlineActive}
           weakCCVisitedNodeIds={cc.weakCCVisitedNodeIds}

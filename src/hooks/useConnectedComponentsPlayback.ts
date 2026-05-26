@@ -103,6 +103,7 @@ export function useConnectedComponentsPlayback({
     setTraversalVisitedEdgeIds,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
+    setTraversalFrontierNodeIds,
   } = traversalVisualSetters
 
   const [statusText, setStatusText] = useState(IDLE_STATUS)
@@ -132,6 +133,7 @@ export function useConnectedComponentsPlayback({
         setTraversalCurrentEdgeId(null)
         setTraversalVisitedNodeIds([])
         setTraversalVisitedEdgeIds([])
+        setTraversalFrontierNodeIds([])
         setTraversalStartNodeId(null)
         setTraversalGoalNodeIds([])
         setWeakCCVisitedNodeIds([])
@@ -162,6 +164,7 @@ export function useConnectedComponentsPlayback({
       setTraversalCurrentEdgeId(currentEdgeId)
       setTraversalVisitedNodeIds(visitedIds)
       setTraversalVisitedEdgeIds([...visitedEdgeIds])
+      setTraversalFrontierNodeIds(currentStep.frontierNodeIds)
       setWeakCCVisitedNodeIds(visitedIds)
       setWeakCCVisitedEdgeIds([...visitedEdgeIds])
       setTraversalStartNodeId(currentStep.componentRootNodeId)

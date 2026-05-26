@@ -43,7 +43,7 @@ export function runConnectedComponents(
   let componentIndex = 0
 
   // Appends one CC step (with component root) and bumps global step order.
-  const emitVisit = (nodeId: string, componentRootId: string, fromNodeId: string | null) => {
+  const emitVisit = (nodeId: string, componentRootId: string, fromNodeId: string | null, frontierNodeIds: string[]) => {
     const node = nodeById.get(nodeId)
     if (!node) return
     const sortedNeighbors = sortIdsByLabel(neighborsById.get(nodeId) ?? [], nodeById)
@@ -76,6 +76,7 @@ export function runConnectedComponents(
       order,
       componentRootNodeId: componentRootId,
       fromNodeId,
+      frontierNodeIds,
       explanation,
     })
     order += 1
@@ -87,6 +88,7 @@ export function runConnectedComponents(
   // Collects one component's node ids in walk order, starting from an unvisited root.
   const exploreFromRoot = (rootId: string) => {
     const componentNodes: string[] = []
+    const frontierIds = new Set<string>([rootId])
 
     traverseReachableFrom({
       neighborsById,
@@ -95,7 +97,10 @@ export function runConnectedComponents(
       strategy,
       orderNeighbors,
       onVisit: (nodeId, parentId) => {
-        emitVisit(nodeId, rootId, parentId)
+        frontierIds.delete(nodeId)
+        const newNeighbors = (neighborsById.get(nodeId) ?? []).filter(id => !globalVisited.has(id))
+        for (const id of newNeighbors) frontierIds.add(id)
+        emitVisit(nodeId, rootId, parentId, [...frontierIds])
         componentNodes.push(nodeId)
       },
     })

@@ -19,6 +19,7 @@ export type BfsStep = {
   order: number
   fromNodeId: string | null
   runningBest?: number | null
+  frontierNodeIds: string[]
   // Internal narration shown in the sidebar during playback (what just happened inside the algorithm).
   explanation?: string
 }

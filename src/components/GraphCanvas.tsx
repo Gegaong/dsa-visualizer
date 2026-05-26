@@ -38,6 +38,7 @@ type GraphCanvasProps = {
   traversalCurrentEdgeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
+  traversalFrontierNodeIds: string[]
   weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
   weakCCOutlineActive: boolean
   weakCCVisitedNodeIds: string[]
@@ -117,6 +118,7 @@ export function GraphCanvas({
   traversalCurrentEdgeId,
   traversalStartNodeId,
   traversalGoalNodeIds,
+  traversalFrontierNodeIds,
   weakCCOutlineHslByNodeId,
   weakCCOutlineActive,
   weakCCVisitedNodeIds,
@@ -377,6 +379,7 @@ export function GraphCanvas({
             traversalCurrentNodeId={traversalCurrentNodeId}
             traversalStartNodeId={traversalStartNodeId}
             traversalGoalNodeIds={traversalGoalNodeIds}
+            traversalFrontierNodeIds={traversalFrontierNodeIds}
             shortestPathNodeIds={shortestPathNodeIds}
             weakCCOutlineHslByNodeId={weakCCOutlineHslByNodeId}
             weakCCOutlineActive={weakCCOutlineActive}

@@ -27,6 +27,7 @@ export type TraversalVisualSetters = {
   setTraversalCurrentEdgeId: (id: string | null) => void
   setTraversalStartNodeId: (id: string | null) => void
   setTraversalGoalNodeIds: (ids: string[]) => void
+  setTraversalFrontierNodeIds: (ids: string[]) => void
 }
 
 export type UseAlgorithmPlaybackOptions<TResult extends { steps: BfsStep[] }> = {
@@ -93,6 +94,7 @@ export function useAlgorithmPlayback<TResult extends { steps: BfsStep[] }>({
     setTraversalCurrentEdgeId,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
+    setTraversalFrontierNodeIds,
   } = traversalVisualSetters
 
   const [result, setResult] = useState<TResult | null>(null)
@@ -145,9 +147,10 @@ export function useAlgorithmPlayback<TResult extends { steps: BfsStep[] }>({
       setTraversalCurrentNodeId(null)
       setTraversalCurrentEdgeId(null)
       setTraversalStartNodeId(null)
+      setTraversalFrontierNodeIds([])
       finalizeRef.current(r)
     }
-  }, [playback, setTraversalCurrentNodeId, setTraversalCurrentEdgeId, setTraversalStartNodeId])
+  }, [playback, setTraversalCurrentNodeId, setTraversalCurrentEdgeId, setTraversalStartNodeId, setTraversalFrontierNodeIds])
 
   // Stops playback, clears the result, and resets the step index for the next run.
   const clearPlaybackAndResult = useCallback(() => {
@@ -165,6 +168,7 @@ export function useAlgorithmPlayback<TResult extends { steps: BfsStep[] }>({
     setTraversalCurrentEdgeId(null)
     setTraversalStartNodeId(null)
     setTraversalGoalNodeIds([])
+    setTraversalFrontierNodeIds([])
     setIsRunning(false)
     onResetVisualizationRef.current()
   }, [
@@ -175,6 +179,7 @@ export function useAlgorithmPlayback<TResult extends { steps: BfsStep[] }>({
     setTraversalCurrentEdgeId,
     setTraversalStartNodeId,
     setTraversalGoalNodeIds,
+    setTraversalFrontierNodeIds,
   ])
 
   // Minimal clear: stops playback and wipes extra state without touching canvas traversal visuals.
