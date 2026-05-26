@@ -1,3 +1,5 @@
+import { useHoldRepeat } from '../../hooks/useHoldRepeat'
+
 type PlaybackControlsProps = {
   // Run / Stop button
   runLabel: string
@@ -42,6 +44,9 @@ export const PlaybackControls = ({
 }: PlaybackControlsProps) => {
   const playLabel = isPlaying ? 'Pause' : isPlaybackComplete ? 'Replay' : 'Play'
 
+  const prevHold = useHoldRepeat(onPrevious, !canStepBackward || stepControlsDisabled)
+  const nextHold = useHoldRepeat(onNext, !canStepForward || stepControlsDisabled)
+
   return (
     <div className="playback">
       <button
@@ -56,7 +61,9 @@ export const PlaybackControls = ({
         <button
           className="btn playback-control-btn"
           type="button"
-          onClick={onPrevious}
+          onMouseDown={prevHold.onMouseDown}
+          onMouseUp={prevHold.onMouseUp}
+          onMouseLeave={prevHold.onMouseLeave}
           disabled={!canStepBackward || stepControlsDisabled}
         >
           Previous
@@ -72,7 +79,9 @@ export const PlaybackControls = ({
         <button
           className="btn playback-control-btn"
           type="button"
-          onClick={onNext}
+          onMouseDown={nextHold.onMouseDown}
+          onMouseUp={nextHold.onMouseUp}
+          onMouseLeave={nextHold.onMouseLeave}
           disabled={!canStepForward || stepControlsDisabled}
         >
           Next

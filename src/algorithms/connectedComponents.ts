@@ -48,8 +48,7 @@ export function runConnectedComponents(
     if (!node) return
     const sortedNeighbors = sortIdsByLabel(neighborsById.get(nodeId) ?? [], nodeById)
     const unseenLabels = sortedNeighbors
-      .filter((id) => !globalVisited.has(id) || id === nodeId)
-      .filter((id) => id !== nodeId)
+      .filter((id) => !globalVisited.has(id))
       .map((id) => nodeById.get(id)?.label)
       .filter((label): label is string => !!label)
 

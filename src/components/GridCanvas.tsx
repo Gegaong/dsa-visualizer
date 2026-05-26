@@ -213,6 +213,7 @@ export const GridCanvas = ({
           className="grid-canvas-area"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
+          onContextMenu={(e) => e.preventDefault()}
         >
           {[...islands].map(key => {
             const { r, c, valid } = parseKey(key)

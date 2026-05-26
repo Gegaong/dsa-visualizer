@@ -7,6 +7,7 @@ export type ForLoopScanMode =
   | 'bl-h' | 'bl-v'
   | 'br-h' | 'br-v'
 
+// Returns all "r,c" cell keys in the order dictated by the scan mode (corner + primary axis).
 function buildScanOrder(mode: ForLoopScanMode, rows: number, cols: number): string[] {
   const topStart  = mode[0] === 't'
   const leftStart = mode[1] === 'l'
@@ -32,6 +33,8 @@ function buildScanOrder(mode: ForLoopScanMode, rows: number, cols: number): stri
   return keys
 }
 
+// Outer for-loop island locator: scans every cell, skipping water and already-visited islands,
+// and fires runInnerBFS/DFS on each unvisited island cell to collect the full island.
 export function runForLoopOuter(
   islands: Set<string>,
   rows: number,

@@ -9,11 +9,13 @@ const FORBIDDEN: HueBand[] = [
   { center: 195, radius: 20 },
 ]
 
+// Shortest angular distance between two hues on the [0, 360) circle.
 function circularDist(a: number, b: number): number {
   const d = Math.abs(a - b) % 360
   return d > 180 ? 360 - d : d
 }
 
+// True if hue `h` falls inside any forbidden band (reserved for water/frontier/current cell colors).
 function isForbidden(h: number): boolean {
   return FORBIDDEN.some(({ center, radius }) => circularDist(h, center) < radius)
 }
@@ -69,6 +71,7 @@ function generateSafeHue(seed: number, index: number): number {
   return SAFE_ARCS[0][0]
 }
 
+// Assigns a distinct HSL color to each island group, avoiding hues reserved for UI states.
 export function buildGridIslandColorMap(groups: string[][]): Map<string, IslandHSL> {
   const map = new Map<string, IslandHSL>()
   if (groups.length === 0) return map

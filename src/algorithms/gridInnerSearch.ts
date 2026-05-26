@@ -3,6 +3,7 @@ import type { GridStep } from './gridTypes'
 const DIRS_4 = [[-1, 0], [0, 1], [1, 0], [0, -1]] as const
 const DIRS_8 = [[-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1]] as const
 
+// Returns valid in-bounds island-cell neighbors of `key` using the chosen connectivity.
 function getIslandNeighbors(
   key: string,
   islands: Set<string>,
@@ -21,6 +22,7 @@ function getIslandNeighbors(
   return result
 }
 
+// BFS flood-fill from startKey: collects all cells of one island level by level, emitting one step per dequeue.
 export function runInnerBFS(
   startKey: string,
   islandIndex: number,
@@ -71,6 +73,7 @@ export function runInnerBFS(
   return { steps, cells }
 }
 
+// DFS flood-fill from startKey: collects all cells of one island depth-first, emitting one step per pop.
 export function runInnerDFS(
   startKey: string,
   islandIndex: number,
