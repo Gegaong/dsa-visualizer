@@ -1,7 +1,5 @@
 import type { GridStep } from './gridTypes'
-
-const DIRS_4 = [[-1, 0], [0, 1], [1, 0], [0, -1]] as const
-const DIRS_8 = [[-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1]] as const
+import { getInBoundsNeighbors } from './gridShared'
 
 // Returns valid in-bounds island-cell neighbors of `key` using the chosen connectivity.
 function getIslandNeighbors(
@@ -11,15 +9,7 @@ function getIslandNeighbors(
   cols: number,
   connectivity: 4 | 8,
 ): string[] {
-  const [r, c] = key.split(',').map(Number)
-  const dirs = connectivity === 4 ? DIRS_4 : DIRS_8
-  const result: string[] = []
-  for (const [dr, dc] of dirs) {
-    const nr = r + dr, nc = c + dc
-    const nk = `${nr},${nc}`
-    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && islands.has(nk)) result.push(nk)
-  }
-  return result
+  return getInBoundsNeighbors(key, rows, cols, connectivity).filter(k => islands.has(k))
 }
 
 // BFS flood-fill from startKey: collects all cells of one island level by level, emitting one step per dequeue.

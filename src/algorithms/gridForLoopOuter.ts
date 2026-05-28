@@ -1,5 +1,6 @@
 import type { GridStep, GridResult, InnerAlgo } from './gridTypes'
 import { runInnerBFS, runInnerDFS } from './gridInnerSearch'
+import { computeDiscoverySteps } from './gridShared'
 
 export type ForLoopScanMode =
   | 'tl-h' | 'tl-v'
@@ -68,10 +69,5 @@ export function runForLoopOuter(
     islandGroups.push(cells)
   }
 
-  let lastInnerIndex = -1
-  for (let i = steps.length - 1; i >= 0; i--) {
-    if (steps[i].phase === 'inner') { lastInnerIndex = i; break }
-  }
-
-  return { steps, islandGroups, discoverySteps: lastInnerIndex + 1 }
+  return { steps, islandGroups, discoverySteps: computeDiscoverySteps(steps) }
 }

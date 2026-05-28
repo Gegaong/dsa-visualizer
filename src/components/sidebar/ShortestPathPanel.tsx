@@ -42,8 +42,8 @@ export type ShortestPathPanelProps = {
 }
 
 // Returns a human-readable step counter; shows "Ready / N" before playback begins.
-function formatStepDisplay(sessionActive: boolean, stepIndex: number, stepTotal: number): string {
-  if (!sessionActive || stepTotal === 0) return '—'
+function formatStepDisplay(stepIndex: number, stepTotal: number): string {
+  if (stepTotal === 0) return '—'
   if (stepIndex >= 0) return `${stepIndex + 1} / ${stepTotal}`
   return `Ready / ${stepTotal}`
 }
@@ -90,7 +90,6 @@ export const ShortestPathPanel = ({
   }
 
   const stepDisplay = formatStepDisplay(
-    isShortestPathSessionActive,
     shortestPathStepIndex,
     shortestPathStepTotal,
   )

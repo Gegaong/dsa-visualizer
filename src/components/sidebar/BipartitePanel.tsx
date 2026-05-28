@@ -41,8 +41,8 @@ export type BipartitePanelProps = {
 }
 
 // Returns a human-readable step counter; shows "Ready / N" before playback begins.
-function formatStepDisplay(sessionActive: boolean, stepIndex: number, stepTotal: number): string {
-  if (!sessionActive || stepTotal === 0) return '—'
+function formatStepDisplay(stepIndex: number, stepTotal: number): string {
+  if (stepTotal === 0) return '—'
   if (stepIndex >= 0) return `${stepIndex + 1} / ${stepTotal}`
   return `Ready / ${stepTotal}`
 }
@@ -91,7 +91,7 @@ export const BipartitePanel = ({
     ? 'Bipartite check runs on undirected graphs only. Switch to Undirected at the top left of the canvas, then press Run.'
     : bipartiteStatusText
 
-  const stepDisplay = formatStepDisplay(isBipartiteSessionActive, bipartiteStepIndex, bipartiteStepTotal)
+  const stepDisplay = formatStepDisplay(bipartiteStepIndex, bipartiteStepTotal)
 
   const isBipartiteText = bipartiteOutput === null ? '—' : bipartiteOutput.isBipartite ? 'Yes' : 'No'
 

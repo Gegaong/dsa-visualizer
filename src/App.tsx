@@ -63,6 +63,7 @@ import { useBipartitePlayback } from './hooks/useBipartitePlayback'
 import { useWeightedPathfindingPlayback } from './hooks/useWeightedPathfindingPlayback'
 import { useNodeDragging } from './hooks/useNodeDragging'
 import { useForLoopBFSPlayback } from './hooks/useForLoopBFSPlayback'
+import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
 
 // Root component: owns all graph and algorithm state, wires hooks, renders layout.
 function App() {
@@ -90,6 +91,10 @@ function App() {
   const [gridIslands, setGridIslands] = useState<Set<string>>(new Set())
   const [gridConnectivity, setGridConnectivity] = useState<4 | 8>(8)
   const [gridCols, setGridCols] = useState(0)
+  const [gridSearchMode, setGridSearchMode] = useState<GridSearchMode>('for-bfs')
+  const [bfsStartCells, setBfsStartCells] = useState<Set<string>>(new Set())
+  const [dfsStartCell, setDfsStartCell] = useState<string | null>(null)
+  const [isPickingStart, setIsPickingStart] = useState(false)
   const [isUndirectedMode, setIsUndirectedMode] = useState(false)
   const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
   const [canvasType, setCanvasType] = useState<CanvasType>('graph')
@@ -308,6 +313,7 @@ function App() {
     }
 
     setCanvasType(type)
+    setIsPickingStart(false)
     setEditingEdgeWeightId(null)
     setDraftEdgeWeight('')
     setEdgeContextMenu(null)
@@ -410,6 +416,41 @@ function App() {
 
   const handleGridZoomIn = () => setGridRows((r) => Math.max(GRID_ROWS_MIN, r - GRID_ZOOM_STEP))
   const handleGridZoomOut = () => setGridRows((r) => Math.min(GRID_ROWS_MAX, r + GRID_ZOOM_STEP))
+
+  // Changes grid search mode; always exits picking mode since the new mode may not need it.
+  const handleGridModeChange = (mode: GridSearchMode) => {
+    setGridSearchMode(mode)
+    setIsPickingStart(false)
+  }
+
+  // Handles a cell click while in picking mode.
+  // BFS outer: toggles the cell in the multi-source set.
+  // DFS outer: sets the single start cell and exits picking mode immediately.
+  const handleGridCellPick = (key: string) => {
+    if (gridSearchMode.startsWith('bfs')) {
+      setBfsStartCells(prev => {
+        const next = new Set(prev)
+        if (next.has(key)) next.delete(key)
+        else next.add(key)
+        return next
+      })
+    } else {
+      setDfsStartCell(key)
+      setIsPickingStart(false)
+    }
+  }
+
+  // Removes a start marker from whichever set owns it (BFS multi-set or DFS single cell).
+  const handleRemoveStartMarker = (key: string) => {
+    if (gridSearchMode.startsWith('bfs')) {
+      setBfsStartCells(prev => { const next = new Set(prev); next.delete(key); return next })
+    } else {
+      if (dfsStartCell === key) setDfsStartCell(null)
+    }
+  }
+
+  // Toggles the start-cell picking mode on/off.
+  const handleTogglePickStart = () => setIsPickingStart(p => !p)
 
   // Switches BFS/DFS traversal tab and resets traversal playback for the new strategy.
   const handleAlgorithmTabChange = (tab: TraversalStrategy) => {
@@ -1060,6 +1101,15 @@ function App() {
             currentCell={gridSearch.currentCell}
             currentPhase={gridSearch.currentPhase}
             islandColorByCellKey={gridSearch.islandColorByCellKey}
+            startMarkers={
+              gridSearchMode.startsWith('bfs') ? [...bfsStartCells]
+              : gridSearchMode.startsWith('dfs') ? (dfsStartCell ? [dfsStartCell] : [])
+              : []
+            }
+            isPickingStart={isPickingStart}
+            onCellPick={handleGridCellPick}
+            onRemoveStartMarker={handleRemoveStartMarker}
+            onClearStartMarkers={() => { setBfsStartCells(new Set()); setDfsStartCell(null) }}
           />
         )}
         {canvasType !== 'grid' && <GraphCanvas
@@ -1143,6 +1193,8 @@ function App() {
 
         {canvasType === 'grid' && (
           <GridSidebar
+            mode={gridSearchMode}
+            onModeChange={handleGridModeChange}
             isRunning={gridSearch.isRunning}
             canRun={gridSearch.canRun}
             statusText={gridSearch.statusText}
@@ -1156,7 +1208,17 @@ function App() {
             canStepBackward={gridSearch.canStepBackward}
             canStepForward={gridSearch.canStepForward}
             canTogglePlay={gridSearch.canTogglePlay}
-            onRun={(mode, scanMode) => gridSearch.run(mode, scanMode)}
+            isPickingStart={isPickingStart}
+            bfsStartCells={bfsStartCells}
+            dfsStartCell={dfsStartCell}
+            onTogglePickStart={handleTogglePickStart}
+            onRun={(mode, scanMode) => {
+              setIsPickingStart(false)
+              const startCells = mode.startsWith('bfs') ? [...bfsStartCells]
+                : mode.startsWith('dfs') ? (dfsStartCell ? [dfsStartCell] : [])
+                : []
+              gridSearch.run(mode, scanMode, startCells)
+            }}
             onStop={gridSearch.stop}
             onStepForward={gridSearch.stepForward}
             onStepBackward={gridSearch.stepBackward}

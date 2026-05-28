@@ -24,6 +24,8 @@ const MODE_LABELS: Record<GridSearchMode, string> = {
 }
 
 type GridSidebarProps = {
+  mode: GridSearchMode
+  onModeChange: (mode: GridSearchMode) => void
   isRunning: boolean
   canRun: boolean
   statusText: string
@@ -37,6 +39,10 @@ type GridSidebarProps = {
   canStepBackward: boolean
   canStepForward: boolean
   canTogglePlay: boolean
+  isPickingStart: boolean
+  bfsStartCells: Set<string>
+  dfsStartCell: string | null
+  onTogglePickStart: () => void
   onRun: (mode: GridSearchMode, scanMode: ForLoopScanMode) => void
   onStop: () => void
   onStepForward: () => void
@@ -45,14 +51,15 @@ type GridSidebarProps = {
   onSpeedChange: (v: number) => void
 }
 
-// Returns a human-readable step counter; shows "Ready / N" before playback begins.
-function formatStepDisplay(isRunning: boolean, stepIndex: number, stepCount: number): string {
-  if (!isRunning || stepCount === 0) return '—'
+// Returns the playback step counter — "Ready / N" before the first step, then "i / N".
+function formatStepDisplay(stepIndex: number, stepCount: number): string {
   if (stepIndex >= 0) return `${stepIndex + 1} / ${stepCount}`
   return `Ready / ${stepCount}`
 }
 
 export const GridSidebar = ({
+  mode,
+  onModeChange,
   isRunning,
   canRun,
   statusText,
@@ -66,6 +73,10 @@ export const GridSidebar = ({
   canStepBackward,
   canStepForward,
   canTogglePlay,
+  isPickingStart,
+  bfsStartCells,
+  dfsStartCell,
+  onTogglePickStart,
   onRun,
   onStop,
   onStepForward,
@@ -73,14 +84,18 @@ export const GridSidebar = ({
   onTogglePlay,
   onSpeedChange,
 }: GridSidebarProps) => {
-  const [mode, setMode] = useState<GridSearchMode>('for-bfs')
   const [scanCorner, setScanCorner] = useState<ScanCorner>('tl')
   const [scanPrimary, setScanPrimary] = useState<'h' | 'v'>('h')
+
+  const isOuterMode = !mode.startsWith('for')
+  const isBfsOuter = mode.startsWith('bfs')
 
   const handleRunToggle = () => {
     if (isRunning) onStop()
     else onRun(mode, `${scanCorner}-${scanPrimary}` as ForLoopScanMode)
   }
+
+  const startPointCount = isBfsOuter ? bfsStartCells.size : (dfsStartCell !== null ? 1 : 0)
 
   return (
     <aside className="sidebar is-grid-search">
@@ -98,7 +113,7 @@ export const GridSidebar = ({
               <select
                 value={mode}
                 disabled={isRunning}
-                onChange={(e) => setMode(e.target.value as GridSearchMode)}
+                onChange={(e) => onModeChange(e.target.value as GridSearchMode)}
               >
                 {(Object.keys(MODE_LABELS) as GridSearchMode[]).map(key => (
                   <option key={key} value={key}>{MODE_LABELS[key]}</option>
@@ -106,24 +121,35 @@ export const GridSidebar = ({
               </select>
             </label>
           </div>
-          <div className="scan-start-row">
-            <div className="field">
-              <span>Start corner</span>
-              <div className="scan-corner-picker">
-                {(['tl', 'tr', 'bl', 'br'] as ScanCorner[]).map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={`scan-corner-btn${scanCorner === c ? ' active' : ''}`}
-                    disabled={isRunning}
-                    onClick={() => setScanCorner(c)}
-                  >
-                    {CORNER_ICONS[c]}
-                  </button>
-                ))}
+        </div>
+
+        {mode === 'for-bfs' && <AlgorithmInfoCard infoKey="grid-for-bfs" />}
+        {mode === 'for-dfs' && <AlgorithmInfoCard infoKey="grid-for-dfs" />}
+        {mode === 'bfs-bfs' && <AlgorithmInfoCard infoKey="grid-bfs-bfs" />}
+        {mode === 'bfs-dfs' && <AlgorithmInfoCard infoKey="grid-bfs-dfs" />}
+        {mode === 'dfs-bfs' && <AlgorithmInfoCard infoKey="grid-dfs-bfs" />}
+        {mode === 'dfs-dfs' && <AlgorithmInfoCard infoKey="grid-dfs-dfs" />}
+
+        {/* Corner + direction pickers: only for for-loop modes */}
+        {!isOuterMode && (
+          <div className="sidebar-section algorithm-config-section">
+            <div className="scan-start-row">
+              <div className="field">
+                <span>Start corner</span>
+                <div className="scan-corner-picker">
+                  {(['tl', 'tr', 'bl', 'br'] as ScanCorner[]).map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`scan-corner-btn${scanCorner === c ? ' active' : ''}`}
+                      disabled={isRunning}
+                      onClick={() => setScanCorner(c)}
+                    >
+                      {CORNER_ICONS[c]}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            {mode.startsWith('for') && (
               <div className="field">
                 <span>Direction</span>
                 <div className="grid-connectivity-toggle scan-direction-toggle">
@@ -145,16 +171,39 @@ export const GridSidebar = ({
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Start cell picker: only for outer BFS / DFS modes */}
+        {isOuterMode && (
+          <div className="sidebar-section">
+            <h3>
+              {isBfsOuter ? 'Start points' : 'Start point'}
+              <span className="h3-optional"> (optional)</span>
+            </h3>
+            <button
+              type="button"
+              className={`btn btn-pill${isPickingStart ? ' btn-active' : ''}`}
+              disabled={isRunning}
+              onClick={onTogglePickStart}
+            >
+              {isPickingStart ? 'Cancel' : (isBfsOuter ? 'Pick start points' : 'Pick start point')}
+            </button>
+            {isPickingStart && (
+              <p className="hint">
+                {isBfsOuter
+                  ? 'Click cells on the grid to add start points. Click a marked cell again to remove it.'
+                  : 'Click a cell on the grid to set the start point.'}
+              </p>
+            )}
+            {!isPickingStart && startPointCount > 0 && (
+              <span className="start-pick-count">
+                {startPointCount} {startPointCount === 1 ? 'point' : 'points'} selected
+              </span>
             )}
           </div>
-        </div>
-
-        {mode === 'for-bfs' && <AlgorithmInfoCard infoKey="grid-for-bfs" />}
-        {mode === 'for-dfs' && <AlgorithmInfoCard infoKey="grid-for-dfs" />}
-        {mode === 'bfs-bfs' && <AlgorithmInfoCard infoKey="grid-bfs-bfs" />}
-        {mode === 'bfs-dfs' && <AlgorithmInfoCard infoKey="grid-bfs-dfs" />}
-        {mode === 'dfs-bfs' && <AlgorithmInfoCard infoKey="grid-dfs-bfs" />}
-        {mode === 'dfs-dfs' && <AlgorithmInfoCard infoKey="grid-dfs-dfs" />}
+        )}
 
         <div className="sidebar-section sidebar-section--grid-playback">
           <h3>Playback</h3>
@@ -175,7 +224,10 @@ export const GridSidebar = ({
             speed={playbackSpeed}
             onSpeedChange={onSpeedChange}
           />
-          <p className="hint">Step {formatStepDisplay(isRunning, stepIndex, stepCount)} — {statusText}</p>
+          {isRunning
+            ? <p className="hint">Step {formatStepDisplay(stepIndex, stepCount)} — {statusText}</p>
+            : <p className="hint">{statusText}</p>
+          }
           <StepExplanation text={currentExplanation} />
         </div>
 

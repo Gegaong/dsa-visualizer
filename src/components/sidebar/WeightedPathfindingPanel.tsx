@@ -53,8 +53,8 @@ export type WeightedPathfindingPanelProps = {
   wpCurrentExplanation: string
 }
 
-function formatStepDisplay(sessionActive: boolean, stepIndex: number, stepTotal: number): string {
-  if (!sessionActive || stepTotal === 0) return '—'
+function formatStepDisplay(stepIndex: number, stepTotal: number): string {
+  if (stepTotal === 0) return '—'
   if (stepIndex >= 0) return `${stepIndex + 1} / ${stepTotal}`
   return `Ready / ${stepTotal}`
 }
@@ -134,7 +134,7 @@ export const WeightedPathfindingPanel = ({
   const frozen = isWPSessionActive
   const showDetailedMode = algorithm === 'bfs' || algorithm === 'dfs'
 
-  const stepDisplay = formatStepDisplay(isWPSessionActive, wpStepIndex, wpStepTotal)
+  const stepDisplay = formatStepDisplay(wpStepIndex, wpStepTotal)
   const pathFound = wpOutput === null ? '—' : wpOutput.pathFound ? 'Yes' : 'No'
   const pathCost = wpOutput !== null && wpOutput.pathFound && wpOutput.pathCost !== null
     ? String(wpOutput.pathCost)

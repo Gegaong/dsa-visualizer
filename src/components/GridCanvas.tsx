@@ -19,6 +19,11 @@ type GridCanvasProps = {
   currentCell: string | null
   currentPhase: 'inner' | 'outer' | null
   islandColorByCellKey: Map<string, IslandHSL> | null
+  startMarkers: string[]
+  isPickingStart: boolean
+  onCellPick: (key: string) => void
+  onRemoveStartMarker: (key: string) => void
+  onClearStartMarkers: () => void
 }
 
 export const GridCanvas = ({
@@ -38,11 +43,17 @@ export const GridCanvas = ({
   currentCell,
   currentPhase,
   islandColorByCellKey,
+  startMarkers,
+  isPickingStart,
+  onCellPick,
+  onRemoveStartMarker,
+  onClearStartMarkers,
 }: GridCanvasProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [removeMode, setRemoveMode] = useState(false)
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
+  const [clearStartConfirmOpen, setClearStartConfirmOpen] = useState(false)
   const isPainting = useRef(false)
   const paintMode = useRef<'add' | 'remove'>('add')
 
@@ -99,10 +110,24 @@ export const GridCanvas = ({
   }
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0 || isBlocked) return
+    if (e.button !== 0) return
     e.preventDefault()
     const key = getCellKey(e)
     if (!key) return
+
+    if (isPickingStart) {
+      onCellPick(key)
+      return
+    }
+
+    if (isBlocked) return
+
+    // Remove mode on start markers: clicking a marker removes it instead of painting
+    if (removeMode && startMarkersSet.has(key)) {
+      onRemoveStartMarker(key)
+      return
+    }
+
     isPainting.current = true
     paintMode.current = removeMode ? 'remove' : 'add'
     applyPaint(key)
@@ -134,6 +159,8 @@ export const GridCanvas = ({
     return { visitedWater, visitedIsland }
   }, [visitedCells, islands])
 
+  const startMarkersSet = useMemo(() => new Set(startMarkers), [startMarkers])
+
   const cellStyle = (r: number, c: number, bg: string) => ({
     position: 'absolute' as const,
     left: c * cellW,
@@ -159,6 +186,14 @@ export const GridCanvas = ({
         onConfirm={handleClearConfirm}
         onCancel={() => setClearConfirmOpen(false)}
       />
+      <ConfirmModal
+        open={clearStartConfirmOpen}
+        title="Clear start points"
+        body="All selected start points will be removed. This can't be undone."
+        confirmLabel="Clear"
+        onConfirm={() => { onClearStartMarkers(); setClearStartConfirmOpen(false) }}
+        onCancel={() => setClearStartConfirmOpen(false)}
+      />
       <section className="canvas-panel">
         <div className="canvas-header">
           <div className="canvas-copy">
@@ -170,7 +205,8 @@ export const GridCanvas = ({
               <button
                 className={connectivity === 4 ? 'active' : ''}
                 type="button"
-                onClick={() => !isBlocked && onConnectivityChange(4)}
+                disabled={isBlocked || isPickingStart}
+                onClick={() => onConnectivityChange(4)}
                 title="4-directional (up, down, left, right)"
               >
                 4-dir
@@ -178,34 +214,44 @@ export const GridCanvas = ({
               <button
                 className={connectivity === 8 ? 'active' : ''}
                 type="button"
-                onClick={() => !isBlocked && onConnectivityChange(8)}
+                disabled={isBlocked || isPickingStart}
+                onClick={() => onConnectivityChange(8)}
                 title="8-directional (includes diagonals)"
               >
                 8-dir
               </button>
             </div>
-            <div className="grid-zoom-inline">
-              <button className="canvas-zoom-btn" type="button" onClick={onZoomOut} disabled={isBlocked || !canZoomOut} aria-label="Zoom out">−</button>
+            <div className={`grid-zoom-inline${isBlocked || isPickingStart ? ' is-dim' : ''}`}>
+              <button className="canvas-zoom-btn" type="button" onClick={onZoomOut} disabled={isBlocked || isPickingStart || !canZoomOut} aria-label="Zoom out">−</button>
               <span className="canvas-zoom-value">{cols}×{rows}</span>
-              <button className="canvas-zoom-btn" type="button" onClick={onZoomIn} disabled={isBlocked || !canZoomIn} aria-label="Zoom in">+</button>
+              <button className="canvas-zoom-btn" type="button" onClick={onZoomIn} disabled={isBlocked || isPickingStart || !canZoomIn} aria-label="Zoom in">+</button>
             </div>
             <button
               className={`btn btn-pill connect-toggle-btn ${removeMode ? 'btn-active' : ''}`}
               type="button"
-              disabled={isBlocked}
+              disabled={isBlocked || isPickingStart}
               onClick={() => setRemoveMode(r => !r)}
             >
               {removeMode ? 'Cancel remove' : 'Remove'}
             </button>
-            <button
-              className="btn btn-clear"
-              style={{ marginLeft: '8px' }}
-              type="button"
-              disabled={isBlocked}
-              onClick={handleClearClick}
-            >
-              Clear grid
-            </button>
+            <div className="delete-stack" role="group" aria-label="Clear controls">
+              <button
+                className="btn delete-stack-btn"
+                type="button"
+                disabled={isBlocked || isPickingStart}
+                onClick={handleClearClick}
+              >
+                Clear islands
+              </button>
+              <button
+                className="btn delete-stack-btn"
+                type="button"
+                disabled={isBlocked || isPickingStart}
+                onClick={() => { if (startMarkers.length > 0) setClearStartConfirmOpen(true) }}
+              >
+                Clear start points
+              </button>
+            </div>
           </div>
         </div>
         <div
@@ -248,6 +294,27 @@ export const GridCanvas = ({
             if (!valid) return null
             return <div style={cellStyle(r, c, '#1e40af')} />
           })()}
+
+          {startMarkers.map(key => {
+            const { r, c, valid } = parseKey(key)
+            if (!valid) return null
+            const dotSize = Math.min(cellW, cellH) * 0.42
+            return (
+              <div
+                key={`sm-${key}`}
+                style={{
+                  position: 'absolute',
+                  left: c * cellW + (cellW - dotSize) / 2,
+                  top: r * cellH + (cellH - dotSize) / 2,
+                  width: dotSize,
+                  height: dotSize,
+                  borderRadius: '50%',
+                  background: '#FACC15',
+                  pointerEvents: 'none',
+                }}
+              />
+            )
+          })}
 
           <div
             style={{

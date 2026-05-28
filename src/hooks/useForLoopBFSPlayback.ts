@@ -5,6 +5,8 @@ import { runOuterBFS, runOuterDFS } from '../algorithms/gridOuterSearch'
 import type { GridResult } from '../algorithms/gridTypes'
 import type { InnerAlgo } from '../algorithms/gridTypes'
 import { buildGridIslandColorMap } from '../utils/gridIslandColors'
+import type { IslandHSL } from '../utils/gridIslandColors'
+import type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
 export type { IslandHSL } from '../utils/gridIslandColors'
 export type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
 export type { InnerAlgo } from '../algorithms/gridTypes'
@@ -14,7 +16,7 @@ export type GridSearchMode =
   | 'bfs-bfs' | 'bfs-dfs'
   | 'dfs-bfs' | 'dfs-dfs'
 
-const IDLE_STATUS = 'Draw islands, then run the search.'
+const IDLE_STATUS = 'Draw islands, then press Run.'
 const GRID_MIN_DELAY = 8
 const GRID_MAX_DELAY = 300
 const GRID_INITIAL_SPEED = 96
@@ -51,7 +53,7 @@ export type ForLoopBFSPlaybackHandle = {
   canStepForward: boolean
   canStepBackward: boolean
   canTogglePlay: boolean
-  run: (mode: GridSearchMode, scanMode: ForLoopScanMode) => void
+  run: (mode: GridSearchMode, scanMode: ForLoopScanMode, startCells?: string[]) => void
   stop: () => void
   stepForward: () => void
   stepBackward: () => void
@@ -128,18 +130,24 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
   })
 
   // Runs the chosen algorithm, stores the full step sequence, and initialises playback state.
-  const run = (mode: GridSearchMode, scanMode: ForLoopScanMode) => {
+  const run = (mode: GridSearchMode, scanMode: ForLoopScanMode, startCells?: string[]) => {
     if (pb.isPlaying) return
     pb.stopPlayback()
     const innerAlgo: InnerAlgo = mode.endsWith('bfs') ? 'bfs' : 'dfs'
-    const corner = scanMode.slice(0, 2) as 'tl' | 'tr' | 'bl' | 'br'
+    const corner = scanMode.slice(0, 2)
+    const defaultKey = corner === 'tl' ? '0,0'
+      : corner === 'tr' ? `0,${cols - 1}`
+      : corner === 'bl' ? `${rows - 1},0`
+      : `${rows - 1},${cols - 1}`
     let result: GridResult
     if (mode.startsWith('for')) {
       result = runForLoopOuter(islands, rows, cols, connectivity, scanMode, innerAlgo)
     } else if (mode.startsWith('bfs')) {
-      result = runOuterBFS(islands, rows, cols, connectivity, corner, innerAlgo)
+      const keys = startCells && startCells.length > 0 ? startCells : [defaultKey]
+      result = runOuterBFS(islands, rows, cols, connectivity, keys, innerAlgo)
     } else {
-      result = runOuterDFS(islands, rows, cols, connectivity, corner, innerAlgo)
+      const key = startCells && startCells.length > 0 ? startCells[0] : defaultKey
+      result = runOuterDFS(islands, rows, cols, connectivity, key, innerAlgo)
     }
     resultRef.current = result
     // Island colors built once at run time so they show during traversal, not just at completion.

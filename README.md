@@ -28,14 +28,13 @@ Your graph on screen always produces the same animation. Changing edges can chan
 - [x] Project setup + tooling
 - [x] Base UI layout (top bar, canvas, sidebar)
 - [x] Node creation + basic canvas rendering
-- [x] Graph canvas environment (drag, connect edges, edit nodes, preset templates)
-- [x] Graph algorithms (BFS, DFS, ...)
-- [x] Weighted graph canvas environment (weights, edit edges, preset templates)
-- [X] Weighted graph algorithms (BFS, DFS, Dijkstra, greedy search, A\* ...)
-- [ ] Grid canvas environment (cells, walls, start/end, preset templates)
-- [ ] Grid algorithms (BFS, DFS, ...)
-- [ ] Maze canvas environment (maze generation + edit, preset templates)
-- [ ] Maze algorithms (BFS, DFS, ...)
+- [x] Graph canvas environment (drag, connect edges, edit nodes, directed/undirected toggle, preset templates)
+- [x] Graph algorithms (BFS, DFS, weakly connected components, cycle detection, bipartite check, shortest path)
+- [x] Weighted graph canvas environment (edge weights, weight editing, directed/undirected toggle, preset templates)
+- [x] Weighted graph algorithms (Dijkstra, greedy best-first search, A\*)
+- [x] Grid canvas environment (island painting, 4-dir/8-dir connectivity, zoom, start point markers)
+- [x] Grid algorithms (for-loop/BFS/DFS outer × BFS/DFS inner island search, 6 combinations)
+- [ ] N-Queens visualizer (N×N chessboard, backtracking solver with step-by-step playback)
 - [ ] Animation polish (colors, visited/path states)
 - [ ] Final testing + documentation
 

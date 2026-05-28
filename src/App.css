@@ -136,6 +136,11 @@
 	color: var(--accent-ink);
 }
 
+.grid-connectivity-toggle button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
 .canvas-header h2 {
 	margin: 0;
 	font-size: 22px;
@@ -385,6 +390,15 @@
 
 .canvas-zoom-btn:hover {
 	border-color: var(--accent);
+}
+
+.canvas-zoom-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.grid-zoom-inline.is-dim .canvas-zoom-value {
+	opacity: 0.45;
 }
 
 .canvas-zoom-value {
@@ -694,6 +708,13 @@
 	color: var(--muted);
 }
 
+.h3-optional {
+	text-transform: none;
+	letter-spacing: 0;
+	font-weight: 400;
+	opacity: 0.6;
+}
+
 .pill-group {
 	display: flex;
 	flex-wrap: wrap;
@@ -935,6 +956,24 @@
 .scan-corner-btn:disabled {
 	opacity: 0.45;
 	cursor: not-allowed;
+}
+
+.start-pick-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.start-pick-count {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--muted);
+	background: var(--accent-soft);
+	border: 1px solid rgba(224, 122, 95, 0.2);
+	padding: 3px 9px;
+	border-radius: 999px;
+	white-space: nowrap;
 }
 
 .algorithm-traversal-buttons {
