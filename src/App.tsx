@@ -1058,6 +1058,7 @@ function App() {
             visitedCells={gridSearch.visitedCells}
             frontierCells={gridSearch.frontierCells}
             currentCell={gridSearch.currentCell}
+            currentPhase={gridSearch.currentPhase}
             islandColorByCellKey={gridSearch.islandColorByCellKey}
           />
         )}
@@ -1155,11 +1156,7 @@ function App() {
             canStepBackward={gridSearch.canStepBackward}
             canStepForward={gridSearch.canStepForward}
             canTogglePlay={gridSearch.canTogglePlay}
-            onRun={(mode, scanMode) => {
-              if (mode.startsWith('for')) {
-                gridSearch.run(scanMode, mode.endsWith('bfs') ? 'bfs' : 'dfs')
-              }
-            }}
+            onRun={(mode, scanMode) => gridSearch.run(mode, scanMode)}
             onStop={gridSearch.stop}
             onStepForward={gridSearch.stepForward}
             onStepBackward={gridSearch.stepBackward}

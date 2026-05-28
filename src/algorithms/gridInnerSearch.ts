@@ -94,7 +94,10 @@ export function runInnerDFS(
     cells.push(current)
     const newVisited: string[] = first ? [current] : []
 
-    for (const nb of getIslandNeighbors(current, islands, rows, cols, connectivity)) {
+    // Push in reverse so DIRS[0] (up / top-left) is popped first — consistent with outer DFS.
+    const nbs = getIslandNeighbors(current, islands, rows, cols, connectivity)
+    for (let i = nbs.length - 1; i >= 0; i--) {
+      const nb = nbs[i]
       if (!visited.has(nb)) {
         visited.add(nb)
         stack.push(nb)

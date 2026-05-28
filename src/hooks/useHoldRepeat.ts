@@ -5,11 +5,11 @@ const HOLD_DELAY_MS = 400
 // After the initial delay: interval steps down at these offsets (ms from repeat start).
 // 80ms → 40ms → 20ms → 10ms → 5ms
 const SPEED_STEPS: Array<{ at: number; interval: number }> = [
-  { at: 0,    interval: 80 },
-  { at: 2000, interval: 40 },
-  { at: 4000, interval: 20 },
-  { at: 6000, interval: 10 },
-  { at: 7000, interval: 5  },
+  { at: 0,     interval: 80 },
+  { at: 3000,  interval: 40 },
+  { at: 6000,  interval: 20 },
+  { at: 9000,  interval: 10 },
+  { at: 12000, interval: 5  },
 ]
 
 // Fires callback immediately on press, then repeatedly after an initial delay.

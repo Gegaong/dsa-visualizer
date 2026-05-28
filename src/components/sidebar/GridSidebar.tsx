@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 import { PlaybackControls } from './PlaybackControls'
 import { StepExplanation } from './StepExplanation'
-import type { GridOutput, ForLoopScanMode } from '../../hooks/useForLoopBFSPlayback'
+import type { GridOutput, ForLoopScanMode, GridSearchMode } from '../../hooks/useForLoopBFSPlayback'
 
 type ScanCorner = 'tl' | 'tr' | 'bl' | 'br'
 
@@ -13,14 +13,6 @@ const DIRECTION_LABELS: Record<ScanCorner, { h: string; v: string }> = {
   bl: { h: '→ ↑', v: '↑ →' },
   br: { h: '← ↑', v: '↑ ←' },
 }
-
-type GridSearchMode =
-  | 'for-bfs'
-  | 'for-dfs'
-  | 'bfs-bfs'
-  | 'bfs-dfs'
-  | 'dfs-bfs'
-  | 'dfs-dfs'
 
 const MODE_LABELS: Record<GridSearchMode, string> = {
   'for-bfs': 'For Loop — BFS',
@@ -114,24 +106,24 @@ export const GridSidebar = ({
               </select>
             </label>
           </div>
-          {mode.startsWith('for') && (
-            <div className="scan-start-row">
-              <div className="field">
-                <span>Start corner</span>
-                <div className="scan-corner-picker">
-                  {(['tl', 'tr', 'bl', 'br'] as ScanCorner[]).map(c => (
-                    <button
-                      key={c}
-                      type="button"
-                      className={`scan-corner-btn${scanCorner === c ? ' active' : ''}`}
-                      disabled={isRunning}
-                      onClick={() => setScanCorner(c)}
-                    >
-                      {CORNER_ICONS[c]}
-                    </button>
-                  ))}
-                </div>
+          <div className="scan-start-row">
+            <div className="field">
+              <span>Start corner</span>
+              <div className="scan-corner-picker">
+                {(['tl', 'tr', 'bl', 'br'] as ScanCorner[]).map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`scan-corner-btn${scanCorner === c ? ' active' : ''}`}
+                    disabled={isRunning}
+                    onClick={() => setScanCorner(c)}
+                  >
+                    {CORNER_ICONS[c]}
+                  </button>
+                ))}
               </div>
+            </div>
+            {mode.startsWith('for') && (
               <div className="field">
                 <span>Direction</span>
                 <div className="grid-connectivity-toggle scan-direction-toggle">
@@ -153,12 +145,16 @@ export const GridSidebar = ({
                   </button>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {mode === 'for-bfs' && <AlgorithmInfoCard infoKey="grid-for-bfs" />}
         {mode === 'for-dfs' && <AlgorithmInfoCard infoKey="grid-for-dfs" />}
+        {mode === 'bfs-bfs' && <AlgorithmInfoCard infoKey="grid-bfs-bfs" />}
+        {mode === 'bfs-dfs' && <AlgorithmInfoCard infoKey="grid-bfs-dfs" />}
+        {mode === 'dfs-bfs' && <AlgorithmInfoCard infoKey="grid-dfs-bfs" />}
+        {mode === 'dfs-dfs' && <AlgorithmInfoCard infoKey="grid-dfs-dfs" />}
 
         <div className="sidebar-section sidebar-section--grid-playback">
           <h3>Playback</h3>

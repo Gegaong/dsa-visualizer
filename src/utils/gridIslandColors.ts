@@ -1,26 +1,25 @@
-import { DISTINCT_PALETTE } from './weakCCOutlineHues'
 export type IslandHSL = { h: number; s: number; l: number }
 
 type HueBand = { center: number; radius: number }
 
+// Hue ranges reserved by the grid UI: orange (frontier), yellow (visited water),
+// green (raw island cells), and blue/cyan (current cell).
 const FORBIDDEN: HueBand[] = [
-  { center: 50,  radius: 20 },
-  { center: 120, radius: 20 },
-  { center: 195, radius: 20 },
+  { center: 40,  radius: 30 },  // orange + yellow: 10°–70°
+  { center: 120, radius: 25 },  // green: 95°–145°
+  { center: 205, radius: 35 },  // cyan + blue: 170°–240°
 ]
 
-// Shortest angular distance between two hues on the [0, 360) circle.
-function circularDist(a: number, b: number): number {
-  const d = Math.abs(a - b) % 360
-  return d > 180 ? 360 - d : d
-}
+// Fixed palette for the first few islands — muted enough not to clash with UI state colors.
+// Ordered by perceptual distinctiveness; all hues are outside the FORBIDDEN bands.
+const PALETTE: IslandHSL[] = [
+  { h: 350, s: 62, l: 60 },  // rose
+  { h: 270, s: 58, l: 63 },  // purple
+  { h: 318, s: 60, l: 63 },  // pink
+  { h: 158, s: 52, l: 50 },  // teal
+]
 
-// True if hue `h` falls inside any forbidden band (reserved for water/frontier/current cell colors).
-function isForbidden(h: number): boolean {
-  return FORBIDDEN.some(({ center, radius }) => circularDist(h, center) < radius)
-}
 
-const PALETTE: IslandHSL[] = DISTINCT_PALETTE.filter(({ h }) => !isForbidden(h))
 
 // Returns hue arcs safe to use — the interval complement of FORBIDDEN bands on [0, 360).
 function buildSafeArcs(): Array<[number, number]> {
@@ -54,6 +53,7 @@ const SAFE_TOTAL = SAFE_ARCS.reduce((sum, [s, e]) => sum + e - s, 0)
 
 const GOLDEN_RATIO = 0.6180339887
 
+// Returns a cryptographically random float in [0, 1) for seeding the golden-ratio hue walk.
 function randomFloat(): number {
   const u = new Uint32Array(1)
   globalThis.crypto.getRandomValues(u)

@@ -4,6 +4,10 @@
 export type AlgorithmInfoKey =
   | 'grid-for-bfs'
   | 'grid-for-dfs'
+  | 'grid-bfs-bfs'
+  | 'grid-bfs-dfs'
+  | 'grid-dfs-bfs'
+  | 'grid-dfs-dfs'
   | 'traversal-bfs'
   | 'traversal-dfs'
   | 'cc-bfs'
@@ -44,6 +48,30 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     time: 'O(M × N)',
     space: 'O(M × N)',
     summary: 'Scans every cell in a configurable order. When an unvisited island cell is found, DFS flood-fills the entire connected island (stack-deep first) before the scan resumes.',
+  },
+  'grid-bfs-bfs': {
+    name: 'BFS + BFS',
+    time: 'O(M × N)',
+    space: 'O(M × N)',
+    summary: 'Outer BFS explores the whole grid breadth-first from the start corner — cells closer to the start are processed first. When it reaches an unvisited island cell, inner BFS flood-fills that island level by level before the outer BFS continues.',
+  },
+  'grid-bfs-dfs': {
+    name: 'BFS + DFS',
+    time: 'O(M × N)',
+    space: 'O(M × N)',
+    summary: 'Outer BFS explores the whole grid breadth-first from the start corner. When it reaches an unvisited island cell, inner DFS flood-fills that island depth-first before the outer BFS continues.',
+  },
+  'grid-dfs-bfs': {
+    name: 'DFS + BFS',
+    time: 'O(M × N)',
+    space: 'O(M × N)',
+    summary: 'Outer DFS explores the whole grid depth-first from the start corner — goes as deep as possible in one direction before backtracking. When it reaches an unvisited island cell, inner BFS flood-fills that island level by level before the outer DFS continues.',
+  },
+  'grid-dfs-dfs': {
+    name: 'DFS + DFS',
+    time: 'O(M × N)',
+    space: 'O(M × N)',
+    summary: 'Outer DFS explores the whole grid depth-first from the start corner. When it reaches an unvisited island cell, inner DFS flood-fills that island depth-first too — both layers dive deep before backtracking.',
   },
   'traversal-bfs': {
     name: 'BFS — Breadth-First Search',

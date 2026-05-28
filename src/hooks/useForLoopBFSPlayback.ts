@@ -1,12 +1,18 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStepPlayback } from './useStepPlayback'
 import { runForLoopOuter } from '../algorithms/gridForLoopOuter'
+import { runOuterBFS, runOuterDFS } from '../algorithms/gridOuterSearch'
 import type { GridResult } from '../algorithms/gridTypes'
 import type { InnerAlgo } from '../algorithms/gridTypes'
 import { buildGridIslandColorMap } from '../utils/gridIslandColors'
 export type { IslandHSL } from '../utils/gridIslandColors'
 export type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
 export type { InnerAlgo } from '../algorithms/gridTypes'
+
+export type GridSearchMode =
+  | 'for-bfs' | 'for-dfs'
+  | 'bfs-bfs' | 'bfs-dfs'
+  | 'dfs-bfs' | 'dfs-dfs'
 
 const IDLE_STATUS = 'Draw islands, then run the search.'
 const GRID_MIN_DELAY = 8
@@ -30,6 +36,7 @@ export type ForLoopBFSPlaybackHandle = {
   visitedCells: string[]
   frontierCells: string[]
   currentCell: string | null
+  currentPhase: 'inner' | 'outer' | null
   islandColorByCellKey: Map<string, IslandHSL> | null
   isRunning: boolean
   statusText: string
@@ -44,7 +51,7 @@ export type ForLoopBFSPlaybackHandle = {
   canStepForward: boolean
   canStepBackward: boolean
   canTogglePlay: boolean
-  run: (scanMode: ForLoopScanMode, innerAlgo: InnerAlgo) => void
+  run: (mode: GridSearchMode, scanMode: ForLoopScanMode) => void
   stop: () => void
   stepForward: () => void
   stepBackward: () => void
@@ -52,6 +59,7 @@ export type ForLoopBFSPlaybackHandle = {
   setPlaybackSpeed: (v: number) => void
 }
 
+// Manages algorithm selection, run-time result storage, and step-by-step playback for all 6 grid search modes.
 export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Params): ForLoopBFSPlaybackHandle {
   const [visitedCells, setVisitedCells] = useState<string[]>([])
   const [frontierCells, setFrontierCells] = useState<string[]>([])
@@ -68,6 +76,7 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
   const visitedSetRef = useRef(new Set<string>())
   const prevStepIndexRef = useRef(-1)
 
+  // Resets all visual state (visited set, frontier, current cell) without touching algorithm result.
   const clearVisuals = useCallback(() => {
     visitedSetRef.current = new Set()
     prevStepIndexRef.current = -1
@@ -118,10 +127,20 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
     },
   })
 
-  const run = (scanMode: ForLoopScanMode, innerAlgo: InnerAlgo) => {
+  // Runs the chosen algorithm, stores the full step sequence, and initialises playback state.
+  const run = (mode: GridSearchMode, scanMode: ForLoopScanMode) => {
     if (pb.isPlaying) return
     pb.stopPlayback()
-    const result = runForLoopOuter(islands, rows, cols, connectivity, scanMode, innerAlgo)
+    const innerAlgo: InnerAlgo = mode.endsWith('bfs') ? 'bfs' : 'dfs'
+    const corner = scanMode.slice(0, 2) as 'tl' | 'tr' | 'bl' | 'br'
+    let result: GridResult
+    if (mode.startsWith('for')) {
+      result = runForLoopOuter(islands, rows, cols, connectivity, scanMode, innerAlgo)
+    } else if (mode.startsWith('bfs')) {
+      result = runOuterBFS(islands, rows, cols, connectivity, corner, innerAlgo)
+    } else {
+      result = runOuterDFS(islands, rows, cols, connectivity, corner, innerAlgo)
+    }
     resultRef.current = result
     // Island colors built once at run time so they show during traversal, not just at completion.
     setIslandColorByCellKey(buildGridIslandColorMap(result.islandGroups))
@@ -136,6 +155,7 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
     setResetSignal(s => s + 1)
   }
 
+  // Aborts playback and clears all algorithm and visual state, returning to idle.
   const stop = () => {
     pb.stopPlayback()
     resultRef.current = null
@@ -159,10 +179,13 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
     return result.steps[pb.stepIndex]?.explanation ?? ''
   })()
 
+  const currentPhase = resultRef.current?.steps[pb.stepIndex]?.phase ?? null
+
   return {
     visitedCells,
     frontierCells,
     currentCell,
+    currentPhase,
     islandColorByCellKey,
     isRunning,
     statusText,

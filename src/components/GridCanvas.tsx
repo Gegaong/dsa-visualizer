@@ -17,6 +17,7 @@ type GridCanvasProps = {
   visitedCells: string[]
   frontierCells: string[]
   currentCell: string | null
+  currentPhase: 'inner' | 'outer' | null
   islandColorByCellKey: Map<string, IslandHSL> | null
 }
 
@@ -35,6 +36,7 @@ export const GridCanvas = ({
   visitedCells,
   frontierCells,
   currentCell,
+  currentPhase,
   islandColorByCellKey,
 }: GridCanvasProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -132,8 +134,6 @@ export const GridCanvas = ({
     return { visitedWater, visitedIsland }
   }, [visitedCells, islands])
 
-  const frontierSet = useMemo(() => new Set(frontierCells), [frontierCells])
-
   const cellStyle = (r: number, c: number, bg: string) => ({
     position: 'absolute' as const,
     left: c * cellW,
@@ -228,7 +228,6 @@ export const GridCanvas = ({
           })}
 
           {visitedIsland.map(key => {
-            if (frontierSet.has(key)) return null
             const { r, c, valid } = parseKey(key)
             if (!valid) return null
             const hsl = islandColorByCellKey?.get(key)
@@ -239,10 +238,12 @@ export const GridCanvas = ({
           {frontierCells.map(key => {
             const { r, c, valid } = parseKey(key)
             if (!valid) return null
-            return <div key={`f-${key}`} style={cellStyle(r, c, '#FB923C')} />
+            // Island frontier cells: semi-transparent orange so the island color underneath blends through.
+            const bg = islands.has(key) ? 'rgba(251,146,60,0.58)' : '#FB923C'
+            return <div key={`f-${key}`} style={cellStyle(r, c, bg)} />
           })}
 
-          {currentCell && (() => {
+          {currentCell && (currentPhase === 'inner' || !islands.has(currentCell)) && (() => {
             const { r, c, valid } = parseKey(currentCell)
             if (!valid) return null
             return <div style={cellStyle(r, c, '#1e40af')} />
