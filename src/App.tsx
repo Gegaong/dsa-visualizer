@@ -32,6 +32,8 @@ import { EdgeContextMenu } from './components/EdgeContextMenu'
 import { GraphCanvas } from './components/GraphCanvas'
 import { GridCanvas } from './components/GridCanvas'
 import { GridSidebar } from './components/sidebar/GridSidebar'
+import { NQueensCanvas } from './components/NQueensCanvas'
+import { NQueensSidebar } from './components/sidebar/NQueensSidebar'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
 import { NodeContextMenu } from './components/NodeContextMenu'
@@ -95,6 +97,7 @@ function App() {
   const [bfsStartCells, setBfsStartCells] = useState<Set<string>>(new Set())
   const [dfsStartCell, setDfsStartCell] = useState<string | null>(null)
   const [isPickingStart, setIsPickingStart] = useState(false)
+  const [nQueensN, setNQueensN] = useState(8)
   const [isUndirectedMode, setIsUndirectedMode] = useState(false)
   const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
   const [canvasType, setCanvasType] = useState<CanvasType>('graph')
@@ -1112,7 +1115,10 @@ function App() {
             onClearStartMarkers={() => { setBfsStartCells(new Set()); setDfsStartCell(null) }}
           />
         )}
-        {canvasType !== 'grid' && <GraphCanvas
+        {canvasType === 'nqueens' && (
+          <NQueensCanvas n={nQueensN} onNChange={setNQueensN} />
+        )}
+        {canvasType !== 'grid' && canvasType !== 'nqueens' && <GraphCanvas
           nodes={nodes}
           edges={effectiveEdges}
           isConnectMode={isConnectMode}
@@ -1226,7 +1232,8 @@ function App() {
             onSpeedChange={gridSearch.setPlaybackSpeed}
           />
         )}
-        {canvasType !== 'grid' && <Sidebar
+        {canvasType === 'nqueens' && <NQueensSidebar />}
+        {canvasType !== 'grid' && canvasType !== 'nqueens' && <Sidebar
           onSidebarSectionChange={handleSidebarSectionChange}
           isWeightedMode={isWeightedMode}
           pathfinder={{

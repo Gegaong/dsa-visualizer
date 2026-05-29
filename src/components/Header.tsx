@@ -33,8 +33,12 @@ export const Header = ({ activeCanvas, onCanvasTypeChange }: HeaderProps) => (
       >
         Grid
       </button>
-      <button className="btn btn-pill" type="button" disabled>
-        Maze
+      <button
+        className={`btn btn-pill ${activeCanvas === 'nqueens' ? 'btn-active' : ''}`}
+        type="button"
+        onClick={() => onCanvasTypeChange('nqueens')}
+      >
+        N-Queens
       </button>
     </nav>
   </header>
