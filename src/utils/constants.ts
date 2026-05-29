@@ -10,7 +10,7 @@ export const DEFAULT_CANVAS_HEIGHT = 560
 export const DRAG_THRESHOLD = 3
 
 // Shared playback slider → timer delay range (ms). Used by traversal + algorithm UI.
-export const PLAYBACK_MIN_DELAY_MS = 50
+export const PLAYBACK_MIN_DELAY_MS = 1
 export const PLAYBACK_MAX_DELAY_MS = 7000
 
 // Canvas zoom bounds and step size.

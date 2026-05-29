@@ -3,7 +3,7 @@ import { useStepPlayback } from './useStepPlayback'
 import { solveNQueens } from '../algorithms/nqueens'
 import type { NQueensStep } from '../algorithms/nqueens'
 
-const NQUEENS_MIN_DELAY = 10
+const NQUEENS_MIN_DELAY = 1
 const NQUEENS_MAX_DELAY = 3525
 const NQUEENS_INITIAL_SPEED = 89
 

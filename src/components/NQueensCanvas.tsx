@@ -132,6 +132,11 @@ export const NQueensCanvas = ({ n, onNChange, isRunning, currentStep }: NQueensC
             const isLockedQueen = lockedQueenKeys.has(key)
             const isTryingQueen = key === tryingKey
 
+            const labelColor = isLight ? '#769656' : '#EEEED2'
+            const labelSize  = Math.max(9, Math.round(cellSize * 0.22))
+            const rankLabel  = c === 0     ? String(n - r)                          : null
+            const fileLabel  = r === n - 1 ? String.fromCharCode(97 + c)            : null
+
             return (
               <div
                 key={i}
@@ -144,6 +149,24 @@ export const NQueensCanvas = ({ n, onNChange, isRunning, currentStep }: NQueensC
                   background: isLight ? '#EEEED2' : '#769656',
                 }}
               >
+                {rankLabel && (
+                  <span style={{
+                    position: 'absolute', top: 2, left: 3,
+                    fontSize: labelSize, fontWeight: 700, lineHeight: 1,
+                    color: labelColor, userSelect: 'none', pointerEvents: 'none',
+                  }}>
+                    {rankLabel}
+                  </span>
+                )}
+                {fileLabel && (
+                  <span style={{
+                    position: 'absolute', bottom: 2, right: 3,
+                    fontSize: labelSize, fontWeight: 700, lineHeight: 1,
+                    color: labelColor, userSelect: 'none', pointerEvents: 'none',
+                  }}>
+                    {fileLabel}
+                  </span>
+                )}
                 {(isLockedQueen || isTryingQueen) && (
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <QueenPiece
