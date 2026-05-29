@@ -19,7 +19,7 @@ export type GridSearchMode =
 const IDLE_STATUS = 'Draw islands, then press Run.'
 const GRID_MIN_DELAY = 8
 const GRID_MAX_DELAY = 300
-const GRID_INITIAL_SPEED = 96
+const GRID_INITIAL_SPEED = 89
 
 type Params = {
   islands: Set<string>

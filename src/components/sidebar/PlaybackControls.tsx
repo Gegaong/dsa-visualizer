@@ -97,7 +97,7 @@ export const PlaybackControls = ({
           step="any"
           value={speed}
           onChange={(event) => onSpeedChange(Number(event.target.value))}
-          disabled={!canTogglePlay || stepControlsDisabled}
+          disabled={stepControlsDisabled}
         />
       </label>
     </div>
