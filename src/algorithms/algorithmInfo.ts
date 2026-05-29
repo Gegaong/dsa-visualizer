@@ -23,6 +23,7 @@ export type AlgorithmInfoKey =
   | 'wp-dijkstra'
   | 'wp-astar'
   | 'wp-greedy'
+  | 'nqueens'
 
 export type AlgorithmInfo = {
   name: string
@@ -274,6 +275,19 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     cons: [
       'Not optimal — may return any path, not the cheapest',
       'Can get stuck behind misleading heuristics',
+    ],
+  },
+  'nqueens': {
+    name: 'N-Queens Backtracking',
+    time: 'O(N!)',
+    space: 'O(N)',
+    summary: 'Places queens column by column. For each column every row is tried; if the position is safe the queen is locked and the solver recurses into the next column. When a conflict is found the queen is removed and the next row is tried. The search continues until all solutions have been found.',
+    pros: [
+      'Finds every valid solution, not just the first',
+      'Conflict pruning cuts most branches before they are explored',
+    ],
+    cons: [
+      'Work grows factorially — large N values are slow',
     ],
   },
 }

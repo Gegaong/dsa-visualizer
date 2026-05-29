@@ -1,3 +1,4 @@
+import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 import { PlaybackControls } from './PlaybackControls'
 import { StepExplanation } from './StepExplanation'
 
@@ -51,6 +52,7 @@ export const NQueensSidebar = ({
       </button>
     </div>
     <div className="sidebar-page-body sidebar-page-body--grid">
+      <AlgorithmInfoCard infoKey="nqueens" />
       <div className="sidebar-section sidebar-section--grid-playback">
         <h3>Playback</h3>
         <PlaybackControls
