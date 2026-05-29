@@ -699,7 +699,8 @@
 	height: 680px;
 }
 
-.sidebar.is-grid-search .sidebar-page-tab {
+.sidebar.is-grid-search .sidebar-page-tab,
+.sidebar.is-nqueens .sidebar-page-tab {
 	font-size: 16px;
 }
 

@@ -66,6 +66,7 @@ import { useWeightedPathfindingPlayback } from './hooks/useWeightedPathfindingPl
 import { useNodeDragging } from './hooks/useNodeDragging'
 import { useForLoopBFSPlayback } from './hooks/useForLoopBFSPlayback'
 import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
+import { useNQueensPlayback } from './hooks/useNQueensPlayback'
 
 // Root component: owns all graph and algorithm state, wires hooks, renders layout.
 function App() {
@@ -219,6 +220,8 @@ function App() {
     cols: gridCols,
     connectivity: gridConnectivity,
   })
+
+  const nQueens = useNQueensPlayback({ n: nQueensN })
 
   // Forwards the sidebar algorithm picker to all canvas-algorithm hooks so their refs stay in sync.
   const handleAlgorithmModeChange = useCallback((mode: AlgorithmMode) => {
@@ -419,6 +422,12 @@ function App() {
 
   const handleGridZoomIn = () => setGridRows((r) => Math.max(GRID_ROWS_MIN, r - GRID_ZOOM_STEP))
   const handleGridZoomOut = () => setGridRows((r) => Math.min(GRID_ROWS_MAX, r + GRID_ZOOM_STEP))
+
+  // Stops any active N-Queens run before changing N so the board resets cleanly.
+  const handleNQueensNChange = (newN: number) => {
+    nQueens.stop()
+    setNQueensN(newN)
+  }
 
   // Changes grid search mode; always exits picking mode since the new mode may not need it.
   const handleGridModeChange = (mode: GridSearchMode) => {
@@ -1116,7 +1125,12 @@ function App() {
           />
         )}
         {canvasType === 'nqueens' && (
-          <NQueensCanvas n={nQueensN} onNChange={setNQueensN} />
+          <NQueensCanvas
+            n={nQueensN}
+            onNChange={handleNQueensNChange}
+            isRunning={nQueens.isRunning}
+            currentStep={nQueens.currentStep}
+          />
         )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && <GraphCanvas
           nodes={nodes}
@@ -1232,7 +1246,26 @@ function App() {
             onSpeedChange={gridSearch.setPlaybackSpeed}
           />
         )}
-        {canvasType === 'nqueens' && <NQueensSidebar />}
+        {canvasType === 'nqueens' && (
+          <NQueensSidebar
+            isRunning={nQueens.isRunning}
+            stepIndex={nQueens.stepIndex}
+            stepCount={nQueens.stepCount}
+            solutionsFound={nQueens.solutionsFound}
+            isPlaying={nQueens.isPlaying}
+            playbackSpeed={nQueens.playbackSpeed}
+            isPlaybackComplete={nQueens.isPlaybackComplete}
+            canStepBackward={nQueens.canStepBackward}
+            canStepForward={nQueens.canStepForward}
+            canTogglePlay={nQueens.canTogglePlay}
+            onRun={nQueens.run}
+            onStop={nQueens.stop}
+            onStepForward={nQueens.stepForward}
+            onStepBackward={nQueens.stepBackward}
+            onTogglePlay={nQueens.togglePlay}
+            onSpeedChange={nQueens.setPlaybackSpeed}
+          />
+        )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && <Sidebar
           onSidebarSectionChange={handleSidebarSectionChange}
           isWeightedMode={isWeightedMode}

@@ -9,10 +9,13 @@ export type UseStepPlaybackOptions = {
   // Bump when starting a new run so the hook resets to step -1 (e.g. new traversal result).
   resetSignal?: number
   // Called whenever the step index changes (including -1 for “ready”).
-  onStepIndexChange: (index: number) => void
+  // Omit when the consumer derives its view straight from stepIndex and needs no notification.
+  onStepIndexChange?: (index: number) => void
   // Called when stepping would move past the last step (run finished).
-  onComplete: () => void
+  onComplete?: () => void
 }
+
+const noop = () => {}
 
 function getPlaybackDelay(speedValue: number, minDelay: number, maxDelay: number) {
   const speedRatio = speedValue / 100
@@ -27,8 +30,8 @@ export function useStepPlayback({
   maxDelay,
   initialSpeed = 81,
   resetSignal = 0,
-  onStepIndexChange,
-  onComplete,
+  onStepIndexChange = noop,
+  onComplete = noop,
 }: UseStepPlaybackOptions) {
   const [stepIndex, setStepIndex] = useState(-1)
   const [isPlaying, setIsPlaying] = useState(false)
