@@ -1248,6 +1248,7 @@ function App() {
         )}
         {canvasType === 'nqueens' && (
           <NQueensSidebar
+            n={nQueensN}
             isRunning={nQueens.isRunning}
             stepIndex={nQueens.stepIndex}
             stepCount={nQueens.stepCount}
@@ -1258,6 +1259,7 @@ function App() {
             canStepBackward={nQueens.canStepBackward}
             canStepForward={nQueens.canStepForward}
             canTogglePlay={nQueens.canTogglePlay}
+            currentStep={nQueens.currentStep}
             onRun={nQueens.run}
             onStop={nQueens.stop}
             onStepForward={nQueens.stepForward}

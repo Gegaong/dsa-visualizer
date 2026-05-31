@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { NQueensStep } from '../algorithms/nqueens'
 
-const N_MIN = 4
+const N_MIN = 2
 const N_MAX = 10
 
 const SOLUTION_COUNTS: Record<number, number> = {
-  4: 2, 5: 10, 6: 4, 7: 40, 8: 92,
+  2: 0, 3: 0, 4: 2, 5: 10, 6: 4, 7: 40, 8: 92,
   9: 352, 10: 724,
 }
 
