@@ -78,6 +78,25 @@ export const NQueensSidebar = ({
         <StepExplanation text="" />
       </div>
 
+      <div className="step-explanation step-explanation--pseudocode">
+        <pre className="nqueens-pseudocode">{`function backtrack(col):
+    for row ← 0 to n-1:
+        if not CONFLICTS(queens, row, col):
+            queens.add({row, col})
+            if col = n-1:
+                ✓ valid solution found
+            else:
+                backtrack(col + 1)
+            queens.remove({row, col})
+
+function CONFLICTS(queens, row, col):
+    for each q in queens:
+        if q.row = row → return true
+        if |q.row - row| = |q.col - col|
+            → return true
+    return false`}</pre>
+      </div>
+
       <div className="sidebar-section">
         <h3>Output</h3>
         <div className="algorithm-output">
