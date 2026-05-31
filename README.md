@@ -34,7 +34,7 @@ Your graph on screen always produces the same animation. Changing edges can chan
 - [x] Weighted graph algorithms (Dijkstra, greedy best-first search, A\*)
 - [x] Grid canvas environment (island painting, 4-dir/8-dir connectivity, zoom, start point markers)
 - [x] Grid algorithms (for-loop/BFS/DFS outer × BFS/DFS inner island search, 6 combinations)
-- [ ] N-Queens visualizer (N×N chessboard, backtracking solver with step-by-step playback)
+- [x] N-Queens visualizer (N×N chessboard, backtracking solver with step-by-step playback)
 - [ ] Animation polish (colors, visited/path states)
 - [ ] Final testing + documentation
 

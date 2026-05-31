@@ -1,7 +1,10 @@
-import { useState } from 'react'
 import type { NQueensStep, NQueensPhase } from '../../algorithms/nqueens'
+
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+
 import { PlaybackControls } from './PlaybackControls'
+
+import { PseudocodePanel } from './PseudocodePanel'
 
 const CODE_PSEUDOCODE = `function backtrack(col):
     for row ← 0 to n-1:
@@ -53,12 +56,15 @@ const EXPLANATORY_HIGHLIGHTS: Record<NQueensPhase, number[]> = {
   backtrack: [11, 12, 14, 15, 16],
 }
 
+// Returns the set of line indices to highlight for a given phase and pseudocode mode.
 function getHighlightedLines(phase: NQueensPhase | null, isExplanatory: boolean): Set<number> {
   if (!phase) return new Set()
   const map = isExplanatory ? EXPLANATORY_HIGHLIGHTS : CODE_HIGHLIGHTS
   return new Set(map[phase])
 }
 
+// Extracts col, row, and placed queens from a step for display in the variable state panel.
+// col is 0-indexed to match the pseudocode; queens are formatted as chess notation (e.g. a7).
 function deriveVars(step: NQueensStep, n: number) {
   const { lockedQueens, tryingQueen, phase } = step
 
@@ -108,6 +114,7 @@ function formatStepDisplay(stepIndex: number, stepCount: number): string {
   return `Ready / ${stepCount}`
 }
 
+// Sidebar for the N-Queens solver — playback controls, pseudocode panel with live variable state, and solution output.
 export const NQueensSidebar = ({
   n,
   isRunning,
@@ -128,11 +135,15 @@ export const NQueensSidebar = ({
   onTogglePlay,
   onSpeedChange,
 }: NQueensSidebarProps) => {
-  const [isExplanatory, setIsExplanatory] = useState(false)
+  const phase = currentStep?.phase ?? null
+  const codeHighlighted = getHighlightedLines(phase, false)
+  const logicHighlighted = getHighlightedLines(phase, true)
 
-  const text = isExplanatory ? EXPLANATORY_PSEUDOCODE : CODE_PSEUDOCODE
-  const highlighted = getHighlightedLines(currentStep?.phase ?? null, isExplanatory)
-  const vars = !isExplanatory && currentStep ? deriveVars(currentStep, n) : null
+  const vars = currentStep ? deriveVars(currentStep, n) : null
+  const varsRows = vars ? [
+    [`n = ${n}`, `col = ${vars.col}`, `row = ${vars.row ?? '—'}`],
+    [`queens = [${vars.queens.join(', ')}]`],
+  ] : null
 
   return (
   <aside className="sidebar is-nqueens">
@@ -167,37 +178,13 @@ export const NQueensSidebar = ({
         )}
       </div>
 
-      <div className="step-explanation step-explanation--pseudocode">
-        <button
-          className="pseudocode-toggle-btn"
-          type="button"
-          onClick={() => setIsExplanatory(v => !v)}
-        >
-          {isExplanatory ? 'Logic' : 'Code'}
-        </button>
-        {vars && (
-          <div className="pseudocode-vars">
-            <div className="pseudocode-vars-row">
-              <span>n = {n}</span>
-              <span>col = {vars.col}</span>
-              <span>row = {vars.row ?? '—'}</span>
-            </div>
-            <div className="pseudocode-vars-row">
-              <span>queens = [{vars.queens.join(', ')}]</span>
-            </div>
-          </div>
-        )}
-        <pre className="nqueens-pseudocode">
-          {text.split('\n').map((line, i) => (
-            <span
-              key={i}
-              className={`pseudocode-line${highlighted.has(i) ? ' pseudocode-line--active' : ''}`}
-            >
-              {line}
-            </span>
-          ))}
-        </pre>
-      </div>
+      <PseudocodePanel
+        codeText={CODE_PSEUDOCODE}
+        logicText={EXPLANATORY_PSEUDOCODE}
+        codeHighlighted={codeHighlighted}
+        logicHighlighted={logicHighlighted}
+        varsRows={varsRows}
+      />
 
       <div className="sidebar-section">
         <h3>Output</h3>
