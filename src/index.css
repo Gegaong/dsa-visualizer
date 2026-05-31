@@ -27,3 +27,8 @@ body {
 	background: radial-gradient(900px 500px at 15% -10%, #e7efe8 0%, rgba(231, 239, 232, 0) 60%),
 		linear-gradient(180deg, #f4f6f1 0%, #ecefe8 100%);
 }
+
+html:fullscreen,
+html:-webkit-full-screen {
+	overflow: hidden;
+}

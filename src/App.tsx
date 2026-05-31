@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
 } from 'react'
@@ -67,6 +68,8 @@ import { useNodeDragging } from './hooks/useNodeDragging'
 import { useForLoopBFSPlayback } from './hooks/useForLoopBFSPlayback'
 import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
 import { useNQueensPlayback } from './hooks/useNQueensPlayback'
+
+const CANVAS_ORDER: CanvasType[] = ['graph', 'weighted-graph', 'grid', 'nqueens']
 
 // Root component: owns all graph and algorithm state, wires hooks, renders layout.
 function App() {
@@ -328,6 +331,23 @@ function App() {
     closeContextMenu()
     resetAllGraphAlgorithmVisualizations()
   }
+
+  // Arrow-key canvas switching while the app is fullscreened.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!document.fullscreenElement) return
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      e.preventDefault()
+      const idx = CANVAS_ORDER.indexOf(canvasType)
+      const nextIdx = e.key === 'ArrowRight'
+        ? (idx + 1) % CANVAS_ORDER.length
+        : (idx - 1 + CANVAS_ORDER.length) % CANVAS_ORDER.length
+      handleCanvasTypeChange(CANVAS_ORDER[nextIdx])
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasType])
 
   // Opens inline weight editing for an edge, pre-filling the current weight.
   const handleEdgeWeightClick = (edgeId: string) => {
