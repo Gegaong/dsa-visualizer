@@ -56,12 +56,12 @@ export function runForLoopOuter(
     opsTotal++  // cell scan (data read: is this cell land or water?)
     if (!islands.has(key)) {
       visited.add(key)
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [key], frontierCells: [], islandIndex: -1, explanation: 'Water — scanner moves on.' })
+      steps.push({ phase: 'outer', subPhase: 'outer-water', currentCell: key, newVisited: [key], frontierCells: [], islandIndex: -1 })
       continue
     }
 
     if (visited.has(key)) {
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [], frontierCells: [], islandIndex: -1, explanation: 'Island cell already explored — scanner skips it.' })
+      steps.push({ phase: 'outer', subPhase: 'outer-visited', currentCell: key, newVisited: [], frontierCells: [], islandIndex: -1 })
       continue
     }
 

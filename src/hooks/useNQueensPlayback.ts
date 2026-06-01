@@ -34,6 +34,8 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
   const [stepCount, setStepCount] = useState(0)
   const [resetSignal, setResetSignal] = useState(0)
   const [operationCount, setOperationCount] = useState(0)
+  const [currentStep, setCurrentStep] = useState<NQueensStep | null>(null)
+  const [solutionsFound, setSolutionsFound] = useState(0)
 
   const resultRef = useRef<NQueensStep[] | null>(null)
   // Precomputed cumulative solution count per step index for O(1) lookup.
@@ -45,6 +47,15 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
     maxDelay: NQUEENS_MAX_DELAY,
     initialSpeed: NQUEENS_INITIAL_SPEED,
     resetSignal,
+    onStepIndexChange: (newIndex) => {
+      if (newIndex < 0 || !resultRef.current) {
+        setCurrentStep(null)
+        setSolutionsFound(0)
+        return
+      }
+      setCurrentStep(resultRef.current[newIndex] ?? null)
+      setSolutionsFound(solutionCumRef.current?.[newIndex] ?? 0)
+    },
   })
 
   // Generates all backtracking steps for the current N, precomputes solution counts, and starts playback.
@@ -79,15 +90,9 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
     setIsRunning(false)
     setStepCount(0)
     setOperationCount(0)
+    setCurrentStep(null)
+    setSolutionsFound(0)
   }, [pb])
-
-  const currentStep = resultRef.current && pb.stepIndex >= 0
-    ? resultRef.current[pb.stepIndex]
-    : null
-
-  const solutionsFound = pb.stepIndex >= 0
-    ? (solutionCumRef.current?.[pb.stepIndex] ?? 0)
-    : 0
 
   return {
     isRunning,

@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useStepPlayback } from './useStepPlayback'
 import { runForLoopOuter } from '../algorithms/gridForLoopOuter'
 import { runOuterBFS, runOuterDFS } from '../algorithms/gridOuterSearch'
-import type { GridResult } from '../algorithms/gridTypes'
+import type { GridResult, GridSubPhase } from '../algorithms/gridTypes'
 import type { InnerAlgo } from '../algorithms/gridTypes'
 import { buildGridIslandColorMap } from '../utils/gridIslandColors'
 import type { IslandHSL } from '../utils/gridIslandColors'
@@ -10,13 +10,13 @@ import type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
 export type { IslandHSL } from '../utils/gridIslandColors'
 export type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
 export type { InnerAlgo } from '../algorithms/gridTypes'
+export type { GridSubPhase } from '../algorithms/gridTypes'
 
 export type GridSearchMode =
   | 'for-bfs' | 'for-dfs'
   | 'bfs-bfs' | 'bfs-dfs'
   | 'dfs-bfs' | 'dfs-dfs'
 
-const IDLE_STATUS = 'Draw islands, then press Run.'
 const GRID_MIN_DELAY = 1
 const GRID_MAX_DELAY = 300
 const GRID_INITIAL_SPEED = 89
@@ -43,11 +43,10 @@ export type ForLoopBFSPlaybackHandle = {
   currentPhase: 'inner' | 'outer' | null
   islandColorByCellKey: Map<string, IslandHSL> | null
   isRunning: boolean
-  statusText: string
-  currentExplanation: string
   gridOutput: GridOutput | null
   stepIndex: number
   stepCount: number
+  currentSubPhase: GridSubPhase | null
   canRun: boolean
   isPlaying: boolean
   playbackSpeed: number
@@ -70,7 +69,8 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
   const [currentCell, setCurrentCell] = useState<string | null>(null)
   const [islandColorByCellKey, setIslandColorByCellKey] = useState<Map<string, IslandHSL> | null>(null)
   const [isRunning, setIsRunning] = useState(false)
-  const [statusText, setStatusText] = useState(IDLE_STATUS)
+  const [currentPhase, setCurrentPhase] = useState<'inner' | 'outer' | null>(null)
+  const [currentSubPhase, setCurrentSubPhase] = useState<GridSubPhase | null>(null)
   const [stepCount, setStepCount] = useState(0)
   const [resetSignal, setResetSignal] = useState(0)
   const [gridOutput, setGridOutput] = useState<GridOutput | null>(null)
@@ -99,6 +99,8 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
       const result = resultRef.current
       if (!result || newIndex < 0) {
         clearVisuals()
+        setCurrentPhase(null)
+        setCurrentSubPhase(null)
         return
       }
 
@@ -120,14 +122,14 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
       setVisitedCells([...visitedSetRef.current])
       setFrontierCells(step.frontierCells)
       setCurrentCell(step.currentCell)
+      setCurrentPhase(step.phase)
+      setCurrentSubPhase(step.subPhase ?? null)
     },
     onComplete: () => {
-      const result = resultRef.current
-      if (!result) return
       setCurrentCell(null)
       setFrontierCells([])
-      const count = result.islandGroups.length
-      setStatusText(`Done. ${count} island${count !== 1 ? 's' : ''} found.`)
+      setCurrentPhase(null)
+      setCurrentSubPhase(null)
     },
   })
 
@@ -162,7 +164,6 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
       discoveryOperations: result.discoveryOperations,
     })
     setIsRunning(true)
-    setStatusText('Ready. Press Play or step forward.')
     setStepCount(result.steps.length)
     setResetSignal(s => s + 1)
   }
@@ -176,32 +177,20 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
     setIslandColorByCellKey(null)
     setGridOutput(null)
     clearVisuals()
-    setStatusText(IDLE_STATUS)
+    setCurrentPhase(null)
+    setCurrentSubPhase(null)
   }
 
   const canRun = islands.size > 0 && cols > 0
-
-  const currentExplanation = (() => {
-    const result = resultRef.current
-    if (!result) return ''
-    if (pb.isPlaybackComplete) {
-      const count = result.islandGroups.length
-      return `Done. ${count} island${count !== 1 ? 's' : ''} found.`
-    }
-    return result.steps[pb.stepIndex]?.explanation ?? ''
-  })()
-
-  const currentPhase = resultRef.current?.steps[pb.stepIndex]?.phase ?? null
 
   return {
     visitedCells,
     frontierCells,
     currentCell,
     currentPhase,
+    currentSubPhase,
     islandColorByCellKey,
     isRunning,
-    statusText,
-    currentExplanation,
     gridOutput,
     stepIndex: pb.stepIndex,
     stepCount,

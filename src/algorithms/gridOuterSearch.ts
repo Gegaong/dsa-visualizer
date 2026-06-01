@@ -59,7 +59,7 @@ export function runOuterBFS(
     if (globalVisited.has(key)) {
       // Island cell flood-filled by a prior inner search — all its neighbors were already
       // added via addIslandBoundary when the island was discovered, so no propagation needed.
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1, explanation: 'Already explored by island flood-fill — skipping.' })
+      steps.push({ phase: 'outer', currentCell: key, newVisited: [], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1 })
       continue
     }
 
@@ -77,9 +77,7 @@ export function runOuterBFS(
           opsTotal++  // frontier push
         }
       }
-      const n = newNeighbors.length
-      const note = n === 0 ? 'No new neighbors.' : `${n} neighbor${n !== 1 ? 's' : ''} added (${queue.length} in queue).`
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [key], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1, explanation: `Water — BFS dequeued. ${note}` })
+      steps.push({ phase: 'outer', currentCell: key, newVisited: [key], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1 })
     } else {
       islandIndex++
       const { steps: inner, cells, operationCount: innerOps } = runInner(key, islandIndex, islands, globalVisited, rows, cols, connectivity)
@@ -124,7 +122,7 @@ export function runOuterDFS(
     opsTotal++  // cell pop (V term) — counts all pops including already-visited
 
     if (globalVisited.has(key)) {
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [], frontierCells: frontier(), islandIndex: -1, explanation: 'Already explored by island flood-fill — skipping.' })
+      steps.push({ phase: 'outer', currentCell: key, newVisited: [], frontierCells: frontier(), islandIndex: -1 })
       continue
     }
 
@@ -134,18 +132,15 @@ export function runOuterDFS(
       // Push neighbors in reverse so DIRS[0] (up / top-left) is explored first.
       const neighbors = getInBoundsNeighbors(key, rows, cols, connectivity)
       opsTotal += neighbors.length  // edge examinations (E term)
-      let n = 0
       for (let i = neighbors.length - 1; i >= 0; i--) {
         const nb = neighbors[i]
         if (!globalVisited.has(nb) && !pushed.has(nb)) {
           stack.push(nb)
           pushed.add(nb)
-          n++
           opsTotal++  // frontier push
         }
       }
-      const note = n === 0 ? 'No new neighbors.' : `${n} neighbor${n !== 1 ? 's' : ''} pushed (${stack.length} in stack).`
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [key], frontierCells: frontier(), islandIndex: -1, explanation: `Water — DFS popped. ${note}` })
+      steps.push({ phase: 'outer', currentCell: key, newVisited: [key], frontierCells: frontier(), islandIndex: -1 })
     } else {
       islandIndex++
       const { steps: inner, cells, operationCount: innerOps } = runInner(key, islandIndex, islands, globalVisited, rows, cols, connectivity)

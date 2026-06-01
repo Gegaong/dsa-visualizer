@@ -14,7 +14,6 @@ export function runInnerBFS(
   const queue = [startKey]
   const cells: string[] = []
   const steps: GridStep[] = []
-  const n = islandIndex + 1
   let first = true
   let operationCount = 1  // initial push of startKey into the queue
 
@@ -36,22 +35,7 @@ export function runInnerBFS(
       }
     }
 
-    let explanation: string
-    if (first) {
-      const nc = newVisited.length - 1
-      explanation = nc > 0
-        ? `Island #${n} found. ${nc} neighbor${nc !== 1 ? 's' : ''} added to queue.`
-        : `Island #${n} found. No adjacent island cells.`
-    } else if (queue.length === 0) {
-      explanation = `Queue empty — island #${n} fully explored.`
-    } else {
-      const nc = newVisited.length
-      explanation = nc > 0
-        ? `Dequeued. ${nc} new neighbor${nc !== 1 ? 's' : ''} added (${queue.length} in queue).`
-        : `Dequeued. No new neighbors (${queue.length} in queue).`
-    }
-
-    steps.push({ phase: 'inner', currentCell: current, newVisited, frontierCells: [...queue], islandIndex, explanation })
+    steps.push({ phase: 'inner', subPhase: first ? 'inner-start' : 'inner-process', currentCell: current, newVisited, frontierCells: [...queue], islandIndex })
     first = false
   }
 
@@ -71,7 +55,6 @@ export function runInnerDFS(
   const stack = [startKey]
   const cells: string[] = []
   const steps: GridStep[] = []
-  const n = islandIndex + 1
   let first = true
   let operationCount = 1  // initial push of startKey into the stack
 
@@ -95,22 +78,7 @@ export function runInnerDFS(
       }
     }
 
-    let explanation: string
-    if (first) {
-      const nc = newVisited.length - 1
-      explanation = nc > 0
-        ? `Island #${n} found. ${nc} neighbor${nc !== 1 ? 's' : ''} added to stack.`
-        : `Island #${n} found. No adjacent island cells.`
-    } else if (stack.length === 0) {
-      explanation = `Stack empty — island #${n} fully explored.`
-    } else {
-      const nc = newVisited.length
-      explanation = nc > 0
-        ? `Popped. ${nc} new neighbor${nc !== 1 ? 's' : ''} added (${stack.length} in stack).`
-        : `Popped. No new neighbors (${stack.length} in stack).`
-    }
-
-    steps.push({ phase: 'inner', currentCell: current, newVisited, frontierCells: [...stack], islandIndex, explanation })
+    steps.push({ phase: 'inner', subPhase: first ? 'inner-start' : 'inner-process', currentCell: current, newVisited, frontierCells: [...stack], islandIndex })
     first = false
   }
 

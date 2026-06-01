@@ -1,12 +1,18 @@
 export type InnerAlgo = 'bfs' | 'dfs'
 
+export type GridSubPhase =
+  | 'outer-water'
+  | 'outer-visited'
+  | 'inner-start'
+  | 'inner-process'
+
 export type GridStep = {
   phase: 'outer' | 'inner'
+  subPhase?: GridSubPhase
   currentCell: string
   newVisited: string[]
   frontierCells: string[]
   islandIndex: number
-  explanation: string
 }
 
 export type GridResult = {

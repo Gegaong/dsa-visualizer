@@ -32,3 +32,17 @@ html:fullscreen,
 html:-webkit-full-screen {
 	overflow: hidden;
 }
+
+html:fullscreen body,
+html:-webkit-full-screen body {
+	height: 100vh;
+	display: flex;
+	align-items: center;
+}
+
+html:fullscreen .app,
+html:-webkit-full-screen .app {
+	margin-top: 0;
+	margin-bottom: 0;
+	width: 100%;
+}

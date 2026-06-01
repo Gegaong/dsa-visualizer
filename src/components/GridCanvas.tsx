@@ -159,7 +159,7 @@ export const GridCanvas = ({
     return { visitedWater, visitedIsland }
   }, [visitedCells, islands])
 
-  const startMarkersSet = useMemo(() => new Set(startMarkers), [startMarkers])
+  const startMarkersSet = new Set(startMarkers)
 
   const cellStyle = (r: number, c: number, bg: string) => ({
     position: 'absolute' as const,

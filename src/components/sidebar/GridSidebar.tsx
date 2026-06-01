@@ -1,8 +1,112 @@
 import { useState } from 'react'
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 import { PlaybackControls } from './PlaybackControls'
-import { StepExplanation } from './StepExplanation'
-import type { GridOutput, ForLoopScanMode, GridSearchMode } from '../../hooks/useForLoopBFSPlayback'
+import { PseudocodePanel } from './PseudocodePanel'
+import type { GridOutput, ForLoopScanMode, GridSearchMode, GridSubPhase } from '../../hooks/useForLoopBFSPlayback'
+
+const FOR_BFS_CODE = `function SCAN(grid, rows, cols):
+    for r ← 0 to rows-1:
+        for c ← 0 to cols-1:
+            if grid[r][c] = water → skip
+            if (r,c) ∈ visited  → skip
+            island ← BFS_FILL(r,c)
+            islands.add(island)
+    return islands
+
+function BFS_FILL(start, grid, visited):
+    queue ← [start]
+    visited.add(start)
+    while queue ≠ ∅:
+        cell ← queue.dequeue()
+        island.add(cell)
+        for each nb of cell:
+            if nb is land ∧ nb ∉ visited:
+                visited.add(nb)
+                queue.enqueue(nb)
+    return island`
+
+const FOR_BFS_LOGIC = `Scan every cell left-to-right,
+top-to-bottom.
+──────────────────────────────────────────
+For each cell:
+  · Water → skip it.
+  · Already visited → skip it.
+
+  · Unvisited island cell found:
+      BFS flood-fill claims the whole island.
+      Expands outward level by level using a queue.
+      All connected land is visited at once.
+      ✓ New island recorded.
+──────────────────────────────────────────
+BFS flood-fill:
+  Enqueue the start, mark it visited.
+  While the queue is not empty:
+    · Dequeue a cell — add it to the island.
+    · Each unvisited land neighbor:
+        Mark visited, enqueue.`
+
+const FOR_DFS_CODE = `function SCAN(grid, rows, cols):
+    for r ← 0 to rows-1:
+        for c ← 0 to cols-1:
+            if grid[r][c] = water → skip
+            if (r,c) ∈ visited  → skip
+            island ← DFS_FILL(r,c)
+            islands.add(island)
+    return islands
+
+function DFS_FILL(start, grid, visited):
+    stack ← [start]
+    visited.add(start)
+    while stack ≠ ∅:
+        cell ← stack.pop()
+        island.add(cell)
+        for each nb of cell:
+            if nb is land ∧ nb ∉ visited:
+                visited.add(nb)
+                stack.push(nb)
+    return island`
+
+const FOR_DFS_LOGIC = `Scan every cell left-to-right,
+top-to-bottom.
+──────────────────────────────────────────
+For each cell:
+  · Water → skip it.
+  · Already visited → skip it.
+
+  · Unvisited island cell found:
+      DFS flood-fill claims the whole island.
+      Dives deep first, then backtracks, using a stack.
+      All connected land is visited at once.
+      ✓ New island recorded.
+──────────────────────────────────────────
+DFS flood-fill:
+  Push the start, mark it visited.
+  While the stack is not empty:
+    · Pop a cell — add it to the island.
+    · Each unvisited land neighbor:
+        Mark visited, push.`
+
+// Line indices (0-based) to highlight per sub-phase for each pseudocode style.
+// FOR-BFS and FOR-DFS share the same line structure — only the function name changes.
+const FOR_CODE_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
+  'outer-water':   [1, 2, 3],
+  'outer-visited': [1, 2, 4],
+  'inner-start':   [5, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  'inner-process': [12, 13, 14, 15, 16, 17, 18],
+}
+
+const FOR_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
+  'outer-water':   [0, 1, 3, 4],
+  'outer-visited': [0, 1, 3, 5],
+  'inner-start':   [7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18],
+  'inner-process': [15, 16, 17, 18],
+}
+
+function getForHighlights(subPhase: GridSubPhase | null, isLogic: boolean): Set<number> {
+  if (!subPhase) return new Set()
+  const map = isLogic ? FOR_LOGIC_HIGHLIGHTS : FOR_CODE_HIGHLIGHTS
+  return new Set(map[subPhase])
+}
 
 type ScanCorner = 'tl' | 'tr' | 'bl' | 'br'
 
@@ -28,8 +132,6 @@ type GridSidebarProps = {
   onModeChange: (mode: GridSearchMode) => void
   isRunning: boolean
   canRun: boolean
-  statusText: string
-  currentExplanation: string
   gridOutput: GridOutput | null
   stepIndex: number
   stepCount: number
@@ -39,6 +141,7 @@ type GridSidebarProps = {
   canStepBackward: boolean
   canStepForward: boolean
   canTogglePlay: boolean
+  currentSubPhase: GridSubPhase | null
   isPickingStart: boolean
   bfsStartCells: Set<string>
   dfsStartCell: string | null
@@ -62,8 +165,6 @@ export const GridSidebar = ({
   onModeChange,
   isRunning,
   canRun,
-  statusText,
-  currentExplanation,
   gridOutput,
   stepIndex,
   stepCount,
@@ -73,6 +174,7 @@ export const GridSidebar = ({
   canStepBackward,
   canStepForward,
   canTogglePlay,
+  currentSubPhase,
   isPickingStart,
   bfsStartCells,
   dfsStartCell,
@@ -224,12 +326,19 @@ export const GridSidebar = ({
             speed={playbackSpeed}
             onSpeedChange={onSpeedChange}
           />
-          {isRunning
-            ? <p className="hint">Step {formatStepDisplay(stepIndex, stepCount)} — {statusText}</p>
-            : <p className="hint">{statusText}</p>
-          }
-          <StepExplanation text={currentExplanation} />
+          {isRunning && (
+            <p className="hint">Step {formatStepDisplay(stepIndex, stepCount)}</p>
+          )}
         </div>
+
+        {(mode === 'for-bfs' || mode === 'for-dfs') && (
+          <PseudocodePanel
+            codeText={mode === 'for-bfs' ? FOR_BFS_CODE : FOR_DFS_CODE}
+            logicText={mode === 'for-bfs' ? FOR_BFS_LOGIC : FOR_DFS_LOGIC}
+            codeHighlighted={getForHighlights(currentSubPhase, false)}
+            logicHighlighted={getForHighlights(currentSubPhase, true)}
+          />
+        )}
 
         <div className="sidebar-section">
           <h3>Output</h3>

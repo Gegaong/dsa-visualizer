@@ -292,6 +292,31 @@ function App() {
     setIsUndirectedMode((prev) => !prev)
   }
 
+  // Dismisses the node context menu without changing graph state.
+  const closeContextMenu = () => setContextMenu(null)
+
+  // Closes inline editing without saving the draft.
+  const cancelEditing = () => {
+    setEditingNodeId(null)
+    setDraftValue('')
+  }
+
+  // Clears the node multi-selection.
+  const clearSelection = () => setSelectedNodeIds([])
+
+  // Clears edge selection used by delete-edge mode.
+  const clearEdgeSelection = () => setSelectedEdgeIds([])
+
+  // Turns off connect/delete modes and clears selections (e.g. before starting an algorithm run).
+  const exitCanvasInteractionModes = () => {
+    setIsDeleteMode(false)
+    setIsDeleteEdgeMode(false)
+    setIsConnectMode(false)
+    setConnectionSource(null)
+    clearSelection()
+    clearEdgeSelection()
+  }
+
   // Switches canvas type and clears all edge-weight editing state.
   const handleCanvasTypeChange = (type: CanvasType) => {
     if (type === canvasType) return
@@ -420,9 +445,6 @@ function App() {
   const handleChangeEdgeDirection = (edgeId: string, direction: GraphEdge['direction']) => {
     setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, direction } : e)))
   }
-
-  // Dismisses the node context menu without changing graph state.
-  const closeContextMenu = () => setContextMenu(null)
 
   // Clamps a zoom level to the configured min/max range.
   const clampCanvasZoom = (value: number) =>
@@ -578,28 +600,12 @@ function App() {
     )
   }
 
-  // Clears the node multi-selection.
-  const clearSelection = () => setSelectedNodeIds([])
-
   // Toggles whether an edge is selected for delete-edge mode.
   const toggleEdgeSelection = (edgeId: string) => {
     if (blockGraphInteraction) return
     setSelectedEdgeIds((prev) =>
       prev.includes(edgeId) ? prev.filter((id) => id !== edgeId) : [...prev, edgeId],
     )
-  }
-
-  // Clears edge selection used by delete-edge mode.
-  const clearEdgeSelection = () => setSelectedEdgeIds([])
-
-  // Turns off connect/delete modes and clears selections (e.g. before starting an algorithm run).
-  const exitCanvasInteractionModes = () => {
-    setIsDeleteMode(false)
-    setIsDeleteEdgeMode(false)
-    setIsConnectMode(false)
-    setConnectionSource(null)
-    clearSelection()
-    clearEdgeSelection()
   }
 
   // Runs BFS/DFS goal traversal after leaving canvas edit modes.
@@ -838,12 +844,6 @@ function App() {
       ),
     )
 
-    setEditingNodeId(null)
-    setDraftValue('')
-  }
-
-  // Closes inline editing without saving the draft.
-  const cancelEditing = () => {
     setEditingNodeId(null)
     setDraftValue('')
   }
@@ -1237,8 +1237,7 @@ function App() {
             onModeChange={handleGridModeChange}
             isRunning={gridSearch.isRunning}
             canRun={gridSearch.canRun}
-            statusText={gridSearch.statusText}
-            currentExplanation={gridSearch.currentExplanation}
+            currentSubPhase={gridSearch.currentSubPhase}
             gridOutput={gridSearch.gridOutput}
             stepIndex={gridSearch.stepIndex}
             stepCount={gridSearch.stepCount}
