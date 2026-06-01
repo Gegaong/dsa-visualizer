@@ -177,7 +177,7 @@ export function runWeightedPathfinding(
     const pendingDiscovers: PendingDiscover[] = []
 
     for (const neighborId of outNeighborsById.get(nodeId) ?? []) {
-      operationCount++
+      operationCount++  // edge examination (E term)
       if (pathSet.has(neighborId)) continue
 
       const edgeInfo = directedEdgeMap.get(`${nodeId}:${neighborId}`)

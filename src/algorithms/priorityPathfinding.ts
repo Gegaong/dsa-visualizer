@@ -185,7 +185,7 @@ export function runPriorityPathfinding(
     if (nodeId === goalNodeId) break
 
     for (const neighborId of outNeighborsById.get(nodeId) ?? []) {
-      operationCount++
+      operationCount++  // edge examination (E term)
       if (settled.has(neighborId)) continue
 
       const edgeInfo = directedEdgeMap.get(`${nodeId}:${neighborId}`)

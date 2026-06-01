@@ -4,7 +4,7 @@ import { getInBoundsNeighbors, computeDiscoverySteps } from './gridShared'
 
 // After inner search claims an island, add all grid-level neighbors of every island cell
 // to the outer collection so the outer traversal can continue beyond the island boundary.
-// Returns the number of neighbor checks performed.
+// Returns ops: 1 per neighbor examined + 1 per cell actually added to the frontier.
 function addIslandBoundary(
   cells: string[],
   globalVisited: Set<string>,
@@ -86,8 +86,8 @@ export function runOuterBFS(
       opsTotal += innerOps
       for (const s of inner) steps.push(s)
       islandGroups.push(cells)
-      opsTotal += addIslandBoundary(cells, globalVisited, enqueued, queue, rows, cols, connectivity)
       discoveryOps = opsTotal
+      opsTotal += addIslandBoundary(cells, globalVisited, enqueued, queue, rows, cols, connectivity)
     }
   }
 
@@ -152,11 +152,12 @@ export function runOuterDFS(
       opsTotal += innerOps
       for (const s of inner) steps.push(s)
       islandGroups.push(cells)
+      discoveryOps = opsTotal
       // Collect boundary cells in natural order, push in reverse so first-found is on top.
       const boundary: string[] = []
       for (const cell of cells) {
         for (const nb of getInBoundsNeighbors(cell, rows, cols, connectivity)) {
-          opsTotal++
+          opsTotal++  // neighbor check
           if (!globalVisited.has(nb) && !pushed.has(nb)) {
             boundary.push(nb)
             pushed.add(nb)
@@ -167,7 +168,6 @@ export function runOuterDFS(
         stack.push(boundary[i])
         opsTotal++  // frontier push
       }
-      discoveryOps = opsTotal
     }
   }
 
