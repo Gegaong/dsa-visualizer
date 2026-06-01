@@ -13,4 +13,6 @@ export type GridResult = {
   steps: GridStep[]
   islandGroups: string[][]
   discoverySteps: number
+  operationCount: number
+  discoveryOperations: number
 }

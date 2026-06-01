@@ -353,6 +353,10 @@ export const WeightedPathfindingPanel = ({
             </div>
           )}
           <div className="output-row">
+            <span className="output-label">Operations</span>
+            <span className="output-value">{wpOutput !== null ? wpOutput.operationCount : '—'}</span>
+          </div>
+          <div className="output-row">
             <span className="output-label">Path found</span>
             <span className="output-value">{pathFound}</span>
           </div>

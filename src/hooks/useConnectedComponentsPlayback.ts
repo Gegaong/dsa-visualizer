@@ -52,6 +52,7 @@ export type CCOutput = {
   componentCount: number
   largestSize: number
   groupsText: string
+  operationCount: number
 } | null
 
 export type ConnectedComponentsPlaybackHandle = {
@@ -229,6 +230,7 @@ export function useConnectedComponentsPlayback({
           componentCount: pb.result.componentCount,
           largestSize: pb.result.largestComponentSize,
           groupsText: formatWeakCCGroupsDisplay(pb.result, nodes),
+          operationCount: pb.result.operationCount,
         }
       : null
 

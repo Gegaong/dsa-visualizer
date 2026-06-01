@@ -34,6 +34,7 @@ export type BipartiteOutput = {
   isBipartite: boolean
   groupALabels: string | null
   groupBLabels: string | null
+  operationCount: number
 } | null
 
 export type BipartitePlaybackHandle = {
@@ -212,6 +213,7 @@ export function useBipartitePlayback({
           isBipartite: pb.result.isBipartite,
           groupALabels: formatBipartiteGroupLabels(pb.result.groupANodeIds, nodes),
           groupBLabels: formatBipartiteGroupLabels(pb.result.groupBNodeIds, nodes),
+          operationCount: pb.result.operationCount,
         }
       : null
 

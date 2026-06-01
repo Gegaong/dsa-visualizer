@@ -83,6 +83,7 @@ export function runPriorityPathfinding(
     pathFound: false,
     pathCost: null,
     heuristicAdmissible,
+    operationCount: 0,
   }
 
   if (nodes.length === 0) return empty
@@ -94,6 +95,7 @@ export function runPriorityPathfinding(
 
   const steps: PriorityPathStep[] = []
   let order = 1
+  let operationCount = 0
 
   const bestGCost = new Map<string, number>([[startNodeId, 0]])
   const bestParent = new Map<string, string | null>([[startNodeId, null]])
@@ -101,6 +103,7 @@ export function runPriorityPathfinding(
 
   const startH = heuristicFn(startNode, goalNode)
   const startPriority = priorityFn(0, startH)
+  operationCount++  // initial PQ push (Rule 3: structure mutation)
   const pq: PQItem[] = [{ nodeId: startNodeId, gCost: 0, priority: startPriority, fromNodeId: null }]
 
   const isAStar = algorithmLabel === 'A*'
@@ -132,6 +135,7 @@ export function runPriorityPathfinding(
 
   while (pq.length > 0) {
     const item = popMin(pq)
+    operationCount++  // PQ pop (Rule 3: structure mutation)
     const { nodeId, gCost } = item
 
     // Skip stale entries left in the queue by lazy deletion.
@@ -181,6 +185,7 @@ export function runPriorityPathfinding(
     if (nodeId === goalNodeId) break
 
     for (const neighborId of outNeighborsById.get(nodeId) ?? []) {
+      operationCount++
       if (settled.has(neighborId)) continue
 
       const edgeInfo = directedEdgeMap.get(`${nodeId}:${neighborId}`)
@@ -197,6 +202,7 @@ export function runPriorityPathfinding(
         const newPriority = priorityFn(newG, newH)
 
         pq.push({ nodeId: neighborId, gCost: newG, priority: newPriority, fromNodeId: nodeId })
+        operationCount++  // PQ push (Rule 3: structure mutation)
 
         const w = edgeInfo?.weight ?? 1
         let discoverExplanation: string
@@ -251,6 +257,7 @@ export function runPriorityPathfinding(
     pathFound: pathNodeIds.length > 0,
     pathCost: settled.has(goalNodeId) ? (bestGCost.get(goalNodeId) ?? null) : null,
     heuristicAdmissible,
+    operationCount,
   }
 }
 

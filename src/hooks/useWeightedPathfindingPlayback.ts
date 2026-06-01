@@ -561,6 +561,7 @@ export function useWeightedPathfindingPlayback({
         pathNodeLabels: result.kind === 'bfsdfs'
           ? formatWPPathNodeLabels(result, nodes)
           : formatPriorityPathNodeLabels(result, nodes),
+        operationCount: result.operationCount,
       }
     : null
 

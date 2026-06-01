@@ -177,6 +177,10 @@ export const CycleDetectionPanel = ({
             <span className="output-value">{stepDisplay}</span>
           </div>
           <div className="output-row">
+            <span className="output-label">Operations</span>
+            <span className="output-value">{cycleDetectionOutput !== null ? cycleDetectionOutput.operationCount : '—'}</span>
+          </div>
+          <div className="output-row">
             <span className="output-label">Cycle found</span>
             <span className="output-value">{cycleFound}</span>
           </div>

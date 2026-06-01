@@ -168,6 +168,10 @@ export const BipartitePanel = ({
             <span className="output-value">{stepDisplay}</span>
           </div>
           <div className="output-row">
+            <span className="output-label">Operations</span>
+            <span className="output-value">{bipartiteOutput !== null ? bipartiteOutput.operationCount : '—'}</span>
+          </div>
+          <div className="output-row">
             <span className="output-label">Is bipartite</span>
             <span className="output-value">{isBipartiteText}</span>
           </div>

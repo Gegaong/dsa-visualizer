@@ -31,6 +31,7 @@ type ColorMap = Map<string, 0 | 1>
 type Coloring = {
   colorMap: ColorMap
   isBipartite: boolean
+  operationCount: number
 }
 
 // BFS 2-coloring: assigns alternating colors level by level; emits a step when each node is colored.
@@ -41,21 +42,27 @@ function colorBfs(
   const { neighborsById, sortedNodeIds } = lookups
   const colorMap: ColorMap = new Map()
   let isBipartite = true
+  let operationCount = 0
 
   for (const rootId of sortedNodeIds) {
     if (colorMap.has(rootId)) continue
     colorMap.set(rootId, 0)
     const queue: string[] = [rootId]
+    operationCount++  // initial push of root into the queue
     emitStep(rootId, 0, null, `New component — group A assigned arbitrarily. All neighbors will get group B, their neighbors group A, and so on. A conflict (neighbor forced to the same group) would prove a cycle of odd length exists.`, [])
 
     while (queue.length > 0) {
       const id = queue.shift()!
+      operationCount++  // node dequeue (V term)
       const nodeColor = colorMap.get(id)!
-      for (const neighborId of neighborsById.get(id) ?? []) {
+      const nodeNeighbors = neighborsById.get(id) ?? []
+      for (const neighborId of nodeNeighbors) {
+        operationCount++  // edge examination (E term)
         if (!colorMap.has(neighborId)) {
           const neighborColor = (1 - nodeColor) as 0 | 1
           colorMap.set(neighborId, neighborColor)
           queue.push(neighborId)
+          operationCount++  // frontier push
           emitStep(
             neighborId,
             neighborColor,
@@ -70,7 +77,7 @@ function colorBfs(
     }
   }
 
-  return { colorMap, isBipartite }
+  return { colorMap, isBipartite, operationCount }
 }
 
 // DFS 2-coloring: iterative with an explicit stack; emits a step when each node is colored.
@@ -82,15 +89,18 @@ function colorDfs(
   const { neighborsById, sortedNodeIds } = lookups
   const colorMap: ColorMap = new Map()
   let isBipartite = true
+  let operationCount = 0
 
   type Frame = { id: string; targetColor: 0 | 1; parentId: string | null }
 
   for (const rootId of sortedNodeIds) {
     if (colorMap.has(rootId)) continue
     const stack: Frame[] = [{ id: rootId, targetColor: 0, parentId: null }]
+    operationCount++  // initial push of root into the stack
 
     while (stack.length > 0) {
       const { id, targetColor, parentId } = stack.pop()!
+      operationCount++  // node pop (V term) — counts all pops including already-colored
 
       if (colorMap.has(id)) {
         if (colorMap.get(id) !== targetColor) isBipartite = false
@@ -105,7 +115,9 @@ function colorDfs(
       const oppositeColor = (1 - targetColor) as 0 | 1
       const neighbors = neighborsById.get(id) ?? []
       for (let i = neighbors.length - 1; i >= 0; i -= 1) {
+        operationCount++  // edge examination (E term)
         stack.push({ id: neighbors[i], targetColor: oppositeColor, parentId: id })
+        operationCount++  // frontier push
       }
 
       const frontierNodeIds = [...new Set(stack.filter(f => !colorMap.has(f.id)).map(f => f.id))]
@@ -113,7 +125,7 @@ function colorDfs(
     }
   }
 
-  return { colorMap, isBipartite }
+  return { colorMap, isBipartite, operationCount }
 }
 
 // Runs the 2-coloring bipartite check on an undirected graph (edge directions are ignored).
@@ -126,7 +138,7 @@ export function runBipartiteCheck(
   startNodeId?: string,
 ): BipartiteResult {
   if (nodes.length === 0) {
-    return { steps: [], isBipartite: true, groupANodeIds: [], groupBNodeIds: [] }
+    return { steps: [], isBipartite: true, groupANodeIds: [], groupBNodeIds: [], operationCount: 0 }
   }
 
   const lookups = buildLookups(nodes, edges, startNodeId)
@@ -140,7 +152,7 @@ export function runBipartiteCheck(
     order += 1
   }
 
-  const { colorMap, isBipartite } =
+  const { colorMap, isBipartite, operationCount } =
     strategy === 'bfs' ? colorBfs(lookups, emitStep) : colorDfs(lookups, emitStep)
 
   const groupANodeIds: string[] = []
@@ -150,5 +162,5 @@ export function runBipartiteCheck(
     else groupBNodeIds.push(id)
   })
 
-  return { steps, isBipartite, groupANodeIds, groupBNodeIds }
+  return { steps, isBipartite, groupANodeIds, groupBNodeIds, operationCount }
 }

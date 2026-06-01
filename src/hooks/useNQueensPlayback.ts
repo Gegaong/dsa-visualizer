@@ -13,6 +13,7 @@ export type NQueensPlaybackHandle = {
   stepIndex: number
   stepCount: number
   solutionsFound: number
+  operationCount: number
   isPlaying: boolean
   playbackSpeed: number
   isPlaybackComplete: boolean
@@ -32,6 +33,7 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
   const [isRunning, setIsRunning] = useState(false)
   const [stepCount, setStepCount] = useState(0)
   const [resetSignal, setResetSignal] = useState(0)
+  const [operationCount, setOperationCount] = useState(0)
 
   const resultRef = useRef<NQueensStep[] | null>(null)
   // Precomputed cumulative solution count per step index for O(1) lookup.
@@ -56,6 +58,14 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
       if (s.phase === 'solution') c++
       return c
     })
+    // Constraint checks (actual checks performed, not lockedQueens.length which overcounts on early exit)
+    // + state mutations for place/solution/backtrack.
+    const totalOps = steps.reduce((sum, s) => {
+      if (s.phase === 'try') return sum + s.conflictChecks
+      if (s.phase === 'place' || s.phase === 'solution' || s.phase === 'backtrack') return sum + 1
+      return sum
+    }, 0)
+    setOperationCount(totalOps)
     setIsRunning(true)
     setStepCount(steps.length)
     setResetSignal(s => s + 1)
@@ -68,6 +78,7 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
     solutionCumRef.current = null
     setIsRunning(false)
     setStepCount(0)
+    setOperationCount(0)
   }, [pb])
 
   const currentStep = resultRef.current && pb.stepIndex >= 0
@@ -84,6 +95,7 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
     stepIndex: pb.stepIndex,
     stepCount,
     solutionsFound,
+    operationCount,
     isPlaying: pb.isPlaying,
     playbackSpeed: pb.playbackSpeed,
     isPlaybackComplete: pb.isPlaybackComplete,

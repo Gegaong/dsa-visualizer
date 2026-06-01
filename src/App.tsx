@@ -1273,6 +1273,7 @@ function App() {
             stepIndex={nQueens.stepIndex}
             stepCount={nQueens.stepCount}
             solutionsFound={nQueens.solutionsFound}
+            operationCount={nQueens.operationCount}
             isPlaying={nQueens.isPlaying}
             playbackSpeed={nQueens.playbackSpeed}
             isPlaybackComplete={nQueens.isPlaybackComplete}

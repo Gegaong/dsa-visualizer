@@ -106,6 +106,7 @@ export function runWeightedPathfinding(
     goalNodeId,
     pathFound: false,
     pathCost: null,
+    operationCount: 0,
   }
 
   if (nodes.length === 0) return empty
@@ -122,6 +123,7 @@ export function runWeightedPathfinding(
   let detailedOrder = 1
   let bestGoalCost = Infinity
   let bestGoalPath: string[] = []
+  let operationCount = 0
 
   const bestKnownCost = new Map<string, number>([[startNodeId, 0]])
   const bestParent = new Map<string, string | null>([[startNodeId, null]])
@@ -145,9 +147,11 @@ export function runWeightedPathfinding(
   const frontier: PathItem[] = [
     { path: [startNodeId], pathSet: new Set([startNodeId]), cost: 0 },
   ]
+  operationCount++  // initial push of start path into the frontier
 
   while (frontier.length > 0) {
     const item = strategy === 'bfs' ? frontier.shift()! : frontier.pop()!
+    operationCount++  // path item dequeue/pop (V term)
     const { path, pathSet, cost } = item
     const nodeId = path[path.length - 1]
 
@@ -173,6 +177,7 @@ export function runWeightedPathfinding(
     const pendingDiscovers: PendingDiscover[] = []
 
     for (const neighborId of outNeighborsById.get(nodeId) ?? []) {
+      operationCount++
       if (pathSet.has(neighborId)) continue
 
       const edgeInfo = directedEdgeMap.get(`${nodeId}:${neighborId}`)
@@ -201,6 +206,7 @@ export function runWeightedPathfinding(
           pathSet: new Set([...pathSet, neighborId]),
           cost: newCost,
         })
+        operationCount++  // frontier push
       }
     }
 
@@ -278,5 +284,6 @@ export function runWeightedPathfinding(
     goalNodeId,
     pathFound: bestGoalPath.length > 0,
     pathCost: bestGoalCost === Infinity ? null : bestGoalCost,
+    operationCount,
   }
 }

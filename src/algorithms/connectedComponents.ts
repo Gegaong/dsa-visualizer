@@ -26,6 +26,7 @@ export function runConnectedComponents(
       componentCount: 0,
       largestComponentSize: 0,
       components: [],
+      operationCount: 0,
     }
   }
 
@@ -41,6 +42,7 @@ export function runConnectedComponents(
   const steps: ConnectedComponentsStep[] = []
   let order = 1
   let componentIndex = 0
+  let operationCount = 0
 
   // Appends one CC step (with component root) and bumps global step order.
   const emitVisit = (nodeId: string, componentRootId: string, fromNodeId: string | null, frontierNodeIds: string[]) => {
@@ -88,6 +90,7 @@ export function runConnectedComponents(
   const exploreFromRoot = (rootId: string) => {
     const componentNodes: string[] = []
     const frontierIds = new Set<string>([rootId])
+    operationCount++  // initial push of root into the queue/stack
 
     traverseReachableFrom({
       neighborsById,
@@ -96,9 +99,15 @@ export function runConnectedComponents(
       strategy,
       orderNeighbors,
       onVisit: (nodeId, parentId) => {
+        operationCount++  // node dequeue/pop
         frontierIds.delete(nodeId)
-        const newNeighbors = (neighborsById.get(nodeId) ?? []).filter(id => !globalVisited.has(id))
-        for (const id of newNeighbors) frontierIds.add(id)
+        const neighbors = neighborsById.get(nodeId) ?? []
+        operationCount += neighbors.length  // edge examinations
+        const newNeighbors = neighbors.filter(id => !globalVisited.has(id))
+        for (const id of newNeighbors) {
+          frontierIds.add(id)
+          operationCount++  // frontier push
+        }
         emitVisit(nodeId, rootId, parentId, [...frontierIds])
         componentNodes.push(nodeId)
       },
@@ -125,5 +134,6 @@ export function runConnectedComponents(
     componentCount: components.length,
     largestComponentSize,
     components,
+    operationCount,
   }
 }

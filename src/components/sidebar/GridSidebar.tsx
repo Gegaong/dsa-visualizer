@@ -241,6 +241,18 @@ export const GridSidebar = ({
               </span>
             </div>
             <div className="output-row">
+              <span className="output-label">Ops to find all</span>
+              <span className="output-value">
+                {gridOutput !== null ? gridOutput.discoveryOperations : '—'}
+              </span>
+            </div>
+            <div className="output-row">
+              <span className="output-label">Total operations</span>
+              <span className="output-value">
+                {gridOutput !== null ? gridOutput.operationCount : '—'}
+              </span>
+            </div>
+            <div className="output-row">
               <span className="output-label">Steps to find all</span>
               <span className="output-value">
                 {gridOutput !== null ? gridOutput.discoverySteps : '—'}

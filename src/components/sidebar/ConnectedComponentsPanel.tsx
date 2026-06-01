@@ -169,6 +169,12 @@ export const ConnectedComponentsPanel = ({
             <span className="output-value">{stepDisplay}</span>
           </div>
           <div className="output-row">
+            <span className="output-label">Operations</span>
+            <span className="output-value">
+              {connectedComponentsOutput !== null ? connectedComponentsOutput.operationCount : '—'}
+            </span>
+          </div>
+          <div className="output-row">
             <span className="output-label">Components found</span>
             <span className="output-value">
               {connectedComponentsOutput !== null ? connectedComponentsOutput.componentCount : '—'}

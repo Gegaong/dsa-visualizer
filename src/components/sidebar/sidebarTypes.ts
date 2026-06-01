@@ -79,29 +79,34 @@ export type ConnectedComponentsOutput = {
   componentCount: number
   largestSize: number
   groupsText: string
+  operationCount: number
 } | null
 
 export type CycleDetectionOutput = {
   hasCycle: boolean
   cycleNodeLabels: string[]
+  operationCount: number
 } | null
 
 export type ShortestPathOutput = {
   pathFound: boolean
   pathLength: number
   pathNodeLabels: string[]
+  operationCount: number
 } | null
 
 export type BipartiteOutput = {
   isBipartite: boolean
   groupALabels: string | null
   groupBLabels: string | null
+  operationCount: number
 } | null
 
 export type WPOutput = {
   pathFound: boolean
   pathCost: number | null
   pathNodeLabels: string[]
+  operationCount: number
 } | null
 
 export type AlgorithmsPageProps = SidebarSharedState & {

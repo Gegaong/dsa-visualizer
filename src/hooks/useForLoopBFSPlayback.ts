@@ -32,6 +32,8 @@ export type GridOutput = {
   islandCount: number
   discoverySteps: number
   totalSteps: number
+  operationCount: number
+  discoveryOperations: number
 }
 
 export type ForLoopBFSPlaybackHandle = {
@@ -156,6 +158,8 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
       islandCount: result.islandGroups.length,
       discoverySteps: result.discoverySteps,
       totalSteps: result.steps.length,
+      operationCount: result.operationCount,
+      discoveryOperations: result.discoveryOperations,
     })
     setIsRunning(true)
     setStatusText('Ready. Press Play or step forward.')

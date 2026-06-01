@@ -93,6 +93,7 @@ type NQueensSidebarProps = {
   stepIndex: number
   stepCount: number
   solutionsFound: number
+  operationCount: number
   isPlaying: boolean
   playbackSpeed: number
   isPlaybackComplete: boolean
@@ -121,6 +122,7 @@ export const NQueensSidebar = ({
   stepIndex,
   stepCount,
   solutionsFound,
+  operationCount,
   isPlaying,
   playbackSpeed,
   isPlaybackComplete,
@@ -192,6 +194,10 @@ export const NQueensSidebar = ({
           <div className="output-row">
             <span className="output-label">Solutions found</span>
             <span className="output-value">{isRunning ? solutionsFound : '—'}</span>
+          </div>
+          <div className="output-row">
+            <span className="output-label">Operations</span>
+            <span className="output-value">{isRunning ? operationCount : '—'}</span>
           </div>
           <div className="output-row">
             <span className="output-label">Total steps</span>

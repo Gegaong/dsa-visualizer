@@ -49,8 +49,10 @@ export function runForLoopOuter(
   const islandGroups: string[][] = []
   let islandIndex = -1
   const runInner = innerAlgo === 'bfs' ? runInnerBFS : runInnerDFS
+  let opsTotal = 0
 
   for (const key of buildScanOrder(scanMode, rows, cols)) {
+    opsTotal++  // cell scan (data read: is this cell land or water?)
     if (!islands.has(key)) {
       visited.add(key)
       steps.push({ phase: 'outer', currentCell: key, newVisited: [key], frontierCells: [], islandIndex: -1, explanation: 'Water — scanner moves on.' })
@@ -64,10 +66,11 @@ export function runForLoopOuter(
 
     islandIndex++
     visited.add(key)
-    const { steps: innerSteps, cells } = runInner(key, islandIndex, islands, visited, rows, cols, connectivity)
+    const { steps: innerSteps, cells, operationCount: innerOps } = runInner(key, islandIndex, islands, visited, rows, cols, connectivity)
+    opsTotal += innerOps
     for (const s of innerSteps) steps.push(s)
     islandGroups.push(cells)
   }
 
-  return { steps, islandGroups, discoverySteps: computeDiscoverySteps(steps) }
+  return { steps, islandGroups, discoverySteps: computeDiscoverySteps(steps), operationCount: opsTotal, discoveryOperations: opsTotal }
 }

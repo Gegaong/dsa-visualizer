@@ -186,6 +186,10 @@ export const ShortestPathPanel = ({
             <span className="output-value">{stepDisplay}</span>
           </div>
           <div className="output-row">
+            <span className="output-label">Operations</span>
+            <span className="output-value">{shortestPathOutput !== null ? shortestPathOutput.operationCount : '—'}</span>
+          </div>
+          <div className="output-row">
             <span className="output-label">Path found</span>
             <span className="output-value">{pathFound}</span>
           </div>

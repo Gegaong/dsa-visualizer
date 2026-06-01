@@ -47,6 +47,7 @@ export type ShortestPathOutput = {
   pathFound: boolean
   pathLength: number
   pathNodeLabels: string[]
+  operationCount: number
 } | null
 
 export type ShortestPathPlaybackHandle = {
@@ -267,6 +268,7 @@ export function useShortestPathPlayback({
           pathFound: pb.result.pathFound,
           pathLength: pb.result.pathNodeIds.length > 0 ? pb.result.pathNodeIds.length - 1 : 0,
           pathNodeLabels: formatShortestPathNodeLabels(pb.result, nodes),
+          operationCount: pb.result.operationCount,
         }
       : null
 

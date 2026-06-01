@@ -35,6 +35,7 @@ function buildGraphLookups(nodes: GraphNode[], edges: GraphEdge[], startNodeId?:
 type DetectionOutcome = {
   steps: CycleDetectionStep[]
   cycleNodeIds: string[]
+  operationCount: number
 }
 
 // DFS approach: iterative depth-first search with per-path "in stack" tracking.
@@ -46,6 +47,7 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
   const globalVisited = new Set<string>()
   const steps: CycleDetectionStep[] = []
   let order = 1
+  let operationCount = 0
 
   const labelOf = (id: string) => nodeById.get(id)?.label ?? '?'
 
@@ -65,6 +67,7 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
     const frames: Array<{ id: string; phase: 'enter' | 'exit'; parentId: string | null }> = [
       { id: rootId, phase: 'enter', parentId: null },
     ]
+    operationCount++  // initial push of root into the frame stack
 
     while (frames.length > 0) {
       const frame = frames.pop()
@@ -82,12 +85,17 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
       inStack.add(id)
       pathStack.push(id)
 
+      operationCount++  // node enter (V term)
       const neighbors = outNeighborsById.get(id) ?? []
-      const backEdgeTarget = neighbors.find((neighborId) => inStack.has(neighborId))
+      let backEdgeTarget: string | undefined
+      for (const neighborId of neighbors) {
+        operationCount++  // edge examination — loop exits early on back-edge found
+        if (inStack.has(neighborId)) { backEdgeTarget = neighborId; break }
+      }
       if (backEdgeTarget !== undefined) {
         const frontierNodeIds = [...new Set(frames.filter(f => f.phase === 'enter' && !globalVisited.has(f.id)).map(f => f.id))]
         emitVisit(id, frame.parentId, `Back edge detected: ${labelOf(id)} → ${labelOf(backEdgeTarget)} leads to a node still on the active DFS path (inStack). In a DFS tree, a back edge always means a directed cycle — the cycle is the portion of the stack from ${labelOf(backEdgeTarget)} down to here.`, frontierNodeIds)
-        return { steps, cycleNodeIds: pathStack.slice(pathStack.indexOf(backEdgeTarget)) }
+        return { steps, cycleNodeIds: pathStack.slice(pathStack.indexOf(backEdgeTarget)), operationCount }
       }
 
       const unseenLabels = neighbors
@@ -107,6 +115,7 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
         const neighborId = neighbors[i]
         if (!globalVisited.has(neighborId)) {
           frames.push({ id: neighborId, phase: 'enter', parentId: id })
+          operationCount++  // frontier push
         }
       }
 
@@ -123,7 +132,7 @@ function detectCycleDfs(lookups: GraphLookups): DetectionOutcome {
     }
   }
 
-  return { steps, cycleNodeIds: [] }
+  return { steps, cycleNodeIds: [], operationCount }
 }
 
 // Reconstructs one cycle from Kahn's leftovers (nodes whose in-degree never reached 0).
@@ -187,6 +196,7 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
   const removed = new Set<string>()
   const steps: CycleDetectionStep[] = []
   let order = 1
+  let operationCount = queue.length  // initial pushes: all in-degree-0 source nodes
 
   const emitVisit = (nodeId: string, fromNodeId: string | null, explanation: string, frontierNodeIds: string[]) => {
     const node = nodeById.get(nodeId)
@@ -198,9 +208,12 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
   while (queue.length > 0) {
     const id = queue.shift()
     if (id === undefined) continue
+    operationCount++  // node dequeue (V term)
     removed.add(id)
+    const outNeighbors = outNeighborsById.get(id) ?? []
     const droppedTo0: string[] = []
-    for (const neighborId of outNeighborsById.get(id) ?? []) {
+    for (const neighborId of outNeighbors) {
+      operationCount++  // edge examination (E term)
       const next = (inDegree.get(neighborId) ?? 0) - 1
       inDegree.set(neighborId, next)
       if (next === 0) {
@@ -208,12 +221,12 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
           parentById.set(neighborId, id)
         }
         queue.push(neighborId)
+        operationCount++  // frontier push
         droppedTo0.push(labelOf(neighborId))
       }
     }
     const isFirst = removed.size === 1
     const nodeLabel = labelOf(id)
-    const outNeighbors = outNeighborsById.get(id) ?? []
     const enqueueNote = droppedTo0.length === 0
       ? `No neighbor reached in-degree 0.`
       : `${droppedTo0.join(', ')} ${droppedTo0.length === 1 ? 'is' : 'are'} now in-degree 0 — added to the queue.`
@@ -231,7 +244,7 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
   }
 
   if (removed.size === sortedNodeIds.length) {
-    return { steps, cycleNodeIds: [] }
+    return { steps, cycleNodeIds: [], operationCount }
   }
 
   const leftover = new Set(sortedNodeIds.filter((id) => !removed.has(id)))
@@ -245,7 +258,7 @@ function detectCycleBfs(lookups: GraphLookups): DetectionOutcome {
       emitVisit(id, cycleNodeIds[parentIndex], reconstructionNote, [])
     })
   }
-  return { steps, cycleNodeIds }
+  return { steps, cycleNodeIds, operationCount }
 }
 
 // Detects whether the directed graph contains a cycle, producing playback steps for the
@@ -258,7 +271,7 @@ export function runCycleDetection(
   startNodeId?: string,
 ): CycleDetectionResult {
   if (nodes.length === 0) {
-    return { steps: [], hasCycle: false, cycleNodeIds: [] }
+    return { steps: [], hasCycle: false, cycleNodeIds: [], operationCount: 0 }
   }
 
   const lookups = buildGraphLookups(nodes, edges, startNodeId)
@@ -268,5 +281,6 @@ export function runCycleDetection(
     steps: outcome.steps,
     hasCycle: outcome.cycleNodeIds.length > 0,
     cycleNodeIds: outcome.cycleNodeIds,
+    operationCount: outcome.operationCount,
   }
 }

@@ -43,6 +43,7 @@ function reconstructPath(
 type PathOutcome = {
   steps: ShortestPathStep[]
   pathNodeIds: string[]
+  operationCount: number
 }
 
 // BFS guarantees the shortest path (fewest edges) in an unweighted graph.
@@ -55,10 +56,12 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
   const queue: string[] = [startId]
   const steps: ShortestPathStep[] = []
   let order = 1
+  let operationCount = 1  // initial push of start into the queue
 
   while (queue.length > 0) {
     const id = queue.shift()
     if (id === undefined) continue
+    operationCount++  // node dequeue (V term)
     const node = nodeById.get(id)
     if (!node) continue
     const parentId = parentById.get(id) ?? null
@@ -73,15 +76,18 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
         frontierNodeIds: [...queue],
         explanation: `BFS processes nodes in non-decreasing distance order. This is the first time the goal was dequeued — by BFS invariant, distance ${myDist} is the minimum possible. Any path arriving later must be at least this long.`,
       })
-      return { steps, pathNodeIds: reconstructPath(parentById, startId, goalId) }
+      return { steps, pathNodeIds: reconstructPath(parentById, startId, goalId), operationCount }
     }
 
     const newlyQueued: string[] = []
-    for (const neighborId of outNeighborsById.get(id) ?? []) {
+    const outNeighbors = outNeighborsById.get(id) ?? []
+    for (const neighborId of outNeighbors) {
+      operationCount++  // edge examination (E term)
       if (!parentById.has(neighborId)) {
         parentById.set(neighborId, id)
         distance.set(neighborId, myDist + 1)
         queue.push(neighborId)
+        operationCount++  // frontier push
         newlyQueued.push(labelOf(neighborId))
       }
     }
@@ -102,7 +108,7 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
     order += 1
   }
 
-  return { steps, pathNodeIds: [] }
+  return { steps, pathNodeIds: [], operationCount }
 }
 
 // DFS exhaustively explores every acyclic path via backtracking and returns the shortest
@@ -114,8 +120,10 @@ function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): Pa
   const steps: ShortestPathStep[] = []
   let order = 1
   let bestPath: string[] = []
+  let operationCount = 0
 
   function dfs(currentId: string, fromId: string | null, currentPath: string[], inPath: Set<string>): void {
+    operationCount++  // node entry (V term)
     const node = nodeById.get(currentId)
     if (!node) return
     const lengthHere = currentPath.length - 1
@@ -172,7 +180,9 @@ function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): Pa
     order += 1
     // Even reaching goal in one more step can't improve best — prune.
     if (bestPath.length > 0 && currentPath.length + 1 >= bestPath.length) return
-    for (const neighborId of outNeighborsById.get(currentId) ?? []) {
+    const dfsNeighbors = outNeighborsById.get(currentId) ?? []
+    for (const neighborId of dfsNeighbors) {
+      operationCount++  // edge examination (E term)
       if (!inPath.has(neighborId)) {
         currentPath.push(neighborId)
         inPath.add(neighborId)
@@ -187,7 +197,7 @@ function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): Pa
   const inPath = new Set([startId])
   dfs(startId, null, initialPath, inPath)
 
-  return { steps, pathNodeIds: bestPath }
+  return { steps, pathNodeIds: bestPath, operationCount }
 }
 
 // Finds a path from startNodeId to goalNodeId using the chosen strategy.
@@ -200,7 +210,7 @@ export function runShortestPath(
   strategy: TraversalStrategy,
 ): ShortestPathResult {
   if (nodes.length === 0) {
-    return { steps: [], pathNodeIds: [], startNodeId, goalNodeId, pathFound: false }
+    return { steps: [], pathNodeIds: [], startNodeId, goalNodeId, pathFound: false, operationCount: 0 }
   }
 
   const lookups = buildGraphLookups(nodes, edges)
@@ -222,6 +232,7 @@ export function runShortestPath(
       startNodeId,
       goalNodeId,
       pathFound: true,
+      operationCount: 0,
     }
   }
 
@@ -235,5 +246,6 @@ export function runShortestPath(
     startNodeId,
     goalNodeId,
     pathFound: outcome.pathNodeIds.length > 0,
+    operationCount: outcome.operationCount,
   }
 }

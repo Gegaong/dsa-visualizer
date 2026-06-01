@@ -47,6 +47,7 @@ type UseCycleDetectionPlaybackParams = {
 export type CycleOutput = {
   hasCycle: boolean
   cycleNodeLabels: string[]
+  operationCount: number
 } | null
 
 export type CycleDetectionPlaybackHandle = {
@@ -230,6 +231,7 @@ export function useCycleDetectionPlayback({
       ? {
           hasCycle: pb.result.hasCycle,
           cycleNodeLabels: formatCycleNodeLabels(pb.result, nodes),
+          operationCount: pb.result.operationCount,
         }
       : null
 

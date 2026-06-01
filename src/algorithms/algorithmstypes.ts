@@ -42,6 +42,7 @@ export type ConnectedComponentsResult = {
   componentCount: number
   largestComponentSize: number
   components: string[][]
+  operationCount: number
 }
 
 export type TraversalStrategy = 'bfs' | 'dfs'
@@ -54,6 +55,7 @@ export type CycleDetectionResult = {
   // Node ids forming one detected directed cycle, in traversal order (consecutive ids,
   // and the last → first, each have an edge). Empty when no cycle exists.
   cycleNodeIds: string[]
+  operationCount: number
 }
 
 export type ShortestPathStep = BfsStep & {
@@ -67,6 +69,7 @@ export type ShortestPathResult = {
   startNodeId: string
   goalNodeId: string
   pathFound: boolean
+  operationCount: number
 }
 
 export type BipartiteStep = BfsStep & {
@@ -79,6 +82,7 @@ export type BipartiteResult = {
   isBipartite: boolean
   groupANodeIds: string[]
   groupBNodeIds: string[]
+  operationCount: number
 }
 
 export type WeightedPathStep = {
@@ -110,6 +114,7 @@ export type WeightedPathResult = {
   goalNodeId: string
   pathFound: boolean
   pathCost: number | null
+  operationCount: number
 }
 
 // 'bfs' / 'dfs' are the unweighted-style path searches; 'dijkstra' / 'astar' / 'greedy' use a priority queue.
@@ -142,4 +147,5 @@ export type PriorityPathResult = {
   pathFound: boolean
   pathCost: number | null
   heuristicAdmissible: boolean
+  operationCount: number
 }
