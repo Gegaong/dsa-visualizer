@@ -59,7 +59,7 @@ export function runOuterBFS(
     if (globalVisited.has(key)) {
       // Island cell flood-filled by a prior inner search — all its neighbors were already
       // added via addIslandBoundary when the island was discovered, so no propagation needed.
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1 })
+      steps.push({ phase: 'outer', subPhase: 'bfs-outer-skip', currentCell: key, newVisited: [], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1 })
       continue
     }
 
@@ -77,7 +77,7 @@ export function runOuterBFS(
           opsTotal++  // frontier push
         }
       }
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [key], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1 })
+      steps.push({ phase: 'outer', subPhase: 'bfs-outer-water', currentCell: key, newVisited: [key], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1 })
     } else {
       islandIndex++
       const { steps: inner, cells, operationCount: innerOps } = runInner(key, islandIndex, islands, globalVisited, rows, cols, connectivity)
@@ -122,7 +122,7 @@ export function runOuterDFS(
     opsTotal++  // cell pop (V term) — counts all pops including already-visited
 
     if (globalVisited.has(key)) {
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [], frontierCells: frontier(), islandIndex: -1 })
+      steps.push({ phase: 'outer', subPhase: 'dfs-outer-skip', currentCell: key, newVisited: [], frontierCells: frontier(), islandIndex: -1 })
       continue
     }
 
@@ -140,7 +140,7 @@ export function runOuterDFS(
           opsTotal++  // frontier push
         }
       }
-      steps.push({ phase: 'outer', currentCell: key, newVisited: [key], frontierCells: frontier(), islandIndex: -1 })
+      steps.push({ phase: 'outer', subPhase: 'dfs-outer-water', currentCell: key, newVisited: [key], frontierCells: frontier(), islandIndex: -1 })
     } else {
       islandIndex++
       const { steps: inner, cells, operationCount: innerOps } = runInner(key, islandIndex, islands, globalVisited, rows, cols, connectivity)

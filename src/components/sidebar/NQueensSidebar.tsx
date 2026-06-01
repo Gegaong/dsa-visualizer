@@ -149,11 +149,6 @@ export const NQueensSidebar = ({
 
   return (
   <aside className="sidebar is-nqueens">
-    <div className="sidebar-page-switch">
-      <button className="sidebar-page-tab is-active" type="button">
-        Solver
-      </button>
-    </div>
     <div className="sidebar-page-body sidebar-page-body--grid">
       <AlgorithmInfoCard infoKey="nqueens" />
       <div className="sidebar-section sidebar-section--grid-playback">

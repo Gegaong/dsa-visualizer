@@ -5,6 +5,10 @@ export type GridSubPhase =
   | 'outer-visited'
   | 'inner-start'
   | 'inner-process'
+  | 'bfs-outer-skip'
+  | 'bfs-outer-water'
+  | 'dfs-outer-skip'
+  | 'dfs-outer-water'
 
 export type GridStep = {
   phase: 'outer' | 'inner'
