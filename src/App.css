@@ -269,7 +269,8 @@
 	transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.sidebar-section--grid-playback + .step-explanation--pseudocode {
+.sidebar-section--grid-playback + .step-explanation--pseudocode,
+.sidebar-section--traversal-playback + .step-explanation--pseudocode {
 	margin-top: -12px;
 }
 
