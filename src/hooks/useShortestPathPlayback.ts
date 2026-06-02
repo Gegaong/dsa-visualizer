@@ -50,12 +50,15 @@ export type ShortestPathOutput = {
   operationCount: number
 } | null
 
+export type SPPhase = 'ready' | 'step-explore' | 'step-goal' | 'done-found' | 'done-empty'
+
 export type ShortestPathPlaybackHandle = {
   shortestPathResult: ShortestPathResult | null
   isShortestPathRunning: boolean
   // Status text ready for display; includes field-missing warnings before any run.
   shortestPathStatusText: string
-  shortestPathCurrentExplanation: string
+  spCurrentPhase: SPPhase | null
+  spVarsRows: string[][] | null
   startNodeLabel: string
   goalNodeLabel: string
   // Intermediate nodes on the found path (excludes start and goal).
@@ -276,16 +279,61 @@ export function useShortestPathPlayback({
     shortestPathResult: pb.result,
     isShortestPathRunning: pb.isRunning,
     shortestPathStatusText,
-    shortestPathCurrentExplanation: (() => {
-      const stepExplanation = pb.result?.steps[pb.stepIndex]?.explanation ?? ''
-      if (!pb.isPlaybackComplete || !pb.result) return stepExplanation
-      const completionMessage = pb.result.pathFound
-        ? (() => {
-            const pathLength = pb.result!.pathNodeIds.length - 1
-            return ` ✓ Shortest path: ${pathLength} edge${pathLength === 1 ? '' : 's'}.`
-          })()
-        : ` ✗ No path exists from start to goal.`
-      return stepExplanation + completionMessage
+    spCurrentPhase: (() => {
+      if (!pb.isRunning) return null as SPPhase | null
+      if (pb.stepIndex < 0) return 'ready' as SPPhase
+      const currentStep = pb.result?.steps[pb.stepIndex]
+      const isGoalStep = currentStep?.nodeId === pb.result?.goalNodeId
+      if (pb.isPlaybackComplete) {
+        if (isGoalStep && pb.result?.pathFound) return 'step-goal' as SPPhase
+        return pb.result?.pathFound ? 'done-found' as SPPhase : 'done-empty' as SPPhase
+      }
+      return isGoalStep ? 'step-goal' as SPPhase : 'step-explore' as SPPhase
+    })(),
+    spVarsRows: (() => {
+      if (!pb.isRunning || pb.stepIndex < 0 || !pb.result) return null
+      const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
+      const step = pb.result.steps[si]
+      const isDone = pb.isPlaybackComplete
+      const nodeVal = isDone ? '—' : step.nodeLabel
+      const visitedLabels = pb.result.steps.slice(0, si + 1).map(s => s.nodeLabel)
+      if (strategyRef.current === 'bfs') {
+        const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
+        const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
+        const labelByNodeId = new Map(pb.result.steps.map(s => [s.nodeId, s.nodeLabel]))
+        const parentEntries = pb.result.steps.slice(0, si + 1).map(s => {
+          const parentLabel = s.fromNodeId ? (labelByNodeId.get(s.fromNodeId) ?? s.fromNodeId) : '—'
+          return `${s.nodeLabel}: ${parentLabel}`
+        })
+        return [
+          [`node = ${nodeVal}`],
+          [`queue = [${frontier.join(', ')}]`],
+          [`parent = {${parentEntries.join(', ')}}`],
+          [`visited = [${visitedLabels.join(', ')}]`],
+        ]
+      }
+      const bestLen = isDone
+        ? (pb.result.pathFound ? pb.result.pathNodeIds.length - 1 : null)
+        : (step.dfsBestPathLength ?? null)
+      const inPathLabels: string[] = [step.nodeLabel]
+      let fromId: string | null = step.fromNodeId
+      let searchBefore = si
+      while (fromId !== null) {
+        let found = -1
+        for (let i = searchBefore - 1; i >= 0; i--) {
+          if (pb.result.steps[i].nodeId === fromId) { found = i; break }
+        }
+        if (found === -1) break
+        const parentStep = pb.result.steps[found]
+        inPathLabels.unshift(parentStep.nodeLabel)
+        fromId = parentStep.fromNodeId
+        searchBefore = found
+      }
+      return [
+        [`node = ${nodeVal}`, `depth = ${inPathLabels.length - 1}`, `best = ${bestLen !== null ? bestLen + ' edges' : '—'}`],
+        [`inPath = {${inPathLabels.join(', ')}}`],
+        [`visited = [${visitedLabels.join(', ')}]`],
+      ]
     })(),
     startNodeLabel,
     goalNodeLabel,

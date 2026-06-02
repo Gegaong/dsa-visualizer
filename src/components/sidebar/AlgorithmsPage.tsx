@@ -89,7 +89,8 @@ export const AlgorithmsPage = ({
   shortestPathOutput,
   shortestPathStepIndex,
   shortestPathStepTotal,
-  shortestPathCurrentExplanation,
+  spCurrentPhase,
+  spVarsRows,
   onRunBipartite,
   onStopBipartite,
   canRunBipartite,
@@ -236,7 +237,10 @@ export const AlgorithmsPage = ({
           shortestPathOutput={shortestPathOutput}
           shortestPathStepIndex={shortestPathStepIndex}
           shortestPathStepTotal={shortestPathStepTotal}
-          shortestPathCurrentExplanation={shortestPathCurrentExplanation}
+          spCurrentPhase={spCurrentPhase}
+          spVarsRows={spVarsRows}
+          pseudocodeShowLogic={pseudocodeShowLogic}
+          onPseudocodeFlip={onPseudocodeFlip}
           onRunShortestPath={onRunShortestPath}
           onStopShortestPath={onStopShortestPath}
         />

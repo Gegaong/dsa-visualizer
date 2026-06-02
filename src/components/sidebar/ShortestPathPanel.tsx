@@ -1,14 +1,117 @@
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
 
-import type { ShortestPathOutput } from './sidebarTypes'
+import type { SPPhase, ShortestPathOutput } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
-import { StepExplanation } from './StepExplanation'
+import { PseudocodePanel } from './PseudocodePanel'
 
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+
+// ─── Code pseudocode strings ─────────────────────────────────────────────────
+
+const BFS_CODE = `function ShortestPathBFS(start, goal):
+    parent ← {start: null}
+    queue ← [start]
+    while queue ≠ empty:
+        u ← queue.dequeue()
+        if u = goal:
+            return reconstructPath(parent)
+        for each neighbor nb of u:
+            if nb ∉ parent:
+                parent[nb] ← u; queue.enqueue(nb)
+    return no path`
+
+const DFS_CODE = `function ShortestPathDFS(start, goal):
+    best ← ∞; inPath ← {start}
+    dfs(start, 1, inPath)
+    return best
+
+function dfs(u, depth, inPath):
+    if u = goal:
+        if depth < best: best ← depth
+        return
+    for each neighbor nb of u:
+        if nb ∉ inPath and depth+1 < best:
+            inPath.add(nb)
+            dfs(nb, depth+1, inPath)
+            inPath.remove(nb)`
+
+// ─── Logic pseudocode strings ─────────────────────────────────────────────────
+
+const BFS_LOGIC = `BFS explores nodes layer by layer,
+visiting all distance-k nodes before
+any distance-(k+1) node.
+──────────────────────────────────────────
+Each step:
+  · Dequeue the front node.
+  · If it's the goal — reconstruct path.
+  · Enqueue unseen neighbors,
+      recording each one's parent.
+First dequeue of goal = shortest path.
+──────────────────────────────────────────
+Queue empty → no path exists.`
+
+const DFS_LOGIC = `DFS explores every acyclic path via
+backtracking, keeping the shortest found.
+Pruning skips branches that can't improve.
+──────────────────────────────────────────
+Each recursive step:
+  · If at goal, compare depth with best.
+  · Otherwise try each unvisited neighbor
+      that could still beat the best.
+  · Backtrack: remove nb from inPath.
+Pruning: skip if depth + 1 ≥ best.
+──────────────────────────────────────────
+All paths explored → return shortest.`
+
+// ─── Highlight maps ───────────────────────────────────────────────────────────
+
+// BFS code: 11 lines (0–10)
+const BFS_CODE_HIGHLIGHTS: Record<SPPhase, number[]> = {
+  ready:        [0, 1, 2],
+  'step-explore': [3, 4, 7, 8, 9],
+  'step-goal':    [3, 4, 5, 6],
+  'done-found':   [6],
+  'done-empty':   [10],
+}
+
+// BFS logic: 12 lines (0–11)
+const BFS_LOGIC_HIGHLIGHTS: Record<SPPhase, number[]> = {
+  ready:        [0, 1, 2],
+  'step-explore': [4, 5, 7, 8],
+  'step-goal':    [4, 5, 6, 9],
+  'done-found':   [9],
+  'done-empty':   [11],
+}
+
+// DFS code: 14 lines (0–13). Outer function lines 0–3 + blank 4 + inner function lines 5–13.
+const DFS_CODE_HIGHLIGHTS: Record<SPPhase, number[]> = {
+  ready:        [0, 1, 2],
+  'step-explore': [9, 10, 11, 12, 13],
+  'step-goal':    [6, 7, 8],
+  'done-found':   [3],
+  'done-empty':   [3],
+}
+
+// DFS logic: 12 lines (0–11)
+const DFS_LOGIC_HIGHLIGHTS: Record<SPPhase, number[]> = {
+  ready:        [0, 1, 2],
+  'step-explore': [4, 6, 7, 8, 9],
+  'step-goal':    [4, 5],
+  'done-found':   [11],
+  'done-empty':   [11],
+}
+
+function getHighlights(phase: SPPhase | null, strategy: TraversalStrategy, isLogic: boolean): Set<number> {
+  if (!phase) return new Set()
+  const map = isLogic
+    ? (strategy === 'bfs' ? BFS_LOGIC_HIGHLIGHTS : DFS_LOGIC_HIGHLIGHTS)
+    : (strategy === 'bfs' ? BFS_CODE_HIGHLIGHTS : DFS_CODE_HIGHLIGHTS)
+  return new Set(map[phase])
+}
 
 export type ShortestPathPanelProps = {
   isTraversalRunning: boolean
@@ -36,19 +139,21 @@ export type ShortestPathPanelProps = {
   shortestPathOutput: ShortestPathOutput
   shortestPathStepIndex: number
   shortestPathStepTotal: number
-  shortestPathCurrentExplanation: string
+  spCurrentPhase: SPPhase | null
+  spVarsRows: string[][] | null
+  pseudocodeShowLogic: boolean
+  onPseudocodeFlip: () => void
   onRunShortestPath: (strategy: TraversalStrategy) => void
   onStopShortestPath: () => void
 }
 
-// Returns a human-readable step counter; shows "Ready / N" before playback begins.
 function formatStepDisplay(stepIndex: number, stepTotal: number): string {
   if (stepTotal === 0) return '—'
   if (stepIndex >= 0) return `${stepIndex + 1} / ${stepTotal}`
   return `Ready / ${stepTotal}`
 }
 
-// Configuration (BFS/DFS, start/goal inputs), playback controls, and output for shortest path.
+// Configuration (BFS/DFS, start/goal inputs), playback controls, pseudocode, and output for shortest path.
 export const ShortestPathPanel = ({
   isTraversalRunning,
   isShortestPathSessionActive,
@@ -75,11 +180,13 @@ export const ShortestPathPanel = ({
   shortestPathOutput,
   shortestPathStepIndex,
   shortestPathStepTotal,
-  shortestPathCurrentExplanation,
+  spCurrentPhase,
+  spVarsRows,
+  pseudocodeShowLogic,
+  onPseudocodeFlip,
   onRunShortestPath,
   onStopShortestPath,
 }: ShortestPathPanelProps) => {
-  // Starts a new run or stops the active one; no-ops while traversal is running.
   const toggleRun = () => {
     if (isTraversalRunning) return
     if (isShortestPathSessionActive) {
@@ -89,11 +196,7 @@ export const ShortestPathPanel = ({
     onRunShortestPath(algorithmTraversal)
   }
 
-  const stepDisplay = formatStepDisplay(
-    shortestPathStepIndex,
-    shortestPathStepTotal,
-  )
-
+  const stepDisplay = formatStepDisplay(shortestPathStepIndex, shortestPathStepTotal)
   const pathFound = shortestPathOutput === null ? '—' : shortestPathOutput.pathFound ? 'Yes' : 'No'
   const pathLength = shortestPathOutput !== null && shortestPathOutput.pathFound ? String(shortestPathOutput.pathLength) : '—'
   const pathSequence =
@@ -154,7 +257,7 @@ export const ShortestPathPanel = ({
         </div>
       </div>
 
-      <div className="sidebar-section">
+      <div className="sidebar-section sidebar-section--sp-playback">
         <h3>Playback</h3>
         <PlaybackControls
           runLabel="Run shortest path"
@@ -175,8 +278,17 @@ export const ShortestPathPanel = ({
           onSpeedChange={onShortestPathPlaybackSpeedChange}
         />
         <p className="hint">{shortestPathStatusText}</p>
-        <StepExplanation text={shortestPathCurrentExplanation} />
       </div>
+
+      <PseudocodePanel
+        codeText={algorithmTraversal === 'bfs' ? BFS_CODE : DFS_CODE}
+        logicText={algorithmTraversal === 'bfs' ? BFS_LOGIC : DFS_LOGIC}
+        codeHighlighted={getHighlights(spCurrentPhase, algorithmTraversal, false)}
+        logicHighlighted={getHighlights(spCurrentPhase, algorithmTraversal, true)}
+        varsRows={spVarsRows}
+        showLogic={pseudocodeShowLogic}
+        onFlip={onPseudocodeFlip}
+      />
 
       <div className="sidebar-section">
         <h3>Output</h3>

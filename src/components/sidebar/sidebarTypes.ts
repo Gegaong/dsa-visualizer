@@ -14,6 +14,10 @@ import type { CCPhase } from '../../hooks/useConnectedComponentsPlayback'
 
 export type { CCPhase }
 
+import type { SPPhase } from '../../hooks/useShortestPathPlayback'
+
+export type { SPPhase }
+
 export type SidebarPage = 'canvas' | 'traversal' | 'algorithms' | 'pathfinder'
 
 export type AlgorithmMode =
@@ -194,7 +198,8 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   shortestPathOutput: ShortestPathOutput
   shortestPathStepIndex: number
   shortestPathStepTotal: number
-  shortestPathCurrentExplanation: string
+  spCurrentPhase: SPPhase | null
+  spVarsRows: string[][] | null
 
   onRunBipartite: (strategy: TraversalStrategy) => void
   onStopBipartite: () => void
