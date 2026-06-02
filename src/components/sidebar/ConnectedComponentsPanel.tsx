@@ -17,15 +17,15 @@ const BFS_CODE = `function ConnectedComponents(graph):
     visited ← {}; components ← []
     for each node v in graph:
         if v ∉ visited:
-            component ← BFS(v, visited)
+            component ← BFS(v, visited, graph)
             components.add(component)
     return components
 
-function BFS(start, visited):
+function BFS(start, visited, graph):
     queue ← [start]; visited.add(start)
     while queue ≠ empty:
         u ← queue.dequeue()
-        for each nb of u:
+        for each nb of u in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
@@ -35,15 +35,15 @@ const DFS_CODE = `function ConnectedComponents(graph):
     visited ← {}; components ← []
     for each node v in graph:
         if v ∉ visited:
-            component ← DFS(v, visited)
+            component ← DFS(v, visited, graph)
             components.add(component)
     return components
 
-function DFS(start, visited):
+function DFS(start, visited, graph):
     stack ← [start]; visited.add(start)
     while stack ≠ empty:
         u ← stack.pop()
-        for each nb of u:
+        for each nb of u in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)

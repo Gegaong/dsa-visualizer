@@ -12,31 +12,31 @@ import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 // ─── Code pseudocode strings ─────────────────────────────────────────────────
 
-const BFS_CODE = `function ShortestPathBFS(start, goal):
+const BFS_CODE = `function ShortestPathBFS(graph, start, goal):
     parent ← {start: null}
     queue ← [start]
     while queue ≠ empty:
         u ← queue.dequeue()
         if u = goal:
             return reconstructPath(parent)
-        for each neighbor nb of u:
+        for each neighbor nb of u in graph:
             if nb ∉ parent:
                 parent[nb] ← u; queue.enqueue(nb)
     return no path`
 
-const DFS_CODE = `function ShortestPathDFS(start, goal):
+const DFS_CODE = `function ShortestPathDFS(graph, start, goal):
     best ← ∞; inPath ← {start}
-    dfs(start, 1, inPath)
+    dfs(start, 1, inPath, graph)
     return best
 
-function dfs(u, depth, inPath):
+function dfs(u, depth, inPath, graph):
     if u = goal:
         if depth < best: best ← depth
         return
-    for each neighbor nb of u:
+    for each neighbor nb of u in graph:
         if nb ∉ inPath and depth+1 < best:
             inPath.add(nb)
-            dfs(nb, depth+1, inPath)
+            dfs(nb, depth+1, inPath, graph)
             inPath.remove(nb)`
 
 // ─── Logic pseudocode strings ─────────────────────────────────────────────────

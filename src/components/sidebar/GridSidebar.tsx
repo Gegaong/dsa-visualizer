@@ -9,7 +9,7 @@ const FOR_BFS_CODE = `function SCAN(grid, rows, cols):
         for c ← 0 to cols-1:
             if grid[r][c] = water → skip
             if (r,c) ∈ visited  → skip
-            island ← BFS_FILL(r,c)
+            island ← BFS_FILL(r,c, grid, visited)
             islands.add(island)
     return islands
 
@@ -19,7 +19,7 @@ function BFS_FILL(start, grid, visited):
     while queue ≠ empty:
         cell ← queue.dequeue()
         island.add(cell)
-        for each nb of cell:
+        for each nb of cell in grid:
             if nb is land ∧ nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
@@ -48,7 +48,7 @@ const FOR_DFS_CODE = `function SCAN(grid, rows, cols):
         for c ← 0 to cols-1:
             if grid[r][c] = water → skip
             if (r,c) ∈ visited  → skip
-            island ← DFS_FILL(r,c)
+            island ← DFS_FILL(r,c, grid, visited)
             islands.add(island)
     return islands
 
@@ -58,7 +58,7 @@ function DFS_FILL(start, grid, visited):
     while stack ≠ empty:
         cell ← stack.pop()
         island.add(cell)
-        for each nb of cell:
+        for each nb of cell in grid:
             if nb is land ∧ nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)
@@ -89,7 +89,7 @@ const BFS_BFS_CODE = `function SCAN(grid, starts):
         if cell ∈ visited  → skip
         visited.add(cell)
         if grid[cell] = water → enqueue nbs
-        else → island ← BFS_FILL(cell)
+        else → island ← BFS_FILL(cell, grid, visited)
     return islands
 
 function BFS_FILL(start, grid, visited):
@@ -97,7 +97,7 @@ function BFS_FILL(start, grid, visited):
     while queue ≠ empty:
         cell ← queue.dequeue()
         island.add(cell)
-        for each nb of cell:
+        for each nb of cell in grid:
             if nb is land ∧ nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
@@ -130,7 +130,7 @@ const BFS_DFS_CODE = `function SCAN(grid, starts):
         if cell ∈ visited  → skip
         visited.add(cell)
         if grid[cell] = water → enqueue nbs
-        else → island ← DFS_FILL(cell)
+        else → island ← DFS_FILL(cell, grid, visited)
     return islands
 
 function DFS_FILL(start, grid, visited):
@@ -138,7 +138,7 @@ function DFS_FILL(start, grid, visited):
     while stack ≠ empty:
         cell ← stack.pop()
         island.add(cell)
-        for each nb of cell:
+        for each nb of cell in grid:
             if nb is land ∧ nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)
@@ -171,7 +171,7 @@ const DFS_BFS_CODE = `function SCAN(grid, start):
         if cell ∈ visited  → skip
         visited.add(cell)
         if grid[cell] = water → push nbs
-        else → island ← BFS_FILL(cell)
+        else → island ← BFS_FILL(cell, grid, visited)
     return islands
 
 function BFS_FILL(start, grid, visited):
@@ -179,7 +179,7 @@ function BFS_FILL(start, grid, visited):
     while queue ≠ empty:
         cell ← queue.dequeue()
         island.add(cell)
-        for each nb of cell:
+        for each nb of cell in grid:
             if nb is land ∧ nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
@@ -212,7 +212,7 @@ const DFS_DFS_CODE = `function SCAN(grid, start):
         if cell ∈ visited  → skip
         visited.add(cell)
         if grid[cell] = water → push nbs
-        else → island ← DFS_FILL(cell)
+        else → island ← DFS_FILL(cell, grid, visited)
     return islands
 
 function DFS_FILL(start, grid, visited):
@@ -220,7 +220,7 @@ function DFS_FILL(start, grid, visited):
     while stack ≠ empty:
         cell ← stack.pop()
         island.add(cell)
-        for each nb of cell:
+        for each nb of cell in grid:
             if nb is land ∧ nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)

@@ -50,14 +50,25 @@ export const PseudocodePanel = ({
         </div>
       )}
       <pre className="pseudocode-pre">
-        {text.split('\n').map((line, i) => (
-          <span
-            key={i}
-            className={`pseudocode-line${highlighted.has(i) ? ' pseudocode-line--active' : ''}`}
-          >
-            {line}
-          </span>
-        ))}
+        {text.split('\n').map((line, i) => {
+          const indent = line.match(/^ */)?.[0].length ?? 0
+          const isActive = highlighted.has(i)
+          const style = indent > 0
+            ? {
+                paddingLeft: isActive ? `calc(12px + ${indent}ch)` : `${indent}ch`,
+                textIndent: `-${indent}ch`,
+              }
+            : undefined
+          return (
+            <span
+              key={i}
+              className={`pseudocode-line${isActive ? ' pseudocode-line--active' : ''}`}
+              style={style}
+            >
+              {line}
+            </span>
+          )
+        })}
       </pre>
     </div>
   )

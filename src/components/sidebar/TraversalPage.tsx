@@ -19,7 +19,7 @@ const BFS_TARGET_NODE_CODE = `function BFS(graph, start, goal):
     while queue ≠ empty:
         node ← queue.dequeue()
         if node = goal → return node
-        for each nb of node:
+        for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
@@ -30,7 +30,7 @@ const DFS_TARGET_NODE_CODE = `function DFS(graph, start, goal):
     while stack ≠ empty:
         node ← stack.pop()
         if node = goal → return node
-        for each nb of node:
+        for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)
@@ -41,7 +41,7 @@ const BFS_TARGET_VALUE_CODE = `function BFS(graph, start, targetVal):
     while queue ≠ empty:
         node ← queue.dequeue()
         if node.value = targetVal → return node
-        for each nb of node:
+        for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
@@ -52,7 +52,7 @@ const DFS_TARGET_VALUE_CODE = `function DFS(graph, start, targetVal):
     while stack ≠ empty:
         node ← stack.pop()
         if node.value = targetVal → return node
-        for each nb of node:
+        for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)
@@ -66,7 +66,7 @@ const BFS_MAX_VALUE_CODE = `function BFS(graph, start):
         node ← queue.dequeue()
         if node.value > best:
             best ← node.value
-        for each nb of node:
+        for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
@@ -79,7 +79,7 @@ const DFS_MAX_VALUE_CODE = `function DFS(graph, start):
         node ← stack.pop()
         if node.value > best:
             best ← node.value
-        for each nb of node:
+        for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)
@@ -92,7 +92,7 @@ const BFS_MIN_VALUE_CODE = `function BFS(graph, start):
         node ← queue.dequeue()
         if node.value < best:
             best ← node.value
-        for each nb of node:
+        for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
@@ -105,7 +105,7 @@ const DFS_MIN_VALUE_CODE = `function DFS(graph, start):
         node ← stack.pop()
         if node.value < best:
             best ← node.value
-        for each nb of node:
+        for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)
