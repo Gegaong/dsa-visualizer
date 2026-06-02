@@ -1386,7 +1386,9 @@ function App() {
             canStepBackward: traversal.canStepBackward,
             canTogglePlay: traversal.canTogglePlay,
             isTraversalPlaybackComplete: traversal.isPlaybackComplete,
-            traversalCurrentExplanation: traversal.traversalCurrentExplanation,
+            traversalCurrentPhase: traversal.traversalCurrentPhase,
+            pseudocodeShowLogic,
+            onPseudocodeFlip: () => setPseudocodeShowLogic(v => !v),
           }}
           algorithms={{
             blockGraphEdits: blockGraphInteraction,

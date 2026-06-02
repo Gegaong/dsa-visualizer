@@ -47,6 +47,8 @@ type UseTraversalPlaybackParams = {
   onClearOtherGraphAlgorithms: () => void
 }
 
+export type TraversalPhase = 'ready' | 'step-regular' | 'step-matched' | 'done-empty'
+
 export type TraversalPlaybackHandle = {
   goalType: GoalType
   setGoalType: (t: GoalType) => void
@@ -72,8 +74,6 @@ export type TraversalPlaybackHandle = {
   traversalStatusText: string
   isTraversalRunning: boolean
   traversalResult: BfsResult | null
-  // Currently-displayed step's internal explanation (empty before/after playback).
-  traversalCurrentExplanation: string
 
   isPlaying: boolean
   playbackSpeed: number
@@ -95,6 +95,7 @@ export type TraversalPlaybackHandle = {
   handleTraversalPlaybackSpeedChange: (value: number) => void
   sidebarTraversalStatusText: string
   canRunTraversal: boolean
+  traversalCurrentPhase: TraversalPhase | null
 }
 
 export function useTraversalPlayback({
@@ -397,18 +398,19 @@ export function useTraversalPlayback({
     handleTraversalPlaybackSpeedChange,
     sidebarTraversalStatusText,
     canRunTraversal,
-    traversalCurrentExplanation: (() => {
-      const stepExplanation = traversalResult?.steps[traversalPlayback.stepIndex]?.explanation ?? ''
-      if (!traversalPlayback.isPlaybackComplete || !traversalResult) return stepExplanation
-
-      const completionMessage = traversalResult.foundNodeId
-        ? ` ✓ Goal reached: ${traversalResult.foundNodeLabel}.`
-        : traversalResult.foundNodeIds.length > 0
-          ? ` ✓ Search complete. Found: ${traversalResult.foundNodeIds.map(id => traversalResult!.steps.find(s => s.nodeId === id)?.nodeLabel ?? id).join(', ')}.`
-          : (traversalResult.goalType === 'max-value' || traversalResult.goalType === 'min-value')
-            ? ` ✓ Search complete. No more nodes to explore.`
-            : ` ✗ Goal not found. Traversal complete.`
-      return stepExplanation + completionMessage
+    traversalCurrentPhase: (() => {
+      if (!isTraversalRunning) return null as TraversalPhase | null
+      const stepIndex = traversalPlayback.stepIndex
+      if (stepIndex < 0) return 'ready' as TraversalPhase
+      if (traversalPlayback.isPlaybackComplete) {
+        if (goalType === 'max-value' || goalType === 'min-value') return 'done-empty' as TraversalPhase
+        return traversalResult?.foundNodeId ? 'step-matched' as TraversalPhase : 'done-empty' as TraversalPhase
+      }
+      if (goalType === 'target-node' || goalType === 'target-value') {
+        const currentStep = traversalResult?.steps[stepIndex]
+        if (currentStep && traversalResult?.foundNodeId === currentStep.nodeId) return 'step-matched' as TraversalPhase
+      }
+      return 'step-regular' as TraversalPhase
     })(),
   }
 }

@@ -6,6 +6,10 @@ export type { WeightedPathfindingPanelProps }
 
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
 
+import type { TraversalPhase } from '../../hooks/useTraversalPlayback'
+
+export type { TraversalPhase }
+
 export type SidebarPage = 'canvas' | 'traversal' | 'algorithms' | 'pathfinder'
 
 export type AlgorithmMode =
@@ -72,7 +76,9 @@ export type TraversalPageProps = SidebarSharedState & {
   canStepBackward: boolean
   canTogglePlay: boolean
   isTraversalPlaybackComplete: boolean
-  traversalCurrentExplanation: string
+  traversalCurrentPhase: TraversalPhase | null
+  pseudocodeShowLogic: boolean
+  onPseudocodeFlip: () => void
 }
 
 export type ConnectedComponentsOutput = {
