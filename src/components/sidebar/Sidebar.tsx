@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 import type { SidebarPage, SidebarProps } from './sidebarTypes'
 
@@ -20,12 +20,13 @@ const PAGE_CLASS: Record<SidebarPage, string> = {
 }
 
 // Right-side control panel. A thin shell: owns the page-switch tabs and notifies the
-// parent on page changes. CanvasSetupPage and TraversalPage mount only while active;
-// AlgorithmsPage stays mounted at all times (display:none when inactive) so that
-// algorithmMode state and the hooks' sidebarAlgorithmModeRef stay in sync.
+// parent on page changes. All four page panels stay mounted at all times (display:none
+// when inactive) so scroll positions are preserved across tab switches.
 // In weighted-graph mode, the Traversal and Algorithms tabs are hidden and the sidebar
 // is forced to the Canvas setup page.
 export const Sidebar = ({
+  activePage,
+  onActivePage,
   onSidebarSectionChange,
   canvasSetup,
   traversal,
@@ -33,7 +34,6 @@ export const Sidebar = ({
   pathfinder,
   isWeightedMode,
 }: SidebarProps) => {
-  const [activePage, setActivePage] = useState<SidebarPage>('canvas')
   const prevPageRef = useRef<SidebarPage>(activePage)
 
   // In weighted mode the only valid pages are 'canvas' and 'pathfinder'.
@@ -56,7 +56,7 @@ export const Sidebar = ({
         <button
           className={`sidebar-page-tab ${effectivePage === 'canvas' ? 'is-active' : ''}`}
           type="button"
-          onClick={() => setActivePage('canvas')}
+          onClick={() => onActivePage('canvas')}
         >
           Canvas setup
         </button>
@@ -64,7 +64,7 @@ export const Sidebar = ({
           <button
             className={`sidebar-page-tab ${effectivePage === 'pathfinder' ? 'is-active' : ''}`}
             type="button"
-            onClick={() => setActivePage('pathfinder')}
+            onClick={() => onActivePage('pathfinder')}
           >
             Pathfinder setup
           </button>
@@ -73,7 +73,7 @@ export const Sidebar = ({
           <button
             className={`sidebar-page-tab ${effectivePage === 'traversal' ? 'is-active' : ''}`}
             type="button"
-            onClick={() => setActivePage('traversal')}
+            onClick={() => onActivePage('traversal')}
           >
             Traversal setup
           </button>
@@ -82,20 +82,23 @@ export const Sidebar = ({
           <button
             className={`sidebar-page-tab ${effectivePage === 'algorithms' ? 'is-active' : ''}`}
             type="button"
-            onClick={() => setActivePage('algorithms')}
+            onClick={() => onActivePage('algorithms')}
           >
             Algorithm setup
           </button>
         )}
       </div>
 
-      {effectivePage === 'canvas' && <CanvasSetupPage {...canvasSetup} />}
-      {effectivePage === 'pathfinder' && <WeightedPathfindingPanel {...pathfinder} />}
-      {effectivePage === 'traversal' && <TraversalPage {...traversal} />}
-      <div
-        className="sidebar-page-root"
-        style={{ display: effectivePage === 'algorithms' ? undefined : 'none' }}
-      >
+      <div className="sidebar-page-root" style={{ display: effectivePage === 'canvas' ? undefined : 'none' }}>
+        <CanvasSetupPage {...canvasSetup} />
+      </div>
+      <div className="sidebar-page-root" style={{ display: effectivePage === 'pathfinder' ? undefined : 'none' }}>
+        <WeightedPathfindingPanel {...pathfinder} />
+      </div>
+      <div className="sidebar-page-root" style={{ display: effectivePage === 'traversal' ? undefined : 'none' }}>
+        <TraversalPage {...traversal} />
+      </div>
+      <div className="sidebar-page-root" style={{ display: effectivePage === 'algorithms' ? undefined : 'none' }}>
         <AlgorithmsPage {...algorithms} />
       </div>
     </aside>

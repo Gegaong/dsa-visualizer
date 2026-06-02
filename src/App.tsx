@@ -110,6 +110,8 @@ function App() {
   const [edgeContextMenu, setEdgeContextMenu] = useState<EdgeContextMenuState | null>(null)
   const [distanceMode, setDistanceMode] = useState(false)
   const [pseudocodeShowLogic, setPseudocodeShowLogic] = useState(false)
+  const [graphSidebarPage, setGraphSidebarPage] = useState<SidebarPage>('canvas')
+  const [weightedSidebarPage, setWeightedSidebarPage] = useState<SidebarPage>('canvas')
 
   const isWeightedMode = canvasType === 'weighted-graph'
 
@@ -321,6 +323,9 @@ function App() {
   // Switches canvas type and clears all edge-weight editing state.
   const handleCanvasTypeChange = (type: CanvasType) => {
     if (type === canvasType) return
+
+    gridSearch.stop()
+    nQueens.stop()
 
     // Save current graph canvas state (grid has no node/edge state to save).
     if (canvasType === 'graph') {
@@ -1294,6 +1299,8 @@ function App() {
           />
         )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && <Sidebar
+          activePage={isWeightedMode ? weightedSidebarPage : graphSidebarPage}
+          onActivePage={(page) => isWeightedMode ? setWeightedSidebarPage(page) : setGraphSidebarPage(page)}
           onSidebarSectionChange={handleSidebarSectionChange}
           isWeightedMode={isWeightedMode}
           pathfinder={{

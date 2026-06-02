@@ -206,6 +206,8 @@ export type AlgorithmsPageProps = SidebarSharedState & {
 }
 
 export type SidebarProps = {
+  activePage: SidebarPage
+  onActivePage: (page: SidebarPage) => void
   onSidebarSectionChange?: (nav: { from: SidebarPage; to: SidebarPage }) => void
   canvasSetup: CanvasSetupPageProps
   traversal: TraversalPageProps
