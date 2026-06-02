@@ -1387,6 +1387,7 @@ function App() {
             canTogglePlay: traversal.canTogglePlay,
             isTraversalPlaybackComplete: traversal.isPlaybackComplete,
             traversalCurrentPhase: traversal.traversalCurrentPhase,
+            traversalVarsRows: traversal.traversalVarsRows,
             pseudocodeShowLogic,
             onPseudocodeFlip: () => setPseudocodeShowLogic(v => !v),
           }}
@@ -1420,6 +1421,7 @@ function App() {
             connectedComponentsStepIndex: cc.stepIndex,
             connectedComponentsStepTotal: cc.connectedComponentsResult?.steps.length ?? 0,
             ccCurrentPhase: cc.ccCurrentPhase,
+            ccVarsRows: cc.ccVarsRows,
             pseudocodeShowLogic,
             onPseudocodeFlip: () => setPseudocodeShowLogic(v => !v),
             onRunCycleDetection: handleRunCycleDetectionFromSidebar,

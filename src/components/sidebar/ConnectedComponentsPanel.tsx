@@ -17,7 +17,7 @@ const BFS_CODE = `function ConnectedComponents(graph):
     visited ← {}; components ← []
     for each node v in graph:
         if v ∉ visited:
-            component ← BFS(v)
+            component ← BFS(v, visited)
             components.add(component)
     return components
 
@@ -35,7 +35,7 @@ const DFS_CODE = `function ConnectedComponents(graph):
     visited ← {}; components ← []
     for each node v in graph:
         if v ∉ visited:
-            component ← DFS(v)
+            component ← DFS(v, visited)
             components.add(component)
     return components
 
@@ -124,6 +124,7 @@ export type ConnectedComponentsPanelProps = {
   connectedComponentsStepIndex: number
   connectedComponentsStepTotal: number
   ccCurrentPhase: CCPhase | null
+  ccVarsRows: string[][] | null
   pseudocodeShowLogic: boolean
   onPseudocodeFlip: () => void
   onRunConnectedComponents: (strategy: TraversalStrategy) => void
@@ -163,6 +164,7 @@ export const ConnectedComponentsPanel = ({
   connectedComponentsStepIndex,
   connectedComponentsStepTotal,
   ccCurrentPhase,
+  ccVarsRows,
   pseudocodeShowLogic,
   onPseudocodeFlip,
   onRunConnectedComponents,
@@ -257,6 +259,7 @@ export const ConnectedComponentsPanel = ({
         logicText={algorithmTraversal === 'bfs' ? BFS_LOGIC : DFS_LOGIC}
         codeHighlighted={getHighlights(ccCurrentPhase, false)}
         logicHighlighted={getHighlights(ccCurrentPhase, true)}
+        varsRows={ccVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
       />

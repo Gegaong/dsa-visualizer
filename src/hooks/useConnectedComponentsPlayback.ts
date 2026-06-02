@@ -58,6 +58,7 @@ export type CCOutput = {
 export type CCPhase = 'ready' | 'step-root' | 'step-inner' | 'done'
 
 export type ConnectedComponentsPlaybackHandle = {
+  ccVarsRows: string[][] | null
   connectedComponentsResult: ConnectedComponentsResult | null
   isConnectedComponentsRunning: boolean
   connectedComponentsStatusText: string
@@ -240,6 +241,24 @@ export function useConnectedComponentsPlayback({
     connectedComponentsResult: pb.result,
     isConnectedComponentsRunning: pb.isRunning,
     connectedComponentsStatusText: statusText,
+    ccVarsRows: (() => {
+      if (!pb.isRunning || pb.stepIndex < 0 || !pb.result) return null
+      const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
+      const step = pb.result.steps[si]
+      const algoKey = strategyRef.current === 'bfs' ? 'queue' : 'stack'
+      const isDone = pb.isPlaybackComplete
+      const nodeVal = isDone ? '—' : step.nodeLabel
+      const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
+      const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
+      const visitedLabels = pb.result.steps.slice(0, si + 1).map(s => s.nodeLabel)
+      const discoveredRoots = [...new Set(pb.result.steps.slice(0, si + 1).map(s => s.componentRootNodeId))]
+      return [
+        [`node = ${nodeVal}`],
+        [`${algoKey} = [${frontier.join(', ')}]`],
+        [`visited = [${visitedLabels.join(', ')}]`],
+        [`components = [${discoveredRoots.map((_, i) => `#${i + 1}`).join(', ')}]`],
+      ]
+    })(),
     ccCurrentPhase: (() => {
       if (!pb.isRunning) return null as CCPhase | null
       if (pb.stepIndex < 0) return 'ready' as CCPhase

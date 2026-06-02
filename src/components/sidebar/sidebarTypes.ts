@@ -81,6 +81,7 @@ export type TraversalPageProps = SidebarSharedState & {
   canTogglePlay: boolean
   isTraversalPlaybackComplete: boolean
   traversalCurrentPhase: TraversalPhase | null
+  traversalVarsRows: string[][] | null
   pseudocodeShowLogic: boolean
   onPseudocodeFlip: () => void
 }
@@ -145,6 +146,7 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   connectedComponentsStepIndex: number
   connectedComponentsStepTotal: number
   ccCurrentPhase: CCPhase | null
+  ccVarsRows: string[][] | null
   pseudocodeShowLogic: boolean
   onPseudocodeFlip: () => void
 

@@ -318,6 +318,7 @@ export const TraversalPage = ({
   canTogglePlay,
   isTraversalPlaybackComplete,
   traversalCurrentPhase,
+  traversalVarsRows,
   pseudocodeShowLogic,
   onPseudocodeFlip,
 }: TraversalPageProps) => {
@@ -439,6 +440,7 @@ export const TraversalPage = ({
         logicText={getLogicText(algorithmTab, goalType)}
         codeHighlighted={getHighlights(traversalCurrentPhase, goalType, false)}
         logicHighlighted={getHighlights(traversalCurrentPhase, goalType, true)}
+        varsRows={traversalVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
       />

@@ -43,6 +43,7 @@ export const AlgorithmsPage = ({
   connectedComponentsStepIndex,
   connectedComponentsStepTotal,
   ccCurrentPhase,
+  ccVarsRows,
   pseudocodeShowLogic,
   onPseudocodeFlip,
   onRunCycleDetection,
@@ -172,6 +173,7 @@ export const AlgorithmsPage = ({
           connectedComponentsStepIndex={connectedComponentsStepIndex}
           connectedComponentsStepTotal={connectedComponentsStepTotal}
           ccCurrentPhase={ccCurrentPhase}
+          ccVarsRows={ccVarsRows}
           pseudocodeShowLogic={pseudocodeShowLogic}
           onPseudocodeFlip={onPseudocodeFlip}
           onRunConnectedComponents={onRunConnectedComponents}

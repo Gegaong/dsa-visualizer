@@ -50,6 +50,7 @@ type UseTraversalPlaybackParams = {
 export type TraversalPhase = 'ready' | 'step-regular' | 'step-matched' | 'done-empty'
 
 export type TraversalPlaybackHandle = {
+  traversalVarsRows: string[][] | null
   goalType: GoalType
   setGoalType: (t: GoalType) => void
   startNodeLabel: string
@@ -398,6 +399,26 @@ export function useTraversalPlayback({
     handleTraversalPlaybackSpeedChange,
     sidebarTraversalStatusText,
     canRunTraversal,
+    traversalVarsRows: (() => {
+      if (!isTraversalRunning || traversalPlayback.stepIndex < 0 || !traversalResult) return null
+      const si = Math.min(traversalPlayback.stepIndex, traversalResult.steps.length - 1)
+      const step = traversalResult.steps[si]
+      const algoKey = algorithmTab === 'bfs' ? 'queue' : 'stack'
+      const isDone = traversalPlayback.isPlaybackComplete
+      const nodeVal = isDone ? '—' : step.nodeLabel
+      const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
+      const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
+      const visitedLabels = traversalResult.steps.slice(0, si + 1).map(s => s.nodeLabel)
+      const row2 = [`${algoKey} = [${frontier.join(', ')}]`]
+      const row3 = [`visited = [${visitedLabels.join(', ')}]`]
+      if (goalType === 'max-value' || goalType === 'min-value') {
+        const bestKey = goalType === 'max-value' ? 'max' : 'min'
+        const bestVal = isDone ? traversalResult.foundValue : (step.runningBest ?? null)
+        return [[`node = ${nodeVal}`, `${bestKey} = ${bestVal ?? '—'}`], row2, row3]
+      }
+      if (goalType === 'target-node') return [[`node = ${nodeVal}`, `goal = "${goalNodeLabel}"`], row2, row3]
+      return [[`node = ${nodeVal}`, `goal = ${goalValueInput}`], row2, row3]
+    })(),
     traversalCurrentPhase: (() => {
       if (!isTraversalRunning) return null as TraversalPhase | null
       const stepIndex = traversalPlayback.stepIndex
