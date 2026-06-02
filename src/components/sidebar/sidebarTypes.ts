@@ -10,6 +10,10 @@ import type { TraversalPhase } from '../../hooks/useTraversalPlayback'
 
 export type { TraversalPhase }
 
+import type { CCPhase } from '../../hooks/useConnectedComponentsPlayback'
+
+export type { CCPhase }
+
 export type SidebarPage = 'canvas' | 'traversal' | 'algorithms' | 'pathfinder'
 
 export type AlgorithmMode =
@@ -140,7 +144,9 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   connectedComponentsOutput: ConnectedComponentsOutput
   connectedComponentsStepIndex: number
   connectedComponentsStepTotal: number
-  connectedComponentsCurrentExplanation: string
+  ccCurrentPhase: CCPhase | null
+  pseudocodeShowLogic: boolean
+  onPseudocodeFlip: () => void
 
   onRunCycleDetection: (strategy: TraversalStrategy) => void
   onStopCycleDetection: () => void

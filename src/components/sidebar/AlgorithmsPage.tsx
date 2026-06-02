@@ -42,7 +42,9 @@ export const AlgorithmsPage = ({
   connectedComponentsOutput,
   connectedComponentsStepIndex,
   connectedComponentsStepTotal,
-  connectedComponentsCurrentExplanation,
+  ccCurrentPhase,
+  pseudocodeShowLogic,
+  onPseudocodeFlip,
   onRunCycleDetection,
   onStopCycleDetection,
   canRunCycleDetection,
@@ -169,7 +171,9 @@ export const AlgorithmsPage = ({
           connectedComponentsOutput={connectedComponentsOutput}
           connectedComponentsStepIndex={connectedComponentsStepIndex}
           connectedComponentsStepTotal={connectedComponentsStepTotal}
-          connectedComponentsCurrentExplanation={connectedComponentsCurrentExplanation}
+          ccCurrentPhase={ccCurrentPhase}
+          pseudocodeShowLogic={pseudocodeShowLogic}
+          onPseudocodeFlip={onPseudocodeFlip}
           onRunConnectedComponents={onRunConnectedComponents}
           onStopConnectedComponents={onStopConnectedComponents}
           ccStartNodeLabel={ccStartNodeLabel}

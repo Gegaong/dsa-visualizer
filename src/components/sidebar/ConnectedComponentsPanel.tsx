@@ -1,14 +1,104 @@
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
 
-import type { ConnectedComponentsOutput } from './sidebarTypes'
+import type { CCPhase, ConnectedComponentsOutput } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
-import { StepExplanation } from './StepExplanation'
+import { PseudocodePanel } from './PseudocodePanel'
 
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+
+// ─── Code pseudocode strings (17 lines each, 0–16) ──────────────────────────
+// Two-function structure: outer loop finds component roots; inner BFS/DFS traverses each.
+
+const BFS_CODE = `function ConnectedComponents(graph):
+    visited ← {}; components ← []
+    for each node v in graph:
+        if v ∉ visited:
+            component ← BFS(v)
+            components.add(component)
+    return components
+
+function BFS(start, visited):
+    queue ← [start]; visited.add(start)
+    while queue ≠ empty:
+        u ← queue.dequeue()
+        for each nb of u:
+            if nb ∉ visited:
+                visited.add(nb)
+                queue.enqueue(nb)
+    return component`
+
+const DFS_CODE = `function ConnectedComponents(graph):
+    visited ← {}; components ← []
+    for each node v in graph:
+        if v ∉ visited:
+            component ← DFS(v)
+            components.add(component)
+    return components
+
+function DFS(start, visited):
+    stack ← [start]; visited.add(start)
+    while stack ≠ empty:
+        u ← stack.pop()
+        for each nb of u:
+            if nb ∉ visited:
+                visited.add(nb)
+                stack.push(nb)
+    return component`
+
+// ─── Logic pseudocode strings (12 lines each, 0–11) ─────────────────────────
+
+const BFS_LOGIC = `Outer loop scans every node once.
+When an unvisited node is found,
+a new BFS component starts from it.
+──────────────────────────────────────────
+BFS within each component:
+  · Root: enqueue it, mark visited.
+  · Dequeue the front node.
+  · For each unvisited neighbor:
+      add to queue, mark visited.
+Queue empties → component is complete.
+──────────────────────────────────────────
+No more unvisited nodes → all done.`
+
+const DFS_LOGIC = `Outer loop scans every node once.
+When an unvisited node is found,
+a new DFS component starts from it.
+──────────────────────────────────────────
+DFS within each component:
+  · Root: push it, mark visited.
+  · Pop the top node.
+  · For each unvisited neighbor:
+      push onto stack, mark visited.
+Stack empties → component is complete.
+──────────────────────────────────────────
+No more unvisited nodes → all done.`
+
+// ─── Highlight maps ──────────────────────────────────────────────────────────
+
+// Code: 17 lines (0–16). Outer function lines 0–6 + blank line 7 + inner function lines 8–16.
+const CODE_HIGHLIGHTS: Record<CCPhase, number[]> = {
+  ready:        [0, 1],
+  'step-root':  [2, 3, 4, 9],
+  'step-inner': [10, 11, 12, 13, 14, 15],
+  done:         [5, 6, 16],
+}
+
+// Logic: 12 lines (0–11). Shared between BFS and DFS (only text differs).
+const LOGIC_HIGHLIGHTS: Record<CCPhase, number[]> = {
+  ready:        [0, 1, 2],
+  'step-root':  [0, 1, 2, 4, 5],
+  'step-inner': [4, 6, 7, 8, 9],
+  done:         [10, 11],
+}
+
+function getHighlights(phase: CCPhase | null, isLogic: boolean): Set<number> {
+  if (!phase) return new Set()
+  return new Set((isLogic ? LOGIC_HIGHLIGHTS : CODE_HIGHLIGHTS)[phase])
+}
 
 export type ConnectedComponentsPanelProps = {
   isTraversalRunning: boolean
@@ -33,21 +123,22 @@ export type ConnectedComponentsPanelProps = {
   connectedComponentsOutput: ConnectedComponentsOutput
   connectedComponentsStepIndex: number
   connectedComponentsStepTotal: number
-  connectedComponentsCurrentExplanation: string
+  ccCurrentPhase: CCPhase | null
+  pseudocodeShowLogic: boolean
+  onPseudocodeFlip: () => void
   onRunConnectedComponents: (strategy: TraversalStrategy) => void
   onStopConnectedComponents: () => void
   ccStartNodeLabel: string
   onCCStartNodeLabelChange: (value: string) => void
 }
 
-// Returns a human-readable step counter; shows "Ready / N" before playback begins.
 function formatStepDisplay(stepIndex: number, stepTotal: number): string {
   if (stepTotal === 0) return '—'
   if (stepIndex >= 0) return `${stepIndex + 1} / ${stepTotal}`
   return `Ready / ${stepTotal}`
 }
 
-// Configuration, playback controls, and output for the connected components algorithm.
+// Configuration, playback controls, pseudocode, and output for the connected components algorithm.
 export const ConnectedComponentsPanel = ({
   isTraversalRunning,
   isUndirectedMode,
@@ -71,13 +162,14 @@ export const ConnectedComponentsPanel = ({
   connectedComponentsOutput,
   connectedComponentsStepIndex,
   connectedComponentsStepTotal,
-  connectedComponentsCurrentExplanation,
+  ccCurrentPhase,
+  pseudocodeShowLogic,
+  onPseudocodeFlip,
   onRunConnectedComponents,
   onStopConnectedComponents,
   ccStartNodeLabel,
   onCCStartNodeLabelChange,
 }: ConnectedComponentsPanelProps) => {
-  // Starts a new run or stops the active one; no-ops while traversal is running.
   const toggleRun = () => {
     if (isTraversalRunning) return
     if (isConnectedComponentsSessionActive) {
@@ -137,7 +229,7 @@ export const ConnectedComponentsPanel = ({
         </div>
       </div>
 
-      <div className="sidebar-section">
+      <div className="sidebar-section sidebar-section--cc-playback">
         <h3>Playback</h3>
         <PlaybackControls
           runLabel="Run connected components"
@@ -158,8 +250,16 @@ export const ConnectedComponentsPanel = ({
           onSpeedChange={onConnectedComponentsPlaybackSpeedChange}
         />
         <p className="hint">{hint}</p>
-        <StepExplanation text={connectedComponentsCurrentExplanation} />
       </div>
+
+      <PseudocodePanel
+        codeText={algorithmTraversal === 'bfs' ? BFS_CODE : DFS_CODE}
+        logicText={algorithmTraversal === 'bfs' ? BFS_LOGIC : DFS_LOGIC}
+        codeHighlighted={getHighlights(ccCurrentPhase, false)}
+        logicHighlighted={getHighlights(ccCurrentPhase, true)}
+        showLogic={pseudocodeShowLogic}
+        onFlip={onPseudocodeFlip}
+      />
 
       <div className="sidebar-section">
         <h3>Output</h3>

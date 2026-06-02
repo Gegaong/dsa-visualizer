@@ -270,7 +270,8 @@
 }
 
 .sidebar-section--grid-playback + .step-explanation--pseudocode,
-.sidebar-section--traversal-playback + .step-explanation--pseudocode {
+.sidebar-section--traversal-playback + .step-explanation--pseudocode,
+.sidebar-section--cc-playback + .step-explanation--pseudocode {
 	margin-top: -12px;
 }
 

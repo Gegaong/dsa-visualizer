@@ -55,11 +55,13 @@ export type CCOutput = {
   operationCount: number
 } | null
 
+export type CCPhase = 'ready' | 'step-root' | 'step-inner' | 'done'
+
 export type ConnectedComponentsPlaybackHandle = {
   connectedComponentsResult: ConnectedComponentsResult | null
   isConnectedComponentsRunning: boolean
   connectedComponentsStatusText: string
-  connectedComponentsCurrentExplanation: string
+  ccCurrentPhase: CCPhase | null
   weakCCOutlineHslByNodeId: Map<string, WeakCCOutlineHSL> | null
   weakCCOutlineActive: boolean
   weakCCVisitedNodeIds: string[]
@@ -238,11 +240,12 @@ export function useConnectedComponentsPlayback({
     connectedComponentsResult: pb.result,
     isConnectedComponentsRunning: pb.isRunning,
     connectedComponentsStatusText: statusText,
-    connectedComponentsCurrentExplanation: (() => {
-      const stepExplanation = pb.result?.steps[pb.stepIndex]?.explanation ?? ''
-      if (!pb.isPlaybackComplete || !pb.result) return stepExplanation
-      const completionMessage = ` ✓ Complete: ${pb.result.componentCount} connected component${pb.result.componentCount !== 1 ? 's' : ''}.`
-      return stepExplanation + completionMessage
+    ccCurrentPhase: (() => {
+      if (!pb.isRunning) return null as CCPhase | null
+      if (pb.stepIndex < 0) return 'ready' as CCPhase
+      if (pb.isPlaybackComplete) return 'done' as CCPhase
+      const currentStep = pb.result?.steps[pb.stepIndex]
+      return currentStep?.fromNodeId === null ? 'step-root' as CCPhase : 'step-inner' as CCPhase
     })(),
     weakCCOutlineHslByNodeId,
     weakCCOutlineActive,
