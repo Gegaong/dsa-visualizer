@@ -6,9 +6,11 @@ type PseudocodePanelProps = {
   codeHighlighted: Set<number>
   logicHighlighted: Set<number>
   varsRows?: string[][] | null
+  showLogic: boolean
+  onFlip: () => void
 }
 
-// Renders a pseudocode block with a Code/Logic toggle and an optional live variable state panel.
+// Flash-card style pseudocode panel. Click anywhere on the card to flip between Code and Logic.
 // varsRows is only shown in Code mode; each inner array is one row of space-separated spans.
 export const PseudocodePanel = ({
   codeText,
@@ -16,21 +18,26 @@ export const PseudocodePanel = ({
   codeHighlighted,
   logicHighlighted,
   varsRows,
+  showLogic,
+  onFlip,
 }: PseudocodePanelProps) => {
-  const [showLogic, setShowLogic] = useState(false)
+  const [isFlipping, setIsFlipping] = useState(false)
 
   const text = showLogic ? logicText : codeText
   const highlighted = showLogic ? logicHighlighted : codeHighlighted
 
+  const handleFlip = () => {
+    if (isFlipping) return
+    setIsFlipping(true)
+    setTimeout(() => onFlip(), 90)
+    setTimeout(() => setIsFlipping(false), 180)
+  }
+
   return (
-    <div className="step-explanation step-explanation--pseudocode">
-      <button
-        className="pseudocode-toggle-btn"
-        type="button"
-        onClick={() => setShowLogic(v => !v)}
-      >
-        {showLogic ? 'Logic' : 'Code'}
-      </button>
+    <div
+      className={`step-explanation step-explanation--pseudocode${isFlipping ? ' pseudocode-card--flipping' : ''}`}
+      onClick={handleFlip}
+    >
       {!showLogic && varsRows && (
         <div className="pseudocode-vars">
           {varsRows.map((row, i) => (

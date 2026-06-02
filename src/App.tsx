@@ -109,6 +109,7 @@ function App() {
   const [draftEdgeWeight, setDraftEdgeWeight] = useState('')
   const [edgeContextMenu, setEdgeContextMenu] = useState<EdgeContextMenuState | null>(null)
   const [distanceMode, setDistanceMode] = useState(false)
+  const [pseudocodeShowLogic, setPseudocodeShowLogic] = useState(false)
 
   const isWeightedMode = canvasType === 'weighted-graph'
 
@@ -1263,6 +1264,8 @@ function App() {
             onStepBackward={gridSearch.stepBackward}
             onTogglePlay={gridSearch.togglePlay}
             onSpeedChange={gridSearch.setPlaybackSpeed}
+            pseudocodeShowLogic={pseudocodeShowLogic}
+            onPseudocodeFlip={() => setPseudocodeShowLogic(v => !v)}
           />
         )}
         {canvasType === 'nqueens' && (
@@ -1286,6 +1289,8 @@ function App() {
             onStepBackward={nQueens.stepBackward}
             onTogglePlay={nQueens.togglePlay}
             onSpeedChange={nQueens.setPlaybackSpeed}
+            pseudocodeShowLogic={pseudocodeShowLogic}
+            onPseudocodeFlip={() => setPseudocodeShowLogic(v => !v)}
           />
         )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && <Sidebar

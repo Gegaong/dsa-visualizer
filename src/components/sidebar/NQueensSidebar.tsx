@@ -43,14 +43,14 @@ If no row worked in this column:
 
 // Line indices (0-based) to highlight per phase for each pseudocode style.
 const CODE_HIGHLIGHTS: Record<NQueensPhase, number[]> = {
-  try:       [1, 2, 10, 11, 12, 13, 14, 15],
+  try:       [1, 2, 11, 12, 13, 14, 15],
   place:     [3, 4, 6, 7],
   solution:  [3, 4, 5],
   backtrack: [8],
 }
 
 const EXPLANATORY_HIGHLIGHTS: Record<NQueensPhase, number[]> = {
-  try:       [2, 4],
+  try:       [0, 2, 4],
   place:     [4, 8, 9],
   solution:  [4, 6, 7],
   backtrack: [11, 12, 14, 15, 16],
@@ -101,12 +101,14 @@ type NQueensSidebarProps = {
   canStepForward: boolean
   canTogglePlay: boolean
   currentStep: NQueensStep | null
+  pseudocodeShowLogic: boolean
   onRun: () => void
   onStop: () => void
   onStepForward: () => void
   onStepBackward: () => void
   onTogglePlay: () => void
   onSpeedChange: (v: number) => void
+  onPseudocodeFlip: () => void
 }
 
 // Returns the playback step counter string — "Ready / N" before the first step, then "i / N".
@@ -130,12 +132,14 @@ export const NQueensSidebar = ({
   canStepForward,
   canTogglePlay,
   currentStep,
+  pseudocodeShowLogic,
   onRun,
   onStop,
   onStepForward,
   onStepBackward,
   onTogglePlay,
   onSpeedChange,
+  onPseudocodeFlip,
 }: NQueensSidebarProps) => {
   const phase = currentStep?.phase ?? null
   const codeHighlighted = getHighlightedLines(phase, false)
@@ -181,6 +185,8 @@ export const NQueensSidebar = ({
         codeHighlighted={codeHighlighted}
         logicHighlighted={logicHighlighted}
         varsRows={varsRows}
+        showLogic={pseudocodeShowLogic}
+        onFlip={onPseudocodeFlip}
       />
 
       <div className="sidebar-section">

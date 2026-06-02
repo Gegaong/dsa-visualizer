@@ -25,25 +25,23 @@ function BFS_FILL(start, grid, visited):
                 queue.enqueue(nb)
     return island`
 
-const FOR_BFS_LOGIC = `Scan every cell left-to-right,
-top-to-bottom.
+const FOR_BFS_LOGIC = `Go through every cell in the grid,
+row by row, left to right.
 ──────────────────────────────────────────
 For each cell:
   · Water → skip it.
-  · Already visited → skip it.
+  · Already part of a known island → skip it.
 
-  · Unvisited island cell found:
-      BFS flood-fill claims the whole island.
-      Expands outward level by level using a queue.
-      All connected land is visited at once.
-      ✓ New island recorded.
+  · Land cell that hasn't been visited yet?
+      This is the start of a new island.
+      BFS expands outward in all directions,
+      claiming every touching land cell,
+      then their neighbors too, until
+      no more connected land remains.
+      ✓ New island found and recorded.
 ──────────────────────────────────────────
-BFS flood-fill:
-  Enqueue the start, mark it visited.
-  While the queue is not empty:
-    · Dequeue a cell — add it to the island.
-    · Each unvisited land neighbor:
-        Mark visited, enqueue.`
+Once every cell has been checked,
+all islands have been found.`
 
 const FOR_DFS_CODE = `function SCAN(grid, rows, cols):
     for r ← 0 to rows-1:
@@ -66,25 +64,23 @@ function DFS_FILL(start, grid, visited):
                 stack.push(nb)
     return island`
 
-const FOR_DFS_LOGIC = `Scan every cell left-to-right,
-top-to-bottom.
+const FOR_DFS_LOGIC = `Go through every cell in the grid,
+row by row, left to right.
 ──────────────────────────────────────────
 For each cell:
   · Water → skip it.
-  · Already visited → skip it.
+  · Already part of a known island → skip it.
 
-  · Unvisited island cell found:
-      DFS flood-fill claims the whole island.
-      Dives deep first, then backtracks, using a stack.
-      All connected land is visited at once.
-      ✓ New island recorded.
+  · Land cell that hasn't been visited yet?
+      This is the start of a new island.
+      DFS dives deep into connected land —
+      following one path as far as it goes,
+      then backtracking to try the rest,
+      until every connected cell is visited.
+      ✓ New island found and recorded.
 ──────────────────────────────────────────
-DFS flood-fill:
-  Push the start, mark it visited.
-  While the stack is not empty:
-    · Pop a cell — add it to the island.
-    · Each unvisited land neighbor:
-        Mark visited, push.`
+Once every cell has been checked,
+all islands have been found.`
 
 const BFS_BFS_CODE = `function SCAN(grid, starts):
     queue ← starts; seen ← starts
@@ -107,28 +103,25 @@ function BFS_FILL(start, grid, visited):
                 queue.enqueue(nb)
     return island`
 
-const BFS_BFS_LOGIC = `BFS scans outward from all starts
-simultaneously.
+const BFS_BFS_LOGIC = `BFS explores the grid outward from all
+starting points at once, nearest cells first.
 ──────────────────────────────────────────
-For each dequeued cell:
+For each cell we reach:
   · Already visited → skip it.
-    (claimed by a prior island fill)
-  · Water cell:
-      Mark visited.
-      Enqueue all unseen neighbors.
+    (already claimed by a previous island)
+  · Water → mark it visited and keep
+      expanding to its neighbors.
 
-  · Unvisited island cell found:
-      BFS flood-fill claims the whole island.
-      Expands outward level by level.
-      All connected land visited at once.
-      ✓ New island recorded.
+  · Unvisited land cell?
+      This is the start of a new island.
+      BFS expands outward in all directions,
+      claiming every touching land cell,
+      then their neighbors too, until
+      no more connected land remains.
+      ✓ New island found and recorded.
 ──────────────────────────────────────────
-BFS flood-fill:
-  Enqueue the start, mark it visited.
-  While the queue is not empty:
-    · Dequeue a cell — add it to the island.
-    · Each unvisited land neighbor:
-        Mark visited, enqueue.`
+When there are no more cells to explore,
+all islands have been found.`
 
 const BFS_DFS_CODE = `function SCAN(grid, starts):
     queue ← starts; seen ← starts
@@ -151,28 +144,25 @@ function DFS_FILL(start, grid, visited):
                 stack.push(nb)
     return island`
 
-const BFS_DFS_LOGIC = `BFS scans outward from all starts
-simultaneously.
+const BFS_DFS_LOGIC = `BFS explores the grid outward from all
+starting points at once, nearest cells first.
 ──────────────────────────────────────────
-For each dequeued cell:
+For each cell we reach:
   · Already visited → skip it.
-    (claimed by a prior island fill)
-  · Water cell:
-      Mark visited.
-      Enqueue all unseen neighbors.
+    (already claimed by a previous island)
+  · Water → mark it visited and keep
+      expanding to its neighbors.
 
-  · Unvisited island cell found:
-      DFS flood-fill claims the whole island.
-      Dives deep first, then backtracks.
-      All connected land visited at once.
-      ✓ New island recorded.
+  · Unvisited land cell?
+      This is the start of a new island.
+      DFS dives deep into connected land —
+      following one path as far as it goes,
+      then backtracking to try the rest,
+      until every connected cell is visited.
+      ✓ New island found and recorded.
 ──────────────────────────────────────────
-DFS flood-fill:
-  Push the start, mark it visited.
-  While the stack is not empty:
-    · Pop a cell — add it to the island.
-    · Each unvisited land neighbor:
-        Mark visited, push.`
+When there are no more cells to explore,
+all islands have been found.`
 
 const DFS_BFS_CODE = `function SCAN(grid, start):
     stack ← [start]; seen ← [start]
@@ -195,28 +185,25 @@ function BFS_FILL(start, grid, visited):
                 queue.enqueue(nb)
     return island`
 
-const DFS_BFS_LOGIC = `DFS scans depth-first from one start
-cell, exploring as deep as possible.
+const DFS_BFS_LOGIC = `DFS explores the grid by going as deep as
+possible from the starting point first.
 ──────────────────────────────────────────
-For each popped cell:
+For each cell we reach:
   · Already visited → skip it.
-    (claimed by a prior island fill)
-  · Water cell:
-      Mark visited.
-      Push all unseen neighbors.
+    (already claimed by a previous island)
+  · Water → mark it visited and keep
+      expanding to its neighbors.
 
-  · Unvisited island cell found:
-      BFS flood-fill claims the whole island.
-      Expands outward level by level.
-      All connected land visited at once.
-      ✓ New island recorded.
+  · Unvisited land cell?
+      This is the start of a new island.
+      BFS expands outward in all directions,
+      claiming every touching land cell,
+      then their neighbors too, until
+      no more connected land remains.
+      ✓ New island found and recorded.
 ──────────────────────────────────────────
-BFS flood-fill:
-  Enqueue the start, mark it visited.
-  While the queue is not empty:
-    · Dequeue a cell — add it to the island.
-    · Each unvisited land neighbor:
-        Mark visited, enqueue.`
+When there are no more cells to explore,
+all islands have been found.`
 
 const DFS_DFS_CODE = `function SCAN(grid, start):
     stack ← [start]; seen ← [start]
@@ -239,35 +226,32 @@ function DFS_FILL(start, grid, visited):
                 stack.push(nb)
     return island`
 
-const DFS_DFS_LOGIC = `DFS scans depth-first from one start
-cell, exploring as deep as possible.
+const DFS_DFS_LOGIC = `DFS explores the grid by going as deep as
+possible from the starting point first.
 ──────────────────────────────────────────
-For each popped cell:
+For each cell we reach:
   · Already visited → skip it.
-    (claimed by a prior island fill)
-  · Water cell:
-      Mark visited.
-      Push all unseen neighbors.
+    (already claimed by a previous island)
+  · Water → mark it visited and keep
+      expanding to its neighbors.
 
-  · Unvisited island cell found:
-      DFS flood-fill claims the whole island.
-      Dives deep first, then backtracks.
-      All connected land visited at once.
-      ✓ New island recorded.
+  · Unvisited land cell?
+      This is the start of a new island.
+      DFS dives deep into connected land —
+      following one path as far as it goes,
+      then backtracking to try the rest,
+      until every connected cell is visited.
+      ✓ New island found and recorded.
 ──────────────────────────────────────────
-DFS flood-fill:
-  Push the start, mark it visited.
-  While the stack is not empty:
-    · Pop a cell — add it to the island.
-    · Each unvisited land neighbor:
-        Mark visited, push.`
+When there are no more cells to explore,
+all islands have been found.`
 
 // Line indices (0-based) to highlight per sub-phase for each pseudocode style.
 // FOR-BFS and FOR-DFS share the same line structure — only the function name changes.
 const FOR_CODE_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
   'outer-water':     [1, 2, 3],
   'outer-visited':   [1, 2, 4],
-  'inner-start':     [5, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  'inner-start':     [5, 10, 11, 12, 13, 14, 15, 16, 17, 18],
   'inner-process':   [12, 13, 14, 15, 16, 17, 18],
   'bfs-outer-skip':  [],
   'bfs-outer-water': [],
@@ -278,8 +262,8 @@ const FOR_CODE_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
 const FOR_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
   'outer-water':     [0, 1, 3, 4],
   'outer-visited':   [0, 1, 3, 5],
-  'inner-start':     [7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18],
-  'inner-process':   [15, 16, 17, 18],
+  'inner-start':     [7, 8, 9, 10, 11, 12, 13],
+  'inner-process':   [7, 8, 9, 10, 11, 12, 13],
   'bfs-outer-skip':  [],
   'bfs-outer-water': [],
   'dfs-outer-skip':  [],
@@ -290,7 +274,7 @@ const FOR_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
 const BFS_CODE_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
   'bfs-outer-skip':  [2, 3, 4],
   'bfs-outer-water': [2, 3, 4, 5, 6],
-  'inner-start':     [7, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  'inner-start':     [7, 11, 12, 13, 14, 15, 16, 17, 18],
   'inner-process':   [12, 13, 14, 15, 16, 17, 18],
   'outer-water':     [],
   'outer-visited':   [],
@@ -300,9 +284,9 @@ const BFS_CODE_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
 
 const BFS_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
   'bfs-outer-skip':  [0, 1, 3, 4, 5],
-  'bfs-outer-water': [0, 1, 3, 6, 7, 8],
-  'inner-start':     [10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21],
-  'inner-process':   [18, 19, 20, 21],
+  'bfs-outer-water': [0, 1, 3, 6, 7],
+  'inner-start':     [9, 10, 11, 12, 13, 14, 15],
+  'inner-process':   [9, 10, 11, 12, 13, 14, 15],
   'outer-water':     [],
   'outer-visited':   [],
   'dfs-outer-skip':  [],
@@ -313,7 +297,7 @@ const BFS_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
 const DFS_CODE_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
   'dfs-outer-skip':  [2, 3, 4],
   'dfs-outer-water': [2, 3, 4, 5, 6],
-  'inner-start':     [7, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  'inner-start':     [7, 11, 12, 13, 14, 15, 16, 17, 18],
   'inner-process':   [12, 13, 14, 15, 16, 17, 18],
   'outer-water':     [],
   'outer-visited':   [],
@@ -323,9 +307,9 @@ const DFS_CODE_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
 
 const DFS_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
   'dfs-outer-skip':  [0, 1, 3, 4, 5],
-  'dfs-outer-water': [0, 1, 3, 6, 7, 8],
-  'inner-start':     [10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21],
-  'inner-process':   [18, 19, 20, 21],
+  'dfs-outer-water': [0, 1, 3, 6, 7],
+  'inner-start':     [9, 10, 11, 12, 13, 14, 15],
+  'inner-process':   [9, 10, 11, 12, 13, 14, 15],
   'outer-water':     [],
   'outer-visited':   [],
   'bfs-outer-skip':  [],
@@ -387,6 +371,7 @@ type GridSidebarProps = {
   isPickingStart: boolean
   bfsStartCells: Set<string>
   dfsStartCell: string | null
+  pseudocodeShowLogic: boolean
   onTogglePickStart: () => void
   onRun: (mode: GridSearchMode, scanMode: ForLoopScanMode) => void
   onStop: () => void
@@ -394,6 +379,7 @@ type GridSidebarProps = {
   onStepBackward: () => void
   onTogglePlay: () => void
   onSpeedChange: (v: number) => void
+  onPseudocodeFlip: () => void
 }
 
 // Returns the playback step counter — "Ready / N" before the first step, then "i / N".
@@ -420,6 +406,7 @@ export const GridSidebar = ({
   isPickingStart,
   bfsStartCells,
   dfsStartCell,
+  pseudocodeShowLogic,
   onTogglePickStart,
   onRun,
   onStop,
@@ -427,6 +414,7 @@ export const GridSidebar = ({
   onStepBackward,
   onTogglePlay,
   onSpeedChange,
+  onPseudocodeFlip,
 }: GridSidebarProps) => {
   const [scanCorner, setScanCorner] = useState<ScanCorner>('tl')
   const [scanPrimary, setScanPrimary] = useState<'h' | 'v'>('h')
@@ -574,6 +562,8 @@ export const GridSidebar = ({
             logicText={mode === 'for-bfs' ? FOR_BFS_LOGIC : FOR_DFS_LOGIC}
             codeHighlighted={getForHighlights(currentSubPhase, false)}
             logicHighlighted={getForHighlights(currentSubPhase, true)}
+            showLogic={pseudocodeShowLogic}
+            onFlip={onPseudocodeFlip}
           />
         )}
 
@@ -583,6 +573,8 @@ export const GridSidebar = ({
             logicText={mode === 'bfs-bfs' ? BFS_BFS_LOGIC : BFS_DFS_LOGIC}
             codeHighlighted={getBfsHighlights(currentSubPhase, false)}
             logicHighlighted={getBfsHighlights(currentSubPhase, true)}
+            showLogic={pseudocodeShowLogic}
+            onFlip={onPseudocodeFlip}
           />
         )}
 
@@ -592,6 +584,8 @@ export const GridSidebar = ({
             logicText={mode === 'dfs-bfs' ? DFS_BFS_LOGIC : DFS_DFS_LOGIC}
             codeHighlighted={getDfsHighlights(currentSubPhase, false)}
             logicHighlighted={getDfsHighlights(currentSubPhase, true)}
+            showLogic={pseudocodeShowLogic}
+            onFlip={onPseudocodeFlip}
           />
         )}
 
