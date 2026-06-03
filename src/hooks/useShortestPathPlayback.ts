@@ -296,7 +296,6 @@ export function useShortestPathPlayback({
       const step = pb.result.steps[si]
       const isDone = pb.isPlaybackComplete
       const nodeVal = isDone ? '—' : step.nodeLabel
-      const visitedLabels = pb.result.steps.slice(0, si + 1).map(s => s.nodeLabel)
       if (strategyRef.current === 'bfs') {
         const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
         const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
@@ -306,15 +305,11 @@ export function useShortestPathPlayback({
           return `${s.nodeLabel}: ${parentLabel}`
         })
         return [
-          [`node = ${nodeVal}`],
+          [`u = ${nodeVal}`],
           [`queue = [${frontier.join(', ')}]`],
           [`parent = {${parentEntries.join(', ')}}`],
-          [`visited = [${visitedLabels.join(', ')}]`],
         ]
       }
-      const bestLen = isDone
-        ? (pb.result.pathFound ? pb.result.pathNodeIds.length - 1 : null)
-        : (step.dfsBestPathLength ?? null)
       const inPathLabels: string[] = [step.nodeLabel]
       let fromId: string | null = step.fromNodeId
       let searchBefore = si
@@ -324,15 +319,43 @@ export function useShortestPathPlayback({
           if (pb.result.steps[i].nodeId === fromId) { found = i; break }
         }
         if (found === -1) break
-        const parentStep = pb.result.steps[found]
-        inPathLabels.unshift(parentStep.nodeLabel)
-        fromId = parentStep.fromNodeId
+        inPathLabels.unshift(pb.result.steps[found].nodeLabel)
+        fromId = pb.result.steps[found].fromNodeId
         searchBefore = found
       }
+      let bestPathLabels: string[] | null = null
+      if (isDone) {
+        if (pb.result.pathFound) {
+          const labelById = new Map(pb.result.steps.map(s => [s.nodeId, s.nodeLabel]))
+          bestPathLabels = pb.result.pathNodeIds.map(id => labelById.get(id) ?? id)
+        }
+      } else {
+        const currentBestLen = step.dfsBestPathLength ?? null
+        if (currentBestLen !== null) {
+          const bestGoalIdx = pb.result.steps.findIndex(
+            (s, i) => i <= si && s.nodeId === pb.result!.goalNodeId && s.dfsBestPathLength === currentBestLen
+          )
+          if (bestGoalIdx !== -1) {
+            bestPathLabels = [pb.result.steps[bestGoalIdx].nodeLabel]
+            let bFrom: string | null = pb.result.steps[bestGoalIdx].fromNodeId
+            let bSearch = bestGoalIdx
+            while (bFrom !== null) {
+              let found = -1
+              for (let i = bSearch - 1; i >= 0; i--) {
+                if (pb.result.steps[i].nodeId === bFrom) { found = i; break }
+              }
+              if (found === -1) break
+              bestPathLabels.unshift(pb.result.steps[found].nodeLabel)
+              bFrom = pb.result.steps[found].fromNodeId
+              bSearch = found
+            }
+          }
+        }
+      }
       return [
-        [`node = ${nodeVal}`, `depth = ${inPathLabels.length - 1}`, `best = ${bestLen !== null ? bestLen + ' edges' : '—'}`],
+        [`u = ${isDone ? '—' : step.nodeLabel}`],
         [`inPath = {${inPathLabels.join(', ')}}`],
-        [`visited = [${visitedLabels.join(', ')}]`],
+        [`bestPath = ${bestPathLabels ? '[' + bestPathLabels.join(', ') + ']' : 'null'}`],
       ]
     })(),
     startNodeLabel,

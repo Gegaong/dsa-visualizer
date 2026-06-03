@@ -253,7 +253,7 @@ export function useConnectedComponentsPlayback({
       const visitedLabels = pb.result.steps.slice(0, si + 1).map(s => s.nodeLabel)
       const discoveredRoots = [...new Set(pb.result.steps.slice(0, si + 1).map(s => s.componentRootNodeId))]
       return [
-        [`node = ${nodeVal}`],
+        [`${step.fromNodeId === null ? 'v' : 'u'} = ${nodeVal}`],
         [`${algoKey} = [${frontier.join(', ')}]`],
         [`visited = [${visitedLabels.join(', ')}]`],
         [`components = [${discoveredRoots.map((_, i) => `#${i + 1}`).join(', ')}]`],

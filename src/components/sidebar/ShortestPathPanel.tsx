@@ -25,18 +25,18 @@ const BFS_CODE = `function ShortestPathBFS(graph, start, goal):
     return no path`
 
 const DFS_CODE = `function ShortestPathDFS(graph, start, goal):
-    best ← ∞; inPath ← {start}
-    dfs(start, 1, inPath, graph)
-    return best
+    bestPath ← null; inPath ← [start]
+    dfs(start, inPath, graph)
+    return bestPath
 
-function dfs(u, depth, inPath, graph):
+function dfs(u, inPath, graph):
     if u = goal:
-        if depth < best: best ← depth
+        if bestPath = null or |inPath| < |bestPath|: bestPath ← copy(inPath)
         return
     for each neighbor nb of u in graph:
-        if nb ∉ inPath and depth+1 < best:
+        if nb ∉ inPath and (bestPath = null or |inPath|+1 < |bestPath|):
             inPath.add(nb)
-            dfs(nb, depth+1, inPath, graph)
+            dfs(nb, inPath, graph)
             inPath.remove(nb)`
 
 // ─── Logic pseudocode strings ─────────────────────────────────────────────────
@@ -59,13 +59,13 @@ backtracking, keeping the shortest found.
 Pruning skips branches that can't improve.
 ──────────────────────────────────────────
 Each recursive step:
-  · If at goal, compare depth with best.
+  · If at goal, update bestPath if shorter.
   · Otherwise try each unvisited neighbor
-      that could still beat the best.
+      that could still improve bestPath.
   · Backtrack: remove nb from inPath.
-Pruning: skip if depth + 1 ≥ best.
+Pruning: skip if |inPath|+1 ≥ |bestPath|.
 ──────────────────────────────────────────
-All paths explored → return shortest.`
+All paths explored → return bestPath.`
 
 // ─── Highlight maps ───────────────────────────────────────────────────────────
 

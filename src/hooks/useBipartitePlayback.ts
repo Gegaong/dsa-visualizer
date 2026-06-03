@@ -244,7 +244,7 @@ export function useBipartitePlayback({
       const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
       const colorEntries = pb.result.steps.slice(0, si + 1).map(s => `${s.nodeLabel}: ${s.color === 0 ? 'red' : 'blue'}`)
       return [
-        [`node = ${nodeVal}`],
+        [`${step.fromNodeId === null ? 'v' : 'u'} = ${nodeVal}`],
         [`${algoKey} = [${frontier.join(', ')}]`],
         [`color = {${colorEntries.join(', ')}}`],
       ]
