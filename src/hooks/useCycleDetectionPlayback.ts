@@ -19,6 +19,8 @@ import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 
 import { runCycleDetection } from '../algorithms/cycleDetection'
 
+import { buildNeighborsMap } from '../algorithms/graphAdjacency'
+
 import {
   buildCycleDetectionCompletionStatus,
   formatCycleNodeLabels,
@@ -50,11 +52,15 @@ export type CycleOutput = {
   operationCount: number
 } | null
 
+export type CyclePhase = 'ready' | 'step-explore' | 'step-cycle' | 'done-found' | 'done-empty'
+
 export type CycleDetectionPlaybackHandle = {
   cycleDetectionResult: CycleDetectionResult | null
   isCycleDetectionRunning: boolean
   cycleDetectionStatusText: string
   cycleDetectionCurrentExplanation: string
+  cycleCurrentPhase: CyclePhase | null
+  cycleVarsRows: string[][] | null
   cycleGoalEdgeIds: string[]
   cycleDetectionStartNodeLabel: string
 
@@ -239,6 +245,82 @@ export function useCycleDetectionPlayback({
     cycleDetectionResult: pb.result,
     isCycleDetectionRunning: pb.isRunning,
     cycleDetectionStatusText: statusText,
+    cycleCurrentPhase: (() => {
+      if (!pb.isRunning || !pb.result) return null as CyclePhase | null
+      if (pb.stepIndex < 0) return 'ready' as CyclePhase
+      const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
+      if (pb.isPlaybackComplete) {
+        return pb.result.hasCycle ? 'done-found' as CyclePhase : 'done-empty' as CyclePhase
+      }
+      if (strategyRef.current === 'dfs' && pb.result.hasCycle && si === pb.result.steps.length - 1) {
+        return 'step-cycle' as CyclePhase
+      }
+      if (strategyRef.current === 'bfs' && pb.result.hasCycle) {
+        if (si >= pb.result.steps.length - pb.result.cycleNodeIds.length) {
+          return 'step-cycle' as CyclePhase
+        }
+      }
+      return 'step-explore' as CyclePhase
+    })(),
+    cycleVarsRows: (() => {
+      if (!pb.isRunning || pb.stepIndex < 0 || !pb.result) return null
+      const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
+      const step = pb.result.steps[si]
+      const isDone = pb.isPlaybackComplete
+      if (strategyRef.current === 'bfs') {
+        // Reconstruction steps appended at end (cycle path) don't represent real Kahn's removals.
+        const regularStepCount = pb.result.hasCycle
+          ? pb.result.steps.length - pb.result.cycleNodeIds.length
+          : pb.result.steps.length
+        const appliedSteps = Math.min(si + 1, regularStepCount)
+        const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
+        const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
+        const removed = appliedSteps
+        const outNeighbors = buildNeighborsMap(nodes, edges)
+        const inDegreeMap = new Map<string, number>(nodes.map(n => [n.id, 0]))
+        nodes.forEach(n => outNeighbors.get(n.id)?.forEach(nbId => {
+          inDegreeMap.set(nbId, (inDegreeMap.get(nbId) ?? 0) + 1)
+        }))
+        for (let i = 0; i < appliedSteps; i++) {
+          outNeighbors.get(pb.result.steps[i].nodeId)?.forEach(nbId => {
+            inDegreeMap.set(nbId, Math.max(0, (inDegreeMap.get(nbId) ?? 0) - 1))
+          })
+        }
+        const removedIds = new Set(pb.result.steps.slice(0, appliedSteps).map(s => s.nodeId))
+        const inDegreeEntries = nodes
+          .filter(n => !removedIds.has(n.id))
+          .map(n => `${n.label}: ${inDegreeMap.get(n.id) ?? 0}`)
+        return [
+          [`u = ${isDone ? '—' : step.nodeLabel}`],
+          [`queue = [${frontier.join(', ')}]`],
+          [`removed = ${removed}`],
+          [`inDegree = {${inDegreeEntries.join(', ')}}`],
+        ]
+      }
+      const varLabel = isDone ? 'u' : (step.fromNodeId === null ? 'v' : 'u')
+      const inStackLabels: string[] = []
+      if (!isDone) {
+        inStackLabels.push(step.nodeLabel)
+        let fromId: string | null = step.fromNodeId
+        let searchBefore = si
+        while (fromId !== null) {
+          let found = -1
+          for (let i = searchBefore - 1; i >= 0; i--) {
+            if (pb.result.steps[i].nodeId === fromId) { found = i; break }
+          }
+          if (found === -1) break
+          inStackLabels.unshift(pb.result.steps[found].nodeLabel)
+          fromId = pb.result.steps[found].fromNodeId
+          searchBefore = found
+        }
+      }
+      const visitedLabels = pb.result.steps.slice(0, si + 1).map(s => s.nodeLabel)
+      return [
+        [`${varLabel} = ${isDone ? '—' : step.nodeLabel}`],
+        [`inStack = {${inStackLabels.join(', ')}}`],
+        [`visited = [${visitedLabels.join(', ')}]`],
+      ]
+    })(),
     cycleDetectionCurrentExplanation: (() => {
       const stepExplanation = pb.result?.steps[pb.stepIndex]?.explanation ?? ''
       if (!pb.isPlaybackComplete || !pb.result) return stepExplanation

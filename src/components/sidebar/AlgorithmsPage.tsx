@@ -67,6 +67,8 @@ export const AlgorithmsPage = ({
   cycleDetectionStepIndex,
   cycleDetectionStepTotal,
   cycleDetectionCurrentExplanation,
+  cycleCurrentPhase,
+  cycleVarsRows,
   onRunShortestPath,
   onStopShortestPath,
   canRunShortestPath,
@@ -207,6 +209,10 @@ export const AlgorithmsPage = ({
           cycleDetectionStepIndex={cycleDetectionStepIndex}
           cycleDetectionStepTotal={cycleDetectionStepTotal}
           cycleDetectionCurrentExplanation={cycleDetectionCurrentExplanation}
+          cycleCurrentPhase={cycleCurrentPhase}
+          cycleVarsRows={cycleVarsRows}
+          pseudocodeShowLogic={pseudocodeShowLogic}
+          onPseudocodeFlip={onPseudocodeFlip}
           onRunCycleDetection={onRunCycleDetection}
           onStopCycleDetection={onStopCycleDetection}
           cycleDetectionStartNodeLabel={cycleDetectionStartNodeLabel}

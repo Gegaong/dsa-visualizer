@@ -22,6 +22,10 @@ import type { BipartitePhase } from '../../hooks/useBipartitePlayback'
 
 export type { BipartitePhase }
 
+import type { CyclePhase } from '../../hooks/useCycleDetectionPlayback'
+
+export type { CyclePhase }
+
 export type SidebarPage = 'canvas' | 'traversal' | 'algorithms' | 'pathfinder'
 
 export type AlgorithmMode =
@@ -179,6 +183,8 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   cycleDetectionStepIndex: number
   cycleDetectionStepTotal: number
   cycleDetectionCurrentExplanation: string
+  cycleCurrentPhase: CyclePhase | null
+  cycleVarsRows: string[][] | null
 
   onRunShortestPath: (strategy: TraversalStrategy) => void
   onStopShortestPath: () => void
