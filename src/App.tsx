@@ -1489,7 +1489,8 @@ function App() {
             bipartiteOutput: bipartite.bipartiteOutput,
             bipartiteStepIndex: bipartite.stepIndex,
             bipartiteStepTotal: bipartite.bipartiteResult?.steps.length ?? 0,
-            bipartiteCurrentExplanation: bipartite.bipartiteCurrentExplanation,
+            bipartiteCurrentPhase: bipartite.bipartiteCurrentPhase,
+            bipartiteVarsRows: bipartite.bipartiteVarsRows,
           }}
         />}
       </div>

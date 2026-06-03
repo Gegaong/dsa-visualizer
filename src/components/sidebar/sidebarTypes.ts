@@ -18,6 +18,10 @@ import type { SPPhase } from '../../hooks/useShortestPathPlayback'
 
 export type { SPPhase }
 
+import type { BipartitePhase } from '../../hooks/useBipartitePlayback'
+
+export type { BipartitePhase }
+
 export type SidebarPage = 'canvas' | 'traversal' | 'algorithms' | 'pathfinder'
 
 export type AlgorithmMode =
@@ -221,7 +225,8 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   bipartiteOutput: BipartiteOutput
   bipartiteStepIndex: number
   bipartiteStepTotal: number
-  bipartiteCurrentExplanation: string
+  bipartiteCurrentPhase: BipartitePhase | null
+  bipartiteVarsRows: string[][] | null
 }
 
 export type SidebarProps = {

@@ -30,6 +30,8 @@ type UseBipartitePlaybackParams = {
   onResetTraversal: () => void
 }
 
+export type BipartitePhase = 'ready' | 'step-root' | 'step-neighbor' | 'done-bipartite' | 'done-not-bipartite'
+
 export type BipartiteOutput = {
   isBipartite: boolean
   groupALabels: string | null
@@ -41,7 +43,8 @@ export type BipartitePlaybackHandle = {
   bipartiteResult: BipartiteResult | null
   isBipartiteRunning: boolean
   bipartiteStatusText: string
-  bipartiteCurrentExplanation: string
+  bipartiteCurrentPhase: BipartitePhase | null
+  bipartiteVarsRows: string[][] | null
   bipartiteGroupANodeIds: string[]
   bipartiteGroupBNodeIds: string[]
   bipartiteStartNodeLabel: string
@@ -221,13 +224,30 @@ export function useBipartitePlayback({
     bipartiteResult: pb.result,
     isBipartiteRunning: pb.isRunning,
     bipartiteStatusText: statusText,
-    bipartiteCurrentExplanation: (() => {
-      const stepExplanation = pb.result?.steps[pb.stepIndex]?.explanation ?? ''
-      if (!pb.isPlaybackComplete || !pb.result) return stepExplanation
-      const completionMessage = pb.result.isBipartite
-        ? ` ✓ Graph is bipartite.`
-        : ` ✗ Graph is not bipartite. Odd cycle detected.`
-      return stepExplanation + completionMessage
+    bipartiteCurrentPhase: (() => {
+      if (!pb.isRunning) return null as BipartitePhase | null
+      if (pb.stepIndex < 0) return 'ready' as BipartitePhase
+      if (pb.isPlaybackComplete) {
+        return pb.result?.isBipartite ? 'done-bipartite' as BipartitePhase : 'done-not-bipartite' as BipartitePhase
+      }
+      const currentStep = pb.result?.steps[pb.stepIndex]
+      return currentStep?.fromNodeId === null ? 'step-root' as BipartitePhase : 'step-neighbor' as BipartitePhase
+    })(),
+    bipartiteVarsRows: (() => {
+      if (!pb.isRunning || pb.stepIndex < 0 || !pb.result) return null
+      const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
+      const step = pb.result.steps[si]
+      const isDone = pb.isPlaybackComplete
+      const nodeVal = isDone ? '—' : step.nodeLabel
+      const algoKey = strategyRef.current === 'bfs' ? 'queue' : 'stack'
+      const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
+      const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
+      const colorEntries = pb.result.steps.slice(0, si + 1).map(s => `${s.nodeLabel}: ${s.color === 0 ? 'red' : 'blue'}`)
+      return [
+        [`node = ${nodeVal}`],
+        [`${algoKey} = [${frontier.join(', ')}]`],
+        [`color = {${colorEntries.join(', ')}}`],
+      ]
     })(),
     bipartiteGroupANodeIds,
     bipartiteGroupBNodeIds,

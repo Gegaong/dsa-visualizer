@@ -88,7 +88,6 @@ export const PlaybackControls = ({
         </button>
       </div>
       <label className="field playback-speed-field">
-        <span>Speed</span>
         <input
           className="slider"
           type="range"

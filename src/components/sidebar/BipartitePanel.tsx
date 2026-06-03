@@ -1,14 +1,107 @@
 import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
 
-import type { BipartiteOutput } from '../../hooks/useBipartitePlayback'
+import type { BipartiteOutput, BipartitePhase } from '../../hooks/useBipartitePlayback'
 
 import { PlaybackControls } from './PlaybackControls'
 
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
-import { StepExplanation } from './StepExplanation'
+import { PseudocodePanel } from './PseudocodePanel'
 
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+
+// ─── Code pseudocode strings (18 lines each, 0–17) ──────────────────────────
+
+const BFS_CODE = `function BipartiteCheck(graph):
+    color ← {}
+    for each node v in graph:
+        if v ∉ color:
+            color[v] ← red
+            BFS(v, color, graph)
+    return true
+
+function BFS(start, color, graph):
+    queue ← [start]
+    while queue ≠ empty:
+        u ← queue.dequeue()
+        for each nb of u in graph:
+            if nb ∉ color:
+                color[nb] ← opposite(color[u])
+                queue.enqueue(nb)
+            elif color[nb] = color[u]:
+                return false`
+
+const DFS_CODE = `function BipartiteCheck(graph):
+    color ← {}
+    for each node v in graph:
+        if v ∉ color:
+            color[v] ← red
+            DFS(v, color, graph)
+    return true
+
+function DFS(start, color, graph):
+    stack ← [start]
+    while stack ≠ empty:
+        u ← stack.pop()
+        for each nb of u in graph:
+            if nb ∉ color:
+                color[nb] ← opposite(color[u])
+                stack.push(nb)
+            elif color[nb] = color[u]:
+                return false`
+
+// ─── Logic pseudocode strings (12 lines each, 0–11) ─────────────────────────
+
+const BFS_LOGIC = `Outer loop scans every node once.
+When an uncolored node is found,
+a new BFS component starts from it.
+──────────────────────────────────────────
+Assign color red; BFS from it:
+  · Dequeue the front node.
+  · Uncolored neighbor → assign opposite
+      color, enqueue it.
+  · Same-colored neighbor as u
+      → return false.
+──────────────────────────────────────────
+All colored with no conflict → return true.`
+
+const DFS_LOGIC = `Outer loop scans every node once.
+When an uncolored node is found,
+a new DFS component starts from it.
+──────────────────────────────────────────
+Assign color red; DFS from it:
+  · Pop the top node.
+  · Uncolored neighbor → assign opposite
+      color, push it.
+  · Same-colored neighbor as u
+      → return false.
+──────────────────────────────────────────
+All colored with no conflict → return true.`
+
+// ─── Highlight maps ──────────────────────────────────────────────────────────
+
+// Code: 18 lines (0–17). Same structure for BFS and DFS — only function name differs.
+const CODE_HIGHLIGHTS: Record<BipartitePhase, number[]> = {
+  ready:                [0, 1],
+  'step-root':          [2, 3, 4, 5, 9],
+  'step-neighbor':      [10, 11, 12, 13, 14, 15],
+  'done-bipartite':     [6],
+  'done-not-bipartite': [16, 17],
+}
+
+// Logic: 12 lines (0–11). Shared between BFS and DFS.
+const LOGIC_HIGHLIGHTS: Record<BipartitePhase, number[]> = {
+  ready:                [0, 1, 2],
+  'step-root':          [0, 1, 2, 4],
+  'step-neighbor':      [5, 6, 7],
+  'done-bipartite':     [10, 11],
+  'done-not-bipartite': [8, 9],
+}
+
+function getHighlights(phase: BipartitePhase | null, isLogic: boolean): Set<number> {
+  if (!phase) return new Set()
+  return new Set((isLogic ? LOGIC_HIGHLIGHTS : CODE_HIGHLIGHTS)[phase])
+}
 
 export type BipartitePanelProps = {
   isTraversalRunning: boolean
@@ -33,21 +126,23 @@ export type BipartitePanelProps = {
   bipartiteOutput: BipartiteOutput
   bipartiteStepIndex: number
   bipartiteStepTotal: number
-  bipartiteCurrentExplanation: string
+  bipartiteCurrentPhase: BipartitePhase | null
+  bipartiteVarsRows: string[][] | null
+  pseudocodeShowLogic: boolean
+  onPseudocodeFlip: () => void
   onRunBipartite: (strategy: TraversalStrategy) => void
   onStopBipartite: () => void
   bipartiteStartNodeLabel: string
   onBipartiteStartNodeLabelChange: (value: string) => void
 }
 
-// Returns a human-readable step counter; shows "Ready / N" before playback begins.
 function formatStepDisplay(stepIndex: number, stepTotal: number): string {
   if (stepTotal === 0) return '—'
   if (stepIndex >= 0) return `${stepIndex + 1} / ${stepTotal}`
   return `Ready / ${stepTotal}`
 }
 
-// Configuration, playback controls, and output for the bipartite check algorithm.
+// Configuration, playback controls, pseudocode, and output for the bipartite check algorithm.
 export const BipartitePanel = ({
   isTraversalRunning,
   isUndirectedMode,
@@ -71,13 +166,15 @@ export const BipartitePanel = ({
   bipartiteOutput,
   bipartiteStepIndex,
   bipartiteStepTotal,
-  bipartiteCurrentExplanation,
+  bipartiteCurrentPhase,
+  bipartiteVarsRows,
+  pseudocodeShowLogic,
+  onPseudocodeFlip,
   onRunBipartite,
   onStopBipartite,
   bipartiteStartNodeLabel,
   onBipartiteStartNodeLabelChange,
 }: BipartitePanelProps) => {
-  // Starts a new run or stops the active one; no-ops while traversal is running.
   const toggleRun = () => {
     if (isTraversalRunning) return
     if (isBipartiteSessionActive) {
@@ -92,7 +189,6 @@ export const BipartitePanel = ({
     : bipartiteStatusText
 
   const stepDisplay = formatStepDisplay(bipartiteStepIndex, bipartiteStepTotal)
-
   const isBipartiteText = bipartiteOutput === null ? '—' : bipartiteOutput.isBipartite ? 'Yes' : 'No'
 
   return (
@@ -136,7 +232,7 @@ export const BipartitePanel = ({
         </div>
       </div>
 
-      <div className="sidebar-section">
+      <div className="sidebar-section sidebar-section--bipartite-playback">
         <h3>Playback</h3>
         <PlaybackControls
           runLabel="Run bipartite check"
@@ -157,8 +253,17 @@ export const BipartitePanel = ({
           onSpeedChange={onBipartitePlaybackSpeedChange}
         />
         <p className="hint">{hint}</p>
-        <StepExplanation text={bipartiteCurrentExplanation} />
       </div>
+
+      <PseudocodePanel
+        codeText={algorithmTraversal === 'bfs' ? BFS_CODE : DFS_CODE}
+        logicText={algorithmTraversal === 'bfs' ? BFS_LOGIC : DFS_LOGIC}
+        codeHighlighted={getHighlights(bipartiteCurrentPhase, false)}
+        logicHighlighted={getHighlights(bipartiteCurrentPhase, true)}
+        varsRows={bipartiteVarsRows}
+        showLogic={pseudocodeShowLogic}
+        onFlip={onPseudocodeFlip}
+      />
 
       <div className="sidebar-section">
         <h3>Output</h3>

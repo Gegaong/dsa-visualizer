@@ -111,7 +111,8 @@ export const AlgorithmsPage = ({
   bipartiteOutput,
   bipartiteStepIndex,
   bipartiteStepTotal,
-  bipartiteCurrentExplanation,
+  bipartiteCurrentPhase,
+  bipartiteVarsRows,
 }: AlgorithmsPageProps) => {
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>('components')
   const [algorithmTraversal, setAlgorithmTraversal] = useState<TraversalStrategy>('bfs')
@@ -267,7 +268,10 @@ export const AlgorithmsPage = ({
           bipartiteOutput={bipartiteOutput}
           bipartiteStepIndex={bipartiteStepIndex}
           bipartiteStepTotal={bipartiteStepTotal}
-          bipartiteCurrentExplanation={bipartiteCurrentExplanation}
+          bipartiteCurrentPhase={bipartiteCurrentPhase}
+          bipartiteVarsRows={bipartiteVarsRows}
+          pseudocodeShowLogic={pseudocodeShowLogic}
+          onPseudocodeFlip={onPseudocodeFlip}
           onRunBipartite={onRunBipartite}
           onStopBipartite={onStopBipartite}
           bipartiteStartNodeLabel={bipartiteStartNodeLabel}
