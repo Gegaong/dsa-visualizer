@@ -89,7 +89,7 @@ const BFS_LOGIC_HIGHLIGHTS: Record<SPPhase, number[]> = {
 
 // DFS code: 14 lines (0–13). Outer function lines 0–3 + blank 4 + inner function lines 5–13.
 const DFS_CODE_HIGHLIGHTS: Record<SPPhase, number[]> = {
-  ready:        [0, 1, 2],
+  ready:        [0, 1],
   'step-explore': [9, 10, 11, 12, 13],
   'step-goal':    [6, 7, 8],
   'done-found':   [3],

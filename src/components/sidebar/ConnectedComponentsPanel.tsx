@@ -80,19 +80,21 @@ No more unvisited nodes → all done.`
 // ─── Highlight maps ──────────────────────────────────────────────────────────
 
 // Code: 17 lines (0–16). Outer function lines 0–6 + blank line 7 + inner function lines 8–16.
+// step-root covers the outer-loop discovery (2,3,4) + seed (9) AND the while-body (10–15):
+// the root is dequeued and its neighbors enqueued in the same step, so its frontier fills here.
 const CODE_HIGHLIGHTS: Record<CCPhase, number[]> = {
   ready:        [0, 1],
-  'step-root':  [2, 3, 4, 9],
+  'step-root':  [2, 3, 4, 9, 10, 11, 12, 13, 14, 15],
   'step-inner': [10, 11, 12, 13, 14, 15],
-  done:         [5, 6, 16],
+  done:         [6],
 }
 
 // Logic: 12 lines (0–11). Shared between BFS and DFS (only text differs).
 const LOGIC_HIGHLIGHTS: Record<CCPhase, number[]> = {
   ready:        [0, 1, 2],
-  'step-root':  [0, 1, 2, 4, 5],
+  'step-root':  [0, 1, 2, 4, 5, 6, 7, 8],
   'step-inner': [4, 6, 7, 8, 9],
-  done:         [10, 11],
+  done:         [11],
 }
 
 function getHighlights(phase: CCPhase | null, isLogic: boolean): Set<number> {

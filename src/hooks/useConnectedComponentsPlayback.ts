@@ -118,6 +118,7 @@ export function useConnectedComponentsPlayback({
   const [weakCCVisitedNodeIds, setWeakCCVisitedNodeIds] = useState<string[]>([])
   const [weakCCVisitedEdgeIds, setWeakCCVisitedEdgeIds] = useState<string[]>([])
   const [startNodeLabel, setStartNodeLabel] = useState('')
+  const [currentStrategy, setCurrentStrategy] = useState<TraversalStrategy>('bfs')
   const strategyRef = useRef<TraversalStrategy>('bfs')
 
   // Clears the algorithm-specific extra state shared by both reset paths.
@@ -198,6 +199,7 @@ export function useConnectedComponentsPlayback({
     pb.stopPlayback()
     onResetTraversal()
     strategyRef.current = strategy
+    setCurrentStrategy(strategy)
 
     if (!isUndirectedMode) {
       setStatusText('Switch to Undirected at the top left of the canvas to run connected components.')
@@ -245,15 +247,16 @@ export function useConnectedComponentsPlayback({
       if (!pb.isRunning || pb.stepIndex < 0 || !pb.result) return null
       const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
       const step = pb.result.steps[si]
-      const algoKey = strategyRef.current === 'bfs' ? 'queue' : 'stack'
+      const algoKey = currentStrategy === 'bfs' ? 'queue' : 'stack'
       const isDone = pb.isPlaybackComplete
       const nodeVal = isDone ? '—' : step.nodeLabel
       const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
       const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
       const visitedLabels = pb.result.steps.slice(0, si + 1).map(s => s.nodeLabel)
       const discoveredRoots = [...new Set(pb.result.steps.slice(0, si + 1).map(s => s.componentRootNodeId))]
+      const vLabel = isDone ? '—' : (nodes.find(n => n.id === step.componentRootNodeId)?.label ?? '?')
       return [
-        [`${step.fromNodeId === null ? 'v' : 'u'} = ${nodeVal}`],
+        [`v = ${vLabel}`, `u = ${nodeVal}`],
         [`${algoKey} = [${frontier.join(', ')}]`],
         [`visited = [${visitedLabels.join(', ')}]`],
         [`components = [${discoveredRoots.map((_, i) => `#${i + 1}`).join(', ')}]`],

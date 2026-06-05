@@ -94,6 +94,7 @@ export function useBipartitePlayback({
   const [bipartiteGroupANodeIds, setBipartiteGroupANodeIds] = useState<string[]>([])
   const [bipartiteGroupBNodeIds, setBipartiteGroupBNodeIds] = useState<string[]>([])
   const [startNodeLabel, setStartNodeLabel] = useState('')
+  const [currentStrategy, setCurrentStrategy] = useState<TraversalStrategy>('bfs')
   const strategyRef = useRef<TraversalStrategy>('bfs')
 
   // Clears bipartite-specific state shared by both reset paths.
@@ -184,6 +185,7 @@ export function useBipartitePlayback({
     pb.stopPlayback()
     onResetTraversal()
     strategyRef.current = strategy
+    setCurrentStrategy(strategy)
 
     if (!isUndirectedMode) {
       setStatusText('Switch to Undirected at the top left of the canvas to run bipartite check.')
@@ -239,12 +241,18 @@ export function useBipartitePlayback({
       const step = pb.result.steps[si]
       const isDone = pb.isPlaybackComplete
       const nodeVal = isDone ? '—' : step.nodeLabel
-      const algoKey = strategyRef.current === 'bfs' ? 'queue' : 'stack'
+      const algoKey = currentStrategy === 'bfs' ? 'queue' : 'stack'
       const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
       const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
       const colorEntries = pb.result.steps.slice(0, si + 1).map(s => `${s.nodeLabel}: ${s.color === 0 ? 'red' : 'blue'}`)
+      let vLabel = isDone ? '—' : step.nodeLabel
+      if (!isDone) {
+        for (let i = si; i >= 0; i--) {
+          if (pb.result.steps[i].fromNodeId === null) { vLabel = pb.result.steps[i].nodeLabel; break }
+        }
+      }
       return [
-        [`${step.fromNodeId === null ? 'v' : 'u'} = ${nodeVal}`],
+        [`v = ${vLabel}`, `u = ${nodeVal}`],
         [`${algoKey} = [${frontier.join(', ')}]`],
         [`color = {${colorEntries.join(', ')}}`],
       ]

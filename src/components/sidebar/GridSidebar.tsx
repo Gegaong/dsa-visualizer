@@ -316,19 +316,32 @@ const DFS_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
   'bfs-outer-water': [],
 }
 
-function getForHighlights(subPhase: GridSubPhase | null, isLogic: boolean): Set<number> {
+// lifecycle drives the pre-step and post-finish highlights, consistent with every other algorithm:
+//   'ready' = session started, not yet stepped → the setup (signature + any pre-loop init; logic
+//             shows the opening overview before the first divider). FOR loops immediately → code [0].
+//   'done'  = playback finished → the terminal `return islands` (code) and the closing conclusion (logic).
+//   null    = mid-run → use the live sub-phase.
+type GridLifecycle = 'ready' | 'done' | null
+
+function getForHighlights(subPhase: GridSubPhase | null, isLogic: boolean, lifecycle: GridLifecycle): Set<number> {
+  if (lifecycle === 'ready') return new Set(isLogic ? [0, 1] : [0])
+  if (lifecycle === 'done') return new Set(isLogic ? [15, 16] : [7])
   if (!subPhase) return new Set()
   const map = isLogic ? FOR_LOGIC_HIGHLIGHTS : FOR_CODE_HIGHLIGHTS
   return new Set(map[subPhase])
 }
 
-function getBfsHighlights(subPhase: GridSubPhase | null, isLogic: boolean): Set<number> {
+function getBfsHighlights(subPhase: GridSubPhase | null, isLogic: boolean, lifecycle: GridLifecycle): Set<number> {
+  if (lifecycle === 'ready') return new Set([0, 1])
+  if (lifecycle === 'done') return new Set(isLogic ? [17, 18] : [8])
   if (!subPhase) return new Set()
   const map = isLogic ? BFS_LOGIC_HIGHLIGHTS : BFS_CODE_HIGHLIGHTS
   return new Set(map[subPhase])
 }
 
-function getDfsHighlights(subPhase: GridSubPhase | null, isLogic: boolean): Set<number> {
+function getDfsHighlights(subPhase: GridSubPhase | null, isLogic: boolean, lifecycle: GridLifecycle): Set<number> {
+  if (lifecycle === 'ready') return new Set([0, 1])
+  if (lifecycle === 'done') return new Set(isLogic ? [17, 18] : [8])
   if (!subPhase) return new Set()
   const map = isLogic ? DFS_LOGIC_HIGHLIGHTS : DFS_CODE_HIGHLIGHTS
   return new Set(map[subPhase])
@@ -421,6 +434,8 @@ export const GridSidebar = ({
 
   const isOuterMode = !mode.startsWith('for')
   const isBfsOuter = mode.startsWith('bfs')
+  // Pre-step → setup lines; finished → terminal/conclusion lines; mid-run → live sub-phase.
+  const lifecycle: GridLifecycle = !isRunning ? null : stepIndex < 0 ? 'ready' : isPlaybackComplete ? 'done' : null
 
   const handleRunToggle = () => {
     if (isRunning) onStop()
@@ -560,8 +575,8 @@ export const GridSidebar = ({
           <PseudocodePanel
             codeText={mode === 'for-bfs' ? FOR_BFS_CODE : FOR_DFS_CODE}
             logicText={mode === 'for-bfs' ? FOR_BFS_LOGIC : FOR_DFS_LOGIC}
-            codeHighlighted={getForHighlights(currentSubPhase, false)}
-            logicHighlighted={getForHighlights(currentSubPhase, true)}
+            codeHighlighted={getForHighlights(currentSubPhase, false, lifecycle)}
+            logicHighlighted={getForHighlights(currentSubPhase, true, lifecycle)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
           />
@@ -571,8 +586,8 @@ export const GridSidebar = ({
           <PseudocodePanel
             codeText={mode === 'bfs-bfs' ? BFS_BFS_CODE : BFS_DFS_CODE}
             logicText={mode === 'bfs-bfs' ? BFS_BFS_LOGIC : BFS_DFS_LOGIC}
-            codeHighlighted={getBfsHighlights(currentSubPhase, false)}
-            logicHighlighted={getBfsHighlights(currentSubPhase, true)}
+            codeHighlighted={getBfsHighlights(currentSubPhase, false, lifecycle)}
+            logicHighlighted={getBfsHighlights(currentSubPhase, true, lifecycle)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
           />
@@ -582,8 +597,8 @@ export const GridSidebar = ({
           <PseudocodePanel
             codeText={mode === 'dfs-bfs' ? DFS_BFS_CODE : DFS_DFS_CODE}
             logicText={mode === 'dfs-bfs' ? DFS_BFS_LOGIC : DFS_DFS_LOGIC}
-            codeHighlighted={getDfsHighlights(currentSubPhase, false)}
-            logicHighlighted={getDfsHighlights(currentSubPhase, true)}
+            codeHighlighted={getDfsHighlights(currentSubPhase, false, lifecycle)}
+            logicHighlighted={getDfsHighlights(currentSubPhase, true, lifecycle)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
           />

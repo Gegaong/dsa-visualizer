@@ -94,7 +94,7 @@ const LOGIC_HIGHLIGHTS: Record<BipartitePhase, number[]> = {
   ready:                [0, 1, 2],
   'step-root':          [0, 1, 2, 4],
   'step-neighbor':      [5, 6, 7],
-  'done-bipartite':     [10, 11],
+  'done-bipartite':     [11],
   'done-not-bipartite': [8, 9],
 }
 

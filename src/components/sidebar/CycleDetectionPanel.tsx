@@ -87,9 +87,11 @@ const BFS_LOGIC_HIGHLIGHTS: Record<CyclePhase, number[]> = {
 }
 
 // DFS code: 14 lines (0–13). Outer function lines 0–5 + blank 6 + inner function lines 7–13.
+// step-explore starts at line 8 (first executing body line); the dfs(...) signature on 7 is a
+// declaration, not an executing statement, so it stays unhighlighted like every other function header.
 const DFS_CODE_HIGHLIGHTS: Record<CyclePhase, number[]> = {
-  ready:          [0, 1, 2, 3],
-  'step-explore': [7, 8, 9, 11, 12, 13],
+  ready:          [0, 1],
+  'step-explore': [8, 9, 11, 12, 13],
   'step-cycle':   [9, 10],
   'done-found':   [4],
   'done-empty':   [5],
@@ -177,7 +179,6 @@ export const CycleDetectionPanel = ({
   cycleDetectionOutput,
   cycleDetectionStepIndex,
   cycleDetectionStepTotal,
-  cycleDetectionCurrentExplanation,
   cycleCurrentPhase,
   cycleVarsRows,
   pseudocodeShowLogic,

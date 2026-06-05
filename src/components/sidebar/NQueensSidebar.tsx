@@ -56,8 +56,23 @@ const EXPLANATORY_HIGHLIGHTS: Record<NQueensPhase, number[]> = {
   backtrack: [11, 12, 14, 15, 16],
 }
 
-// Returns the set of line indices to highlight for a given phase and pseudocode mode.
-function getHighlightedLines(phase: NQueensPhase | null, isExplanatory: boolean): Set<number> {
+// Returns the set of line indices to highlight, consistent with every other algorithm:
+//   'ready' = session started, not yet stepped → the setup (just the backtrack signature here,
+//             since it loops immediately with no init line).
+//   'done'  = search finished → the outcome. N-Queens has no return statement: its result is the
+//             solutions it found, so highlight the "solution found" line — but only if any exist
+//             (n = 2, 3 have none, and there is no "no solution" line to point at).
+//   null    = mid-run → the live phase.
+type NQueensLifecycle = 'ready' | 'done' | null
+
+function getHighlightedLines(
+  phase: NQueensPhase | null,
+  isExplanatory: boolean,
+  lifecycle: NQueensLifecycle,
+  solutionsFound: number,
+): Set<number> {
+  if (lifecycle === 'ready') return new Set([0])
+  if (lifecycle === 'done') return new Set(solutionsFound > 0 ? [isExplanatory ? 7 : 5] : [])
   if (!phase) return new Set()
   const map = isExplanatory ? EXPLANATORY_HIGHLIGHTS : CODE_HIGHLIGHTS
   return new Set(map[phase])
@@ -142,8 +157,10 @@ export const NQueensSidebar = ({
   onPseudocodeFlip,
 }: NQueensSidebarProps) => {
   const phase = currentStep?.phase ?? null
-  const codeHighlighted = getHighlightedLines(phase, false)
-  const logicHighlighted = getHighlightedLines(phase, true)
+  // Pre-step → setup; finished → outcome; mid-run → live phase.
+  const lifecycle: NQueensLifecycle = !isRunning ? null : stepIndex < 0 ? 'ready' : isPlaybackComplete ? 'done' : null
+  const codeHighlighted = getHighlightedLines(phase, false, lifecycle, solutionsFound)
+  const logicHighlighted = getHighlightedLines(phase, true, lifecycle, solutionsFound)
 
   const vars = currentStep ? deriveVars(currentStep, n) : null
   const varsRows = vars ? [

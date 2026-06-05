@@ -108,6 +108,7 @@ export function useCycleDetectionPlayback({
   const [statusText, setStatusText] = useState(IDLE_STATUS)
   const [cycleGoalEdgeIds, setCycleGoalEdgeIds] = useState<string[]>([])
   const [startNodeLabel, setStartNodeLabel] = useState('')
+  const [currentStrategy, setCurrentStrategy] = useState<TraversalStrategy>('bfs')
   const strategyRef = useRef<TraversalStrategy>('bfs')
 
   // Clears the algorithm-specific extra state shared by all reset paths.
@@ -206,6 +207,7 @@ export function useCycleDetectionPlayback({
     onResetTraversal()
     setCycleGoalEdgeIds([])
     strategyRef.current = strategy
+    setCurrentStrategy(strategy)
 
     if (isUndirectedMode) {
       setStatusText('Switch to Directed at the top left of the canvas to run cycle detection.')
@@ -252,10 +254,10 @@ export function useCycleDetectionPlayback({
       if (pb.isPlaybackComplete) {
         return pb.result.hasCycle ? 'done-found' as CyclePhase : 'done-empty' as CyclePhase
       }
-      if (strategyRef.current === 'dfs' && pb.result.hasCycle && si === pb.result.steps.length - 1) {
+      if (currentStrategy === 'dfs' && pb.result.hasCycle && si === pb.result.steps.length - 1) {
         return 'step-cycle' as CyclePhase
       }
-      if (strategyRef.current === 'bfs' && pb.result.hasCycle) {
+      if (currentStrategy === 'bfs' && pb.result.hasCycle) {
         if (si >= pb.result.steps.length - pb.result.cycleNodeIds.length) {
           return 'step-cycle' as CyclePhase
         }
@@ -267,7 +269,7 @@ export function useCycleDetectionPlayback({
       const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
       const step = pb.result.steps[si]
       const isDone = pb.isPlaybackComplete
-      if (strategyRef.current === 'bfs') {
+      if (currentStrategy === 'bfs') {
         // Reconstruction steps appended at end (cycle path) don't represent real Kahn's removals.
         const regularStepCount = pb.result.hasCycle
           ? pb.result.steps.length - pb.result.cycleNodeIds.length
@@ -291,13 +293,11 @@ export function useCycleDetectionPlayback({
           .filter(n => !removedIds.has(n.id))
           .map(n => `${n.label}: ${inDegreeMap.get(n.id) ?? 0}`)
         return [
-          [`u = ${isDone ? '—' : step.nodeLabel}`],
+          [`u = ${isDone ? '—' : step.nodeLabel}`, `removed = ${removed}`],
           [`queue = [${frontier.join(', ')}]`],
-          [`removed = ${removed}`],
           [`inDegree = {${inDegreeEntries.join(', ')}}`],
         ]
       }
-      const varLabel = isDone ? 'u' : (step.fromNodeId === null ? 'v' : 'u')
       const inStackLabels: string[] = []
       if (!isDone) {
         inStackLabels.push(step.nodeLabel)
@@ -315,8 +315,11 @@ export function useCycleDetectionPlayback({
         }
       }
       const visitedLabels = pb.result.steps.slice(0, si + 1).map(s => s.nodeLabel)
+      const vLabel = isDone ? '—' : inStackLabels[0]
+      const uLabel = isDone ? '—' : step.fromNodeId === null ? step.nodeLabel : (nodes.find(n => n.id === step.fromNodeId)?.label ?? '?')
+      const nbLabel = isDone ? '—' : step.fromNodeId === null ? '—' : step.nodeLabel
       return [
-        [`${varLabel} = ${isDone ? '—' : step.nodeLabel}`],
+        [`v = ${vLabel}`, `u = ${uLabel}`, `nb = ${nbLabel}`],
         [`inStack = {${inStackLabels.join(', ')}}`],
         [`visited = [${visitedLabels.join(', ')}]`],
       ]

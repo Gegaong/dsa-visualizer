@@ -113,6 +113,7 @@ export function useShortestPathPlayback({
   const [goalNodeLabel, setGoalNodeLabel] = useState('')
   const [shortestPathNodeIds, setShortestPathNodeIds] = useState<string[]>([])
   const [shortestPathEdgeIds, setShortestPathEdgeIds] = useState<string[]>([])
+  const [currentStrategy, setCurrentStrategy] = useState<TraversalStrategy>('bfs')
   const strategyRef = useRef<TraversalStrategy>('bfs')
 
   // Clears the algorithm-specific extra state shared by all reset paths.
@@ -212,6 +213,7 @@ export function useShortestPathPlayback({
     pb.stopPlayback()
     onResetTraversal()
     strategyRef.current = strategy
+    setCurrentStrategy(strategy)
 
     if (nodes.length === 0) {
       setStatusText('Add nodes to the canvas first.')
@@ -296,7 +298,7 @@ export function useShortestPathPlayback({
       const step = pb.result.steps[si]
       const isDone = pb.isPlaybackComplete
       const nodeVal = isDone ? '—' : step.nodeLabel
-      if (strategyRef.current === 'bfs') {
+      if (currentStrategy === 'bfs') {
         const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
         const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
         const labelByNodeId = new Map(pb.result.steps.map(s => [s.nodeId, s.nodeLabel]))
@@ -352,8 +354,13 @@ export function useShortestPathPlayback({
           }
         }
       }
+      const row1 = isDone
+        ? [`u = —`, `nb = —`]
+        : step.fromNodeId === null
+          ? [`u = ${step.nodeLabel}`, `nb = —`]
+          : [`u = ${nodes.find(n => n.id === step.fromNodeId)?.label ?? '?'}`, `nb = ${step.nodeLabel}`]
       return [
-        [`u = ${isDone ? '—' : step.nodeLabel}`],
+        row1,
         [`inPath = {${inPathLabels.join(', ')}}`],
         [`bestPath = ${bestPathLabels ? '[' + bestPathLabels.join(', ') + ']' : 'null'}`],
       ]
