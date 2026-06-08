@@ -83,8 +83,6 @@ export type WPPlaybackHandle = {
   wpNodesSettled: number
   wpAssumedNodeIds: string[]
   wpPathGuaranteed: boolean
-  // Currently-displayed step's internal explanation (empty before/after playback).
-  wpCurrentExplanation: string
   wpCurrentPhase: WPPhase | null
   wpVarsRows: string[][] | null
 
@@ -539,23 +537,6 @@ export function useWeightedPathfindingPlayback({
       }
     : null
 
-  const currentExplanation: string = (() => {
-    if (!result) return ''
-    let explanation: string
-    if (result.kind === 'priority') {
-      explanation = result.steps[playback.stepIndex]?.explanation ?? ''
-    } else {
-      explanation = result.detailedSteps[playback.stepIndex]?.explanation ?? ''
-    }
-
-    if (!playback.isPlaybackComplete) return explanation
-
-    const completionMessage = result.pathFound
-      ? ` ✓ Path found: cost ${result.pathCost}.`
-      : ` ✗ No path exists.`
-    return explanation + completionMessage
-  })()
-
   return {
     isWPRunning: isRunning,
     wpResult: result,
@@ -601,69 +582,153 @@ export function useWeightedPathfindingPlayback({
     playWP,
     pauseWP,
     handleWPPlaybackSpeedChange: playback.setPlaybackSpeed,
-    wpCurrentExplanation: currentExplanation,
     wpCurrentPhase: (() => {
-      if (!isRunning || !result || result.kind !== 'bfsdfs') return null as WPPhase | null
+      if (!isRunning || !result) return null as WPPhase | null
       if (playback.stepIndex < 0) return 'ready' as WPPhase
       if (playback.isPlaybackComplete) return (result.pathFound ? 'done-found' : 'done-empty') as WPPhase
-      const activeSteps = result.detailedSteps
-      const si = Math.min(playback.stepIndex, activeSteps.length - 1)
-      const step = activeSteps[si]
-      if (step.eventType === 'settle') return 'step-settle' as WPPhase
+      if (result.kind === 'bfsdfs') {
+        const activeSteps = result.detailedSteps
+        const si = Math.min(playback.stepIndex, activeSteps.length - 1)
+        const step = activeSteps[si]
+        if (step.eventType === 'settle') return 'step-settle' as WPPhase
+        if (step.fromNodeId === null) return 'step-start' as WPPhase
+        return 'step-discover' as WPPhase
+      }
+      const si = Math.min(playback.stepIndex, result.steps.length - 1)
+      const step = result.steps[si]
+      if (step.eventType === 'settle' || step.eventType === 'assumed') return 'step-settle' as WPPhase
       if (step.fromNodeId === null) return 'step-start' as WPPhase
       return 'step-discover' as WPPhase
     })(),
     wpVarsRows: (() => {
-      if (!result || result.kind !== 'bfsdfs' || playback.stepIndex < 0) return null
-      const isDone = playback.isPlaybackComplete
-      const activeSteps = result.detailedSteps
-      const si = Math.min(playback.stepIndex, activeSteps.length - 1)
-      const step = activeSteps[si]
+      if (!result) return null
       const nodeLabels = new Map(nodes.map(n => [n.id, n.label]))
+      const isDone = playback.isPlaybackComplete
 
-      const settledSet = new Set<string>()
-      const bestKnownCost = new Map<string, number>()
-      for (const s of activeSteps.slice(0, si + 1)) {
-        if (s.eventType === 'settle') {
-          settledSet.add(s.nodeId)
-        } else {
-          const ex = bestKnownCost.get(s.nodeId)
-          if (ex === undefined || s.costToNode < ex) bestKnownCost.set(s.nodeId, s.costToNode)
+      if (playback.stepIndex < 0) {
+        const startLabel = nodeLabels.get(result.startNodeId) ?? '?'
+        if (result.kind === 'bfsdfs') {
+          const frontierLabel = wpAlgorithm === 'dfs' ? 'stack' : 'queue'
+          return [[`u = —`], [`${frontierLabel} = [${startLabel}]`], [`cost = {${startLabel}: 0}`]]
         }
+        if (wpAlgorithm === 'greedy') return [[`u = —`], [`pq = [${startLabel}]`], [`visited = []`]]
+        const costLabel = wpAlgorithm === 'astar' ? 'g' : 'dist'
+        return [[`u = —`], [`pq = [${startLabel}]`], [`${costLabel} = {${startLabel}: 0}`]]
       }
 
-      const frontierLabel = wpAlgorithm === 'dfs' ? 'stack' : 'queue'
-      const queueLabels = [...bestKnownCost.keys()]
-        .filter(id => !settledSet.has(id))
-        .map(id => nodeLabels.get(id) ?? id)
-      const costEntries = [...bestKnownCost.entries()]
-        .map(([id, c]) => `${nodeLabels.get(id) ?? id}: ${c}`)
-
-      if (isDone) {
+      if (result.kind === 'bfsdfs') {
+        const activeSteps = result.detailedSteps
+        const si = Math.min(playback.stepIndex, activeSteps.length - 1)
+        const step = activeSteps[si]
+        const settledSet = new Set<string>()
+        const bestKnownCost = new Map<string, number>()
+        for (const s of activeSteps.slice(0, si + 1)) {
+          if (s.eventType === 'settle') {
+            settledSet.add(s.nodeId)
+          } else {
+            const ex = bestKnownCost.get(s.nodeId)
+            if (ex === undefined || s.costToNode < ex) bestKnownCost.set(s.nodeId, s.costToNode)
+          }
+        }
+        const frontierLabel = wpAlgorithm === 'dfs' ? 'stack' : 'queue'
+        const queueLabels = [...bestKnownCost.keys()]
+          .filter(id => !settledSet.has(id))
+          .map(id => nodeLabels.get(id) ?? id)
+        const costEntries = [...bestKnownCost.entries()]
+          .map(([id, c]) => `${nodeLabels.get(id) ?? id}: ${c}`)
+        if (isDone) {
+          return [
+            [`u = —`, `c = —`, `newCost = —`],
+            [`${frontierLabel} = []`],
+            [`cost = {${costEntries.join(', ')}}`],
+          ]
+        }
+        if (step.eventType === 'settle') {
+          return [
+            [`u = ${step.nodeLabel}`, `c = —`, `newCost = —`],
+            [`${frontierLabel} = [${queueLabels.join(', ')}]`],
+            [`cost = {${costEntries.join(', ')}}`],
+          ]
+        }
+        const uLabel = step.fromNodeId === null
+          ? step.nodeLabel
+          : (nodeLabels.get(step.fromNodeId) ?? '?')
+        const cVal = step.fromNodeId === null ? 0 : (bestKnownCost.get(step.fromNodeId) ?? 0)
         return [
-          [`u = —`],
-          [`${frontierLabel} = []`],
-          [`cost = {${costEntries.join(', ')}}`],
-        ]
-      }
-
-      if (step.eventType === 'settle') {
-        return [
-          [`u = ${step.nodeLabel}`],
+          [`u = ${uLabel}`, `c = ${cVal}`, `newCost = ${step.costToNode}`],
           [`${frontierLabel} = [${queueLabels.join(', ')}]`],
           [`cost = {${costEntries.join(', ')}}`],
         ]
       }
 
-      const uLabel = step.fromNodeId === null
+      // Priority algorithms (Dijkstra, A*, Greedy)
+      const si = Math.min(playback.stepIndex, result.steps.length - 1)
+      const step = result.steps[si]
+      const algo = wpAlgorithm
+      const settledSet = new Set<string>()
+      const bestKnownCost = new Map<string, number>()
+      for (const s of result.steps.slice(0, si + 1)) {
+        if (s.eventType === 'settle' || s.eventType === 'assumed') {
+          settledSet.add(s.nodeId)
+          bestKnownCost.set(s.nodeId, s.gCost)
+        } else {
+          const ex = bestKnownCost.get(s.nodeId)
+          if (ex === undefined || s.gCost < ex) bestKnownCost.set(s.nodeId, s.gCost)
+        }
+      }
+      const queueLabels = [...bestKnownCost.keys()]
+        .filter(id => !settledSet.has(id))
+        .map(id => nodeLabels.get(id) ?? id)
+      const isSettle = step.eventType === 'settle' || step.eventType === 'assumed'
+      const uLabel = isSettle || step.fromNodeId === null
         ? step.nodeLabel
         : (nodeLabels.get(step.fromNodeId) ?? '?')
-      const cVal = step.fromNodeId === null ? 0 : (bestKnownCost.get(step.fromNodeId) ?? 0)
 
+      if (algo === 'greedy') {
+        const visitedLabels = [...settledSet].map(id => nodeLabels.get(id) ?? id)
+        if (isDone) {
+          return [
+            [`u = —`, `h = —`],
+            [`pq = []`],
+            [`visited = [${visitedLabels.join(', ')}]`],
+          ]
+        }
+        return [
+          [`u = ${uLabel}`, `h = ${formatCost(step.hCost)}`],
+          [`pq = [${queueLabels.join(', ')}]`],
+          [`visited = [${visitedLabels.join(', ')}]`],
+        ]
+      }
+
+      const costEntries = [...bestKnownCost.entries()]
+        .map(([id, c]) => `${nodeLabels.get(id) ?? id}: ${formatCost(c)}`)
+
+      if (algo === 'astar') {
+        const row1: string[] = isDone
+          ? [`u = —`, `g = —`, `h = —`, `f = —`]
+          : [`u = ${uLabel}`, `g = ${formatCost(step.gCost)}`, `h = ${formatCost(step.hCost)}`, `f = ${formatCost(step.priority)}`]
+        return [
+          row1,
+          [`pq = [${isDone ? '' : queueLabels.join(', ')}]`],
+          [`g = {${costEntries.join(', ')}}`],
+        ]
+      }
+
+      // Dijkstra
+      let dVal: string, newDistVal: string
+      if (isDone) {
+        dVal = '—'; newDistVal = '—'
+      } else if (isSettle || step.fromNodeId === null) {
+        dVal = formatCost(step.gCost); newDistVal = '—'
+      } else {
+        dVal = formatCost(bestKnownCost.get(step.fromNodeId) ?? 0); newDistVal = formatCost(step.gCost)
+      }
       return [
-        [`u = ${uLabel}`, `c = ${cVal}`, `newCost = ${step.costToNode}`],
-        [`${frontierLabel} = [${queueLabels.join(', ')}]`],
-        [`cost = {${costEntries.join(', ')}}`],
+        isDone
+          ? [`u = —`, `d = —`, `newDist = —`]
+          : [`u = ${uLabel}`, `d = ${dVal}`, `newDist = ${newDistVal}`],
+        [`pq = [${isDone ? '' : queueLabels.join(', ')}]`],
+        [`dist = {${costEntries.join(', ')}}`],
       ]
     })(),
   }

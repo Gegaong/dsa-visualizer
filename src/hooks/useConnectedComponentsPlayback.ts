@@ -244,7 +244,12 @@ export function useConnectedComponentsPlayback({
     isConnectedComponentsRunning: pb.isRunning,
     connectedComponentsStatusText: statusText,
     ccVarsRows: (() => {
-      if (!pb.isRunning || pb.stepIndex < 0 || !pb.result) return null
+      if (!pb.isRunning || !pb.result) return null
+      if (pb.stepIndex < 0) {
+        const algoKey = currentStrategy === 'bfs' ? 'queue' : 'stack'
+        const firstLabel = pb.result.steps[0].nodeLabel
+        return [[`v = —`, `u = —`], [`${algoKey} = [${firstLabel}]`], [`visited = []`], [`components = []`]]
+      }
       const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
       const step = pb.result.steps[si]
       const algoKey = currentStrategy === 'bfs' ? 'queue' : 'stack'

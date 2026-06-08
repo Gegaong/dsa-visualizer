@@ -265,7 +265,24 @@ export function useCycleDetectionPlayback({
       return 'step-explore' as CyclePhase
     })(),
     cycleVarsRows: (() => {
-      if (!pb.isRunning || pb.stepIndex < 0 || !pb.result) return null
+      if (!pb.isRunning || !pb.result) return null
+      if (pb.stepIndex < 0) {
+        if (currentStrategy === 'bfs') {
+          const outNeighbors = buildNeighborsMap(nodes, edges)
+          const inDegreeMap = new Map<string, number>(nodes.map(n => [n.id, 0]))
+          nodes.forEach(n => outNeighbors.get(n.id)?.forEach(nbId => {
+            inDegreeMap.set(nbId, (inDegreeMap.get(nbId) ?? 0) + 1)
+          }))
+          const zeroLabels = nodes.filter(n => (inDegreeMap.get(n.id) ?? 0) === 0).map(n => n.label)
+          const inDegreeEntries = nodes.map(n => `${n.label}: ${inDegreeMap.get(n.id) ?? 0}`)
+          return [
+            [`u = —`, `removed = 0`],
+            [`queue = [${zeroLabels.join(', ')}]`],
+            [`inDegree = {${inDegreeEntries.join(', ')}}`],
+          ]
+        }
+        return [[`v = —`, `u = —`, `nb = —`], [`inStack = {}`], [`visited = []`]]
+      }
       const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
       const step = pb.result.steps[si]
       const isDone = pb.isPlaybackComplete

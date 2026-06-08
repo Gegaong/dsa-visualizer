@@ -400,7 +400,15 @@ export function useTraversalPlayback({
     sidebarTraversalStatusText,
     canRunTraversal,
     traversalVarsRows: (() => {
-      if (!isTraversalRunning || traversalPlayback.stepIndex < 0 || !traversalResult) return null
+      if (!isTraversalRunning || !traversalResult) return null
+      if (traversalPlayback.stepIndex < 0) {
+        const algoKey = algorithmTab === 'bfs' ? 'queue' : 'stack'
+        const firstLabel = traversalResult.steps[0].nodeLabel
+        if (goalType === 'max-value') return [[`node = —`, `max = —`], [`${algoKey} = [${firstLabel}]`], [`visited = []`]]
+        if (goalType === 'min-value') return [[`node = —`, `min = —`], [`${algoKey} = [${firstLabel}]`], [`visited = []`]]
+        if (goalType === 'target-node') return [[`node = —`, `goal = "${goalNodeLabel}"`], [`${algoKey} = [${firstLabel}]`], [`visited = []`]]
+        return [[`node = —`, `goal = ${goalValueInput}`], [`${algoKey} = [${firstLabel}]`], [`visited = []`]]
+      }
       const si = Math.min(traversalPlayback.stepIndex, traversalResult.steps.length - 1)
       const step = traversalResult.steps[si]
       const algoKey = algorithmTab === 'bfs' ? 'queue' : 'stack'

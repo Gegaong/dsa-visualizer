@@ -12,8 +12,6 @@ import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
 import { PseudocodePanel } from './PseudocodePanel'
 
-import { StepExplanation } from './StepExplanation'
-
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
 const WP_INFO_KEY: Record<WeightedAlgorithm, AlgorithmInfoKey> = {
@@ -96,11 +94,110 @@ Each step:
 ──────────────────────────────────────────
 Stack empty → color the best path green.`
 
-// ─── Highlight maps ───────────────────────────────────────────────────────────
-// BFS and DFS share identical line structure (11 code lines, 20 logic lines),
-// so one set of maps covers both.
+// ─── Dijkstra pseudocode ──────────────────────────────────────────────────────
 
-// code: 11 lines (0–10)
+const DIJKSTRA_CODE = `Dijkstra(graph, start, goal):
+    dist[v] ← ∞ for all v; dist[start] ← 0; pq ← [(0, start)]; prev ← {}
+    while pq ≠ empty:
+        (d, u) ← pq.popMin(); if u already settled: continue
+        settle u; if u = goal: return reconstruct(prev, start, goal)
+        for each neighbor nb of u in graph:
+            newDist ← dist[u] + w(u, nb)
+            if newDist < dist[nb]:
+                dist[nb] ← newDist; prev[nb] ← u; pq.push((newDist, nb))
+    return no path`
+
+const DIJKSTRA_LOGIC = `Dijkstra always expands the globally
+cheapest known node first, guaranteeing
+the shortest path for non-negative weights.
+──────────────────────────────────────────
+Each step:
+  · Pop the cheapest node u from the pq.
+    If u is already settled, skip it —
+    a stale entry reached u at higher cost.
+  · Settle u (turn green): dist[u] confirmed.
+    If u = goal, return path via prev.
+  · For each neighbor nb: if dist[u]+w(u,nb)
+    beats dist[nb], update dist[nb] and push
+    (newDist, nb) onto the pq — nb yellow.
+  · Nodes already settled are never
+    re-expanded — any remaining pq entries
+    for a settled node are skipped when
+    they are eventually popped.
+──────────────────────────────────────────
+pq empty → no path from start to goal.`
+
+// ─── A* pseudocode ────────────────────────────────────────────────────────────
+
+const ASTAR_CODE = `AStar(graph, start, goal):
+    g[v] ← ∞ for all v; g[start] ← 0; pq ← [(h(start), start)]; prev ← {}
+    while pq ≠ empty:
+        (f, u) ← pq.popMin(); if u already settled: continue
+        settle u; if u = goal: return reconstruct(prev, start, goal)
+        for each neighbor nb of u in graph:
+            newG ← g[u] + w(u, nb)
+            if newG < g[nb]:
+                g[nb] ← newG; prev[nb] ← u; pq.push((newG + h(nb), nb))
+    return no path`
+
+const ASTAR_LOGIC = `A* expands nodes by f(n) = g(n) + h(n):
+actual cost so far plus a heuristic
+estimate of the remaining distance.
+──────────────────────────────────────────
+Each step:
+  · Pop the node u with the lowest f value.
+    If u is already settled, skip it —
+    a stale entry reached u at higher g.
+  · Settle u (turn green): g[u] confirmed.
+    If u = goal, return the path via prev.
+  · For each neighbor nb: if g[u]+w(u,nb)
+    beats g[nb], update g[nb], prev[nb] ← u,
+    and push (g[nb]+h(nb), nb) — nb yellow.
+  · The heuristic h biases expansion toward
+    the goal: nodes with lower estimated
+    remaining cost get priority, focusing
+    the search directionally.
+──────────────────────────────────────────
+pq empty → no path from start to goal.`
+
+// ─── Greedy pseudocode ────────────────────────────────────────────────────────
+
+const GREEDY_CODE = `Greedy(graph, start, goal):
+    pq ← [(h(start), start)]; prev ← {}; visited ← {}
+    while pq ≠ empty:
+        (_, u) ← pq.popMin(); if u ∈ visited: continue
+        visited ← visited ∪ {u}; if u = goal: return reconstruct(prev, start, goal)
+        for each neighbor nb of u in graph:
+            if nb ∉ visited:
+                prev[nb] ← u; pq.push((h(nb), nb))
+    return no path`
+
+const GREEDY_LOGIC = `Greedy always expands the node estimated
+closest to the goal — path cost is never
+considered, only heuristic distance.
+──────────────────────────────────────────
+Each step:
+  · Pop the node u with the lowest h(u).
+    If u is already visited, skip it —
+    we reached it via a different path.
+  · Mark u visited (turn green).
+    If u = goal, return the path via prev.
+  · For each unvisited neighbor nb: record
+    prev[nb] ← u and push (h(nb), nb) onto
+    the pq — nb turns yellow.
+  · No cost tracking — only h drives order.
+    Greedy can be fast but gives no
+    guarantee of optimality; the found
+    path depends on the heuristic's shape.
+──────────────────────────────────────────
+pq empty → no path from start to goal.`
+
+// ─── Highlight maps ───────────────────────────────────────────────────────────
+// BFS and DFS share identical line structure (11 code lines, 20 logic lines).
+// Dijkstra and A* share identical code line structure (10 lines).
+// All three priority algorithms share one logic highlight map (19 lines).
+
+// BFS/DFS code: 11 lines (0–10)
 const WP_CODE_HIGHLIGHTS: Record<WPPhase, number[]> = {
   'ready':         [0, 1],
   'step-start':    [0, 1],
@@ -110,7 +207,7 @@ const WP_CODE_HIGHLIGHTS: Record<WPPhase, number[]> = {
   'done-empty':    [10],
 }
 
-// logic: 20 lines (0–19)
+// BFS/DFS logic: 20 lines (0–19)
 const WP_LOGIC_HIGHLIGHTS: Record<WPPhase, number[]> = {
   'ready':         [0, 1, 2],
   'step-start':    [0, 1, 2],
@@ -120,10 +217,44 @@ const WP_LOGIC_HIGHLIGHTS: Record<WPPhase, number[]> = {
   'done-empty':    [18, 19],
 }
 
-function getWPHighlights(phase: WPPhase | null, isLogic: boolean): Set<number> {
+// Dijkstra + A* code: 10 lines (0–9); identical structure
+const PRIORITY_CODE_HIGHLIGHTS: Record<WPPhase, number[]> = {
+  'ready':         [0, 1],
+  'step-start':    [0, 1],
+  'step-settle':   [2, 3, 4],
+  'step-discover': [5, 6, 7, 8],
+  'done-found':    [4],
+  'done-empty':    [9],
+}
+
+// Greedy code: 9 lines (0–8)
+const GREEDY_CODE_HIGHLIGHTS: Record<WPPhase, number[]> = {
+  'ready':         [0, 1],
+  'step-start':    [0, 1],
+  'step-settle':   [2, 3, 4],
+  'step-discover': [5, 6, 7],
+  'done-found':    [4],
+  'done-empty':    [8],
+}
+
+// Dijkstra / A* / Greedy logic: 19 lines (0–18); identical phase positions
+const PRIORITY_LOGIC_HIGHLIGHTS: Record<WPPhase, number[]> = {
+  'ready':         [0, 1, 2],
+  'step-start':    [0, 1, 2],
+  'step-settle':   [8, 9],
+  'step-discover': [10, 11, 12],
+  'done-found':    [17, 18],
+  'done-empty':    [17, 18],
+}
+
+function getWPHighlights(phase: WPPhase | null, isLogic: boolean, algorithm: WeightedAlgorithm): Set<number> {
   if (!phase) return new Set()
-  const map = isLogic ? WP_LOGIC_HIGHLIGHTS : WP_CODE_HIGHLIGHTS
-  return new Set(map[phase])
+  if (algorithm === 'bfs' || algorithm === 'dfs') {
+    return new Set((isLogic ? WP_LOGIC_HIGHLIGHTS : WP_CODE_HIGHLIGHTS)[phase])
+  }
+  if (isLogic) return new Set(PRIORITY_LOGIC_HIGHLIGHTS[phase])
+  if (algorithm === 'greedy') return new Set(GREEDY_CODE_HIGHLIGHTS[phase])
+  return new Set(PRIORITY_CODE_HIGHLIGHTS[phase])
 }
 
 // ─── Props & component ────────────────────────────────────────────────────────
@@ -154,7 +285,6 @@ export type WeightedPathfindingPanelProps = {
   onStopWP: () => void
   wpQueueSize: number | null
   wpNodesSettled: number
-  wpCurrentExplanation: string
   wpCurrentPhase: WPPhase | null
   wpVarsRows: string[][] | null
   pseudocodeShowLogic: boolean
@@ -193,7 +323,6 @@ export const WeightedPathfindingPanel = ({
   onStopWP,
   wpQueueSize,
   wpNodesSettled,
-  wpCurrentExplanation,
   wpCurrentPhase,
   wpVarsRows,
   pseudocodeShowLogic,
@@ -225,7 +354,6 @@ export const WeightedPathfindingPanel = ({
   }
 
   const frozen = isWPSessionActive
-  const showPseudocode = isWPSessionActive && (algorithm === 'bfs' || algorithm === 'dfs')
 
   const stepDisplay = formatStepDisplay(wpStepIndex, wpStepTotal)
   const pathFound = wpOutput === null ? '—' : wpOutput.pathFound ? 'Yes' : 'No'
@@ -364,18 +492,28 @@ export const WeightedPathfindingPanel = ({
         <p className="hint">{wpStatusText}</p>
       </div>
 
-      {showPseudocode ? (
+      {isWPSessionActive && (
         <PseudocodePanel
-          codeText={algorithm === 'dfs' ? DFS_CODE : BFS_CODE}
-          logicText={algorithm === 'dfs' ? DFS_LOGIC : BFS_LOGIC}
-          codeHighlighted={getWPHighlights(wpCurrentPhase, false)}
-          logicHighlighted={getWPHighlights(wpCurrentPhase, true)}
+          codeText={
+            algorithm === 'dfs' ? DFS_CODE
+            : algorithm === 'dijkstra' ? DIJKSTRA_CODE
+            : algorithm === 'astar' ? ASTAR_CODE
+            : algorithm === 'greedy' ? GREEDY_CODE
+            : BFS_CODE
+          }
+          logicText={
+            algorithm === 'dfs' ? DFS_LOGIC
+            : algorithm === 'dijkstra' ? DIJKSTRA_LOGIC
+            : algorithm === 'astar' ? ASTAR_LOGIC
+            : algorithm === 'greedy' ? GREEDY_LOGIC
+            : BFS_LOGIC
+          }
+          codeHighlighted={getWPHighlights(wpCurrentPhase, false, algorithm)}
+          logicHighlighted={getWPHighlights(wpCurrentPhase, true, algorithm)}
           varsRows={wpVarsRows}
           showLogic={pseudocodeShowLogic}
           onFlip={onPseudocodeFlip}
         />
-      ) : (
-        <StepExplanation text={wpCurrentExplanation} />
       )}
 
       <div className="sidebar-section">

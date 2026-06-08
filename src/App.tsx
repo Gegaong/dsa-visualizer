@@ -1329,7 +1329,6 @@ function App() {
             onStopWP: weightedPathfinding.resetWPVisualization,
             wpQueueSize: weightedPathfinding.wpQueueSize,
             wpNodesSettled: weightedPathfinding.wpNodesSettled,
-            wpCurrentExplanation: weightedPathfinding.wpCurrentExplanation,
             wpCurrentPhase: weightedPathfinding.wpCurrentPhase,
             wpVarsRows: weightedPathfinding.wpVarsRows,
             pseudocodeShowLogic,

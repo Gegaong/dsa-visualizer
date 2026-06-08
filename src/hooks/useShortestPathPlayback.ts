@@ -293,7 +293,14 @@ export function useShortestPathPlayback({
       return isGoalStep ? 'step-goal' as SPPhase : 'step-explore' as SPPhase
     })(),
     spVarsRows: (() => {
-      if (!pb.isRunning || pb.stepIndex < 0 || !pb.result) return null
+      if (!pb.isRunning || !pb.result) return null
+      if (pb.stepIndex < 0) {
+        if (currentStrategy === 'bfs') {
+          const startLabel = pb.result.steps[0].nodeLabel
+          return [[`u = —`], [`queue = [${startLabel}]`], [`parent = {}`]]
+        }
+        return [[`u = —`, `nb = —`], [`inPath = {}`], [`bestPath = null`]]
+      }
       const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
       const step = pb.result.steps[si]
       const isDone = pb.isPlaybackComplete
