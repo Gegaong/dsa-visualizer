@@ -2295,17 +2295,3 @@
 	border-radius: 10px;
 }
 
-.step-explanation-icon {
-	color: var(--accent);
-	flex: 0 0 auto;
-	margin-top: 1px;
-}
-
-.step-explanation-text {
-	margin: 0;
-	font-size: 12.8px;
-	line-height: 1.45;
-	color: var(--ink);
-	overflow-wrap: anywhere;
-	word-break: break-word;
-}
