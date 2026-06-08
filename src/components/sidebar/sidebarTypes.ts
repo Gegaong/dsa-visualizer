@@ -26,6 +26,10 @@ import type { CyclePhase } from '../../hooks/useCycleDetectionPlayback'
 
 export type { CyclePhase }
 
+import type { WPPhase } from '../../hooks/useWeightedPathfindingPlayback'
+
+export type { WPPhase }
+
 export type SidebarPage = 'canvas' | 'traversal' | 'algorithms' | 'pathfinder'
 
 export type AlgorithmMode =

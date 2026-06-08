@@ -1325,13 +1325,15 @@ function App() {
             wpOutput: weightedPathfinding.wpOutput,
             wpStepIndex: weightedPathfinding.stepIndex,
             wpStepTotal: weightedPathfinding.wpActiveStepTotal,
-            isDetailedMode: weightedPathfinding.isDetailedMode,
-            onToggleDetailedMode: weightedPathfinding.toggleDetailedMode,
             onRunWP: handleRunWPFromSidebar,
             onStopWP: weightedPathfinding.resetWPVisualization,
             wpQueueSize: weightedPathfinding.wpQueueSize,
             wpNodesSettled: weightedPathfinding.wpNodesSettled,
             wpCurrentExplanation: weightedPathfinding.wpCurrentExplanation,
+            wpCurrentPhase: weightedPathfinding.wpCurrentPhase,
+            wpVarsRows: weightedPathfinding.wpVarsRows,
+            pseudocodeShowLogic,
+            onPseudocodeFlip: () => setPseudocodeShowLogic(v => !v),
           }}
           canvasSetup={{
             blockGraphEdits: blockGraphInteraction,

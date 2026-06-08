@@ -273,8 +273,9 @@
 .sidebar-section--traversal-playback + .step-explanation--pseudocode,
 .sidebar-section--cc-playback + .step-explanation--pseudocode,
 .sidebar-section--sp-playback + .step-explanation--pseudocode,
-.sidebar-section--bipartite-playback + .step-explanation--pseudocode {
-	margin-top: -12px;
+.sidebar-section--bipartite-playback + .step-explanation--pseudocode,
+.sidebar-section--wp-playback + .step-explanation--pseudocode {
+	margin-top: -16px;
 }
 
 .step-explanation--pseudocode:hover {

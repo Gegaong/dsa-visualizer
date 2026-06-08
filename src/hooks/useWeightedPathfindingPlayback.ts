@@ -6,6 +6,8 @@ import {
   useState,
 } from 'react'
 
+export type WPPhase = 'ready' | 'step-start' | 'step-discover' | 'step-settle' | 'done-found' | 'done-empty'
+
 import type { GraphEdge, GraphNode } from '../types'
 
 import type {
@@ -76,7 +78,6 @@ export type WPPlaybackHandle = {
 
   wpOutput: WPOutput
   canRunWP: boolean
-  isDetailedMode: boolean
   wpActiveStepTotal: number
   wpQueueSize: number | null
   wpNodesSettled: number
@@ -84,6 +85,8 @@ export type WPPlaybackHandle = {
   wpPathGuaranteed: boolean
   // Currently-displayed step's internal explanation (empty before/after playback).
   wpCurrentExplanation: string
+  wpCurrentPhase: WPPhase | null
+  wpVarsRows: string[][] | null
 
   runWPFromSidebar: (algorithm: WeightedAlgorithm) => void
   resetWPVisualization: () => void
@@ -94,7 +97,6 @@ export type WPPlaybackHandle = {
   playWP: () => void
   pauseWP: () => void
   handleWPPlaybackSpeedChange: (value: number) => void
-  toggleDetailedMode: () => void
 }
 
 type UseWPPlaybackParams = {
@@ -125,8 +127,6 @@ export function useWeightedPathfindingPlayback({
   const algorithmRef = useRef<WeightedAlgorithm>('bfs')
   const [wpAlgorithm, setWpAlgorithm] = useState<WeightedAlgorithm>('bfs')
   const [playbackSession, setPlaybackSession] = useState(0)
-  const [isDetailedMode, setIsDetailedMode] = useState(false)
-  const isDetailedModeRef = useRef(false)
 
   // Visual state derived on each step
   const [wpSettledNodeIds, setWpSettledNodeIds] = useState<string[]>([])
@@ -154,8 +154,7 @@ export function useWeightedPathfindingPlayback({
       const label = algorithmLabel(algorithmRef.current)
 
       if (r.kind === 'bfsdfs') {
-        const detailed = isDetailedModeRef.current
-        const activeSteps = detailed ? r.detailedSteps : r.steps
+        const activeSteps = r.detailedSteps
 
         if (index < 0) {
           setWpSettledNodeIds([])
@@ -183,37 +182,19 @@ export function useWeightedPathfindingPlayback({
         const tentativeMap = new Map<string, number>()
         const costByNodeId = new Map<string, number>()
 
-        if (detailed) {
-          for (const step of visibleSteps) {
-            if (step.eventType === 'settle') {
-              settledSet.add(step.nodeId)
-              tentativeMap.delete(step.nodeId)
-              costByNodeId.set(step.nodeId, step.costToNode)
-            } else {
-              if (!settledSet.has(step.nodeId)) {
-                const existing = tentativeMap.get(step.nodeId)
-                if (existing === undefined || step.costToNode < existing) {
-                  tentativeMap.set(step.nodeId, step.costToNode)
-                  costByNodeId.set(step.nodeId, step.costToNode)
-                }
+        for (const step of visibleSteps) {
+          if (step.eventType === 'settle') {
+            settledSet.add(step.nodeId)
+            tentativeMap.delete(step.nodeId)
+            costByNodeId.set(step.nodeId, step.costToNode)
+          } else {
+            if (!settledSet.has(step.nodeId)) {
+              const existing = tentativeMap.get(step.nodeId)
+              if (existing === undefined || step.costToNode < existing) {
+                tentativeMap.set(step.nodeId, step.costToNode)
+                costByNodeId.set(step.nodeId, step.costToNode)
               }
             }
-          }
-        } else {
-          const bestKnownCost = new Map<string, number>()
-          for (const step of visibleSteps) {
-            const existing = bestKnownCost.get(step.nodeId)
-            if (existing === undefined || step.costToNode < existing) {
-              bestKnownCost.set(step.nodeId, step.costToNode)
-            }
-            const mpc = step.minPendingCostAfter
-            for (const [id, knownCost] of bestKnownCost) {
-              if (!settledSet.has(id) && knownCost <= mpc) settledSet.add(id)
-            }
-          }
-          for (const [id, cost] of bestKnownCost) {
-            costByNodeId.set(id, cost)
-            if (!settledSet.has(id)) tentativeMap.set(id, cost)
           }
         }
 
@@ -235,7 +216,7 @@ export function useWeightedPathfindingPlayback({
           ? getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
           : null
 
-        const statusMsg = detailed && currentStep.eventType === 'settle'
+        const statusMsg = currentStep.eventType === 'settle'
           ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${formatCost(currentStep.costToNode)}`)
           : `Visiting ${currentStep.nodeLabel} · current path cost ${formatCost(currentStep.costToNode)} (step ${bound + 1}/${activeSteps.length}) · ${label}`
 
@@ -382,7 +363,7 @@ export function useWeightedPathfindingPlayback({
   const activeStepCount = result === null ? 0
     : result.kind === 'priority'
       ? result.steps.length
-      : (isDetailedMode ? result.detailedSteps.length : result.steps.length)
+      : result.detailedSteps.length
 
   const playback = useStepPlayback({
     stepCount: activeStepCount,
@@ -520,7 +501,7 @@ export function useWeightedPathfindingPlayback({
     if (!result) return
     const activeLen = result.kind === 'priority'
       ? result.steps.length
-      : (isDetailedModeRef.current ? result.detailedSteps.length : result.steps.length)
+      : result.detailedSteps.length
     const replayFromEnd = playback.stepIndex >= activeLen - 1
     playback.togglePlay()
     if (replayFromEnd) {
@@ -533,13 +514,6 @@ export function useWeightedPathfindingPlayback({
   const pauseWP = useCallback(() => {
     playback.stopPlayback()
   }, [playback])
-
-  const toggleDetailedMode = useCallback(() => {
-    setIsDetailedMode((prev) => {
-      isDetailedModeRef.current = !prev
-      return !prev
-    })
-  }, [])
 
   const startMissing = startNodeLabel.trim() === ''
   const goalMissing = goalNodeLabel.trim() === ''
@@ -571,8 +545,7 @@ export function useWeightedPathfindingPlayback({
     if (result.kind === 'priority') {
       explanation = result.steps[playback.stepIndex]?.explanation ?? ''
     } else {
-      const active = isDetailedMode ? result.detailedSteps : result.steps
-      explanation = active[playback.stepIndex]?.explanation ?? ''
+      explanation = result.detailedSteps[playback.stepIndex]?.explanation ?? ''
     }
 
     if (!playback.isPlaybackComplete) return explanation
@@ -614,7 +587,6 @@ export function useWeightedPathfindingPlayback({
 
     wpOutput,
     canRunWP,
-    isDetailedMode,
     wpActiveStepTotal: activeStepCount,
     wpQueueSize,
     wpNodesSettled: wpSettledNodeIds.length,
@@ -629,7 +601,70 @@ export function useWeightedPathfindingPlayback({
     playWP,
     pauseWP,
     handleWPPlaybackSpeedChange: playback.setPlaybackSpeed,
-    toggleDetailedMode,
     wpCurrentExplanation: currentExplanation,
+    wpCurrentPhase: (() => {
+      if (!isRunning || !result || result.kind !== 'bfsdfs') return null as WPPhase | null
+      if (playback.stepIndex < 0) return 'ready' as WPPhase
+      if (playback.isPlaybackComplete) return (result.pathFound ? 'done-found' : 'done-empty') as WPPhase
+      const activeSteps = result.detailedSteps
+      const si = Math.min(playback.stepIndex, activeSteps.length - 1)
+      const step = activeSteps[si]
+      if (step.eventType === 'settle') return 'step-settle' as WPPhase
+      if (step.fromNodeId === null) return 'step-start' as WPPhase
+      return 'step-discover' as WPPhase
+    })(),
+    wpVarsRows: (() => {
+      if (!result || result.kind !== 'bfsdfs' || playback.stepIndex < 0) return null
+      const isDone = playback.isPlaybackComplete
+      const activeSteps = result.detailedSteps
+      const si = Math.min(playback.stepIndex, activeSteps.length - 1)
+      const step = activeSteps[si]
+      const nodeLabels = new Map(nodes.map(n => [n.id, n.label]))
+
+      const settledSet = new Set<string>()
+      const bestKnownCost = new Map<string, number>()
+      for (const s of activeSteps.slice(0, si + 1)) {
+        if (s.eventType === 'settle') {
+          settledSet.add(s.nodeId)
+        } else {
+          const ex = bestKnownCost.get(s.nodeId)
+          if (ex === undefined || s.costToNode < ex) bestKnownCost.set(s.nodeId, s.costToNode)
+        }
+      }
+
+      const frontierLabel = wpAlgorithm === 'dfs' ? 'stack' : 'queue'
+      const queueLabels = [...bestKnownCost.keys()]
+        .filter(id => !settledSet.has(id))
+        .map(id => nodeLabels.get(id) ?? id)
+      const costEntries = [...bestKnownCost.entries()]
+        .map(([id, c]) => `${nodeLabels.get(id) ?? id}: ${c}`)
+
+      if (isDone) {
+        return [
+          [`u = —`],
+          [`${frontierLabel} = []`],
+          [`cost = {${costEntries.join(', ')}}`],
+        ]
+      }
+
+      if (step.eventType === 'settle') {
+        return [
+          [`u = ${step.nodeLabel}`],
+          [`${frontierLabel} = [${queueLabels.join(', ')}]`],
+          [`cost = {${costEntries.join(', ')}}`],
+        ]
+      }
+
+      const uLabel = step.fromNodeId === null
+        ? step.nodeLabel
+        : (nodeLabels.get(step.fromNodeId) ?? '?')
+      const cVal = step.fromNodeId === null ? 0 : (bestKnownCost.get(step.fromNodeId) ?? 0)
+
+      return [
+        [`u = ${uLabel}`, `c = ${cVal}`, `newCost = ${step.costToNode}`],
+        [`${frontierLabel} = [${queueLabels.join(', ')}]`],
+        [`cost = {${costEntries.join(', ')}}`],
+      ]
+    })(),
   }
 }

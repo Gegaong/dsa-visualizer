@@ -4,11 +4,13 @@ import type { WeightedAlgorithm } from '../../algorithms/algorithmstypes'
 
 import type { AlgorithmInfoKey } from '../../algorithms/algorithmInfo'
 
-import type { WPOutput } from './sidebarTypes'
+import type { WPOutput, WPPhase } from './sidebarTypes'
 
 import { PlaybackControls } from './PlaybackControls'
 
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+
+import { PseudocodePanel } from './PseudocodePanel'
 
 import { StepExplanation } from './StepExplanation'
 
@@ -21,6 +23,110 @@ const WP_INFO_KEY: Record<WeightedAlgorithm, AlgorithmInfoKey> = {
   astar: 'wp-astar',
   greedy: 'wp-greedy',
 }
+
+// ─── Code pseudocode ─────────────────────────────────────────────────────────
+
+const BFS_CODE = `WeightedBFS(graph, start, goal):
+    cost[start] ← 0; queue ← [(path=[start], c=0)]; bestCost ← ∞; bestPath ← []
+    while queue ≠ empty:
+        (path, c) ← queue.dequeue(); u ← path.last
+        if c > cost[u] or c ≥ bestCost: continue
+        if u = goal: bestCost ← c; bestPath ← path; continue
+        for each neighbor nb of u in graph:
+            newCost ← c + w(u, nb)
+            if nb ∉ path and newCost < cost[nb] and newCost < bestCost:
+                cost[nb] ← newCost; queue.enqueue((path+[nb], newCost))
+    return bestPath if bestPath ≠ [] else no path`
+
+// ─── Logic pseudocode ─────────────────────────────────────────────────────────
+
+const BFS_LOGIC = `BFS explores paths in FIFO order —
+oldest entry is dequeued first.
+──────────────────────────────────────────
+Each step:
+  · Dequeue the oldest path and look at
+    its last node. Skip if a cheaper path
+    to it already exists, or if this path
+    can't beat the best goal found so far.
+  · If the node is the goal: record it as
+    the best path found; keep searching —
+    a cheaper route may still be queued.
+  · For each unvisited neighbor: if this
+    path reaches it cheaper than before,
+    color the neighbor yellow and add the
+    extended path to the back of the queue.
+  · Any node that can no longer be reached
+    cheaper by anything still in the queue
+    turns green — its cost is confirmed.
+──────────────────────────────────────────
+Queue empty → color the best path green.`
+
+// ─── DFS pseudocode ───────────────────────────────────────────────────────────
+
+const DFS_CODE = `WeightedDFS(graph, start, goal):
+    cost[start] ← 0; stack ← [(path=[start], c=0)]; bestCost ← ∞; bestPath ← []
+    while stack ≠ empty:
+        (path, c) ← stack.pop(); u ← path.last
+        if c > cost[u] or c ≥ bestCost: continue
+        if u = goal: bestCost ← c; bestPath ← path; continue
+        for each neighbor nb of u in graph:
+            newCost ← c + w(u, nb)
+            if nb ∉ path and newCost < cost[nb] and newCost < bestCost:
+                cost[nb] ← newCost; stack.push((path+[nb], newCost))
+    return bestPath if bestPath ≠ [] else no path`
+
+const DFS_LOGIC = `DFS explores paths in LIFO order —
+most recent entry is popped first.
+──────────────────────────────────────────
+Each step:
+  · Pop the most recent path and look at
+    its last node. Skip if a cheaper path
+    to it already exists, or if this path
+    can't beat the best goal found so far.
+  · If the node is the goal: record it as
+    the best path found; keep searching —
+    a cheaper route may still be in stack.
+  · For each unvisited neighbor: if this
+    path reaches it cheaper than before,
+    color the neighbor yellow and push the
+    extended path onto the stack.
+  · Any node that can no longer be reached
+    cheaper by anything still in the stack
+    turns green — its cost is confirmed.
+──────────────────────────────────────────
+Stack empty → color the best path green.`
+
+// ─── Highlight maps ───────────────────────────────────────────────────────────
+// BFS and DFS share identical line structure (11 code lines, 20 logic lines),
+// so one set of maps covers both.
+
+// code: 11 lines (0–10)
+const WP_CODE_HIGHLIGHTS: Record<WPPhase, number[]> = {
+  'ready':         [0, 1],
+  'step-start':    [0, 1],
+  'step-discover': [2, 3, 6, 7, 8, 9],
+  'step-settle':   [2, 3, 4],
+  'done-found':    [10],
+  'done-empty':    [10],
+}
+
+// logic: 20 lines (0–19)
+const WP_LOGIC_HIGHLIGHTS: Record<WPPhase, number[]> = {
+  'ready':         [0, 1, 2],
+  'step-start':    [0, 1, 2],
+  'step-discover': [3, 4, 5, 6, 7, 11, 12, 13, 14],
+  'step-settle':   [3, 15, 16, 17],
+  'done-found':    [18, 19],
+  'done-empty':    [18, 19],
+}
+
+function getWPHighlights(phase: WPPhase | null, isLogic: boolean): Set<number> {
+  if (!phase) return new Set()
+  const map = isLogic ? WP_LOGIC_HIGHLIGHTS : WP_CODE_HIGHLIGHTS
+  return new Set(map[phase])
+}
+
+// ─── Props & component ────────────────────────────────────────────────────────
 
 export type WeightedPathfindingPanelProps = {
   isWPSessionActive: boolean
@@ -44,13 +150,15 @@ export type WeightedPathfindingPanelProps = {
   wpOutput: WPOutput
   wpStepIndex: number
   wpStepTotal: number
-  isDetailedMode: boolean
-  onToggleDetailedMode: () => void
   onRunWP: (algorithm: WeightedAlgorithm) => void
   onStopWP: () => void
   wpQueueSize: number | null
   wpNodesSettled: number
   wpCurrentExplanation: string
+  wpCurrentPhase: WPPhase | null
+  wpVarsRows: string[][] | null
+  pseudocodeShowLogic: boolean
+  onPseudocodeFlip: () => void
 }
 
 function formatStepDisplay(stepIndex: number, stepTotal: number): string {
@@ -81,33 +189,20 @@ export const WeightedPathfindingPanel = ({
   wpOutput,
   wpStepIndex,
   wpStepTotal,
-  isDetailedMode,
-  onToggleDetailedMode,
   onRunWP,
   onStopWP,
   wpQueueSize,
   wpNodesSettled,
   wpCurrentExplanation,
+  wpCurrentPhase,
+  wpVarsRows,
+  pseudocodeShowLogic,
+  onPseudocodeFlip,
 }: WeightedPathfindingPanelProps) => {
   const [algorithm, setAlgorithm] = useState<WeightedAlgorithm>('bfs')
-  const [showHelp, setShowHelp] = useState(false)
-  const helpBtnRef = useRef<HTMLButtonElement>(null)
-  const helpPopupRef = useRef<HTMLDivElement>(null)
   const [showNodeHelp, setShowNodeHelp] = useState(false)
   const nodeHelpBtnRef = useRef<HTMLButtonElement>(null)
   const nodeHelpPopupRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!showHelp) return
-    const handleOutsideClick = (e: MouseEvent) => {
-      const target = e.target as Node
-      const inBtn = helpBtnRef.current?.contains(target) ?? false
-      const inPopup = helpPopupRef.current?.contains(target) ?? false
-      if (!inBtn && !inPopup) setShowHelp(false)
-    }
-    document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [showHelp])
 
   useEffect(() => {
     if (!showNodeHelp) return
@@ -121,8 +216,6 @@ export const WeightedPathfindingPanel = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [showNodeHelp])
 
-  const toggleHelp = () => setShowHelp((v) => !v)
-
   const toggleRun = () => {
     if (isWPSessionActive) {
       onStopWP()
@@ -132,7 +225,7 @@ export const WeightedPathfindingPanel = ({
   }
 
   const frozen = isWPSessionActive
-  const showDetailedMode = algorithm === 'bfs' || algorithm === 'dfs'
+  const showPseudocode = isWPSessionActive && (algorithm === 'bfs' || algorithm === 'dfs')
 
   const stepDisplay = formatStepDisplay(wpStepIndex, wpStepTotal)
   const pathFound = wpOutput === null ? '—' : wpOutput.pathFound ? 'Yes' : 'No'
@@ -249,7 +342,7 @@ export const WeightedPathfindingPanel = ({
         </div>
       </div>
 
-      <div className="sidebar-section">
+      <div className="sidebar-section sidebar-section--wp-playback">
         <h3>Playback</h3>
         <PlaybackControls
           runLabel="Run pathfinder"
@@ -268,70 +361,22 @@ export const WeightedPathfindingPanel = ({
           speed={wpPlaybackSpeed}
           onSpeedChange={onWPPlaybackSpeedChange}
         />
-        {showDetailedMode && (
-          <div className="detail-mode-row">
-            <label className="detail-mode-label">
-              <input
-                type="checkbox"
-                checked={isDetailedMode}
-                onChange={onToggleDetailedMode}
-                disabled={frozen}
-              />
-              Show confirmation steps
-            </label>
-            <button
-              ref={helpBtnRef}
-              type="button"
-              className="detail-mode-help-btn"
-              onClick={toggleHelp}
-              aria-label="What are confirmation steps?"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.25"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.5 9a2.5 2.5 0 0 1 4.9 0.7c0 1.7-2.4 1.7-2.4 3.3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </button>
-            {showHelp && (
-              <div
-                ref={helpPopupRef}
-                className="detail-mode-help-popup"
-                role="tooltip"
-              >
-                <p className="detail-mode-help-popup-title">Confirmation steps</p>
-                <p>
-                  A node turns green once its cost is locked in — no remaining path can reach
-                  it more cheaply.
-                </p>
-                <p>
-                  <strong>How we detect this:</strong> after each expansion, we check the
-                  cheapest cost left in the queue. Any node whose best cost is ≤ that minimum
-                  is confirmed.
-                </p>
-                <p>
-                  <strong>Off:</strong> confirmations happen silently during discovery.
-                </p>
-                <p>
-                  <strong>On:</strong> each confirmation gets its own step explaining why the
-                  cost is final.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
         <p className="hint">{wpStatusText}</p>
-        <StepExplanation text={wpCurrentExplanation} />
       </div>
+
+      {showPseudocode ? (
+        <PseudocodePanel
+          codeText={algorithm === 'dfs' ? DFS_CODE : BFS_CODE}
+          logicText={algorithm === 'dfs' ? DFS_LOGIC : BFS_LOGIC}
+          codeHighlighted={getWPHighlights(wpCurrentPhase, false)}
+          logicHighlighted={getWPHighlights(wpCurrentPhase, true)}
+          varsRows={wpVarsRows}
+          showLogic={pseudocodeShowLogic}
+          onFlip={onPseudocodeFlip}
+        />
+      ) : (
+        <StepExplanation text={wpCurrentExplanation} />
+      )}
 
       <div className="sidebar-section">
         <h3>Output</h3>
