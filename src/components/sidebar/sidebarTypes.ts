@@ -186,7 +186,6 @@ export type AlgorithmsPageProps = SidebarSharedState & {
   cycleDetectionOutput: CycleDetectionOutput
   cycleDetectionStepIndex: number
   cycleDetectionStepTotal: number
-  cycleDetectionCurrentExplanation: string
   cycleCurrentPhase: CyclePhase | null
   cycleVarsRows: string[][] | null
 

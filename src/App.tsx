@@ -1429,7 +1429,6 @@ function App() {
             cycleDetectionOutput: cycleDetection.cycleOutput,
             cycleDetectionStepIndex: cycleDetection.stepIndex,
             cycleDetectionStepTotal: cycleDetection.cycleDetectionResult?.steps.length ?? 0,
-            cycleDetectionCurrentExplanation: cycleDetection.cycleDetectionCurrentExplanation,
             cycleCurrentPhase: cycleDetection.cycleCurrentPhase,
             cycleVarsRows: cycleDetection.cycleVarsRows,
             onRunShortestPath: handleRunShortestPathFromSidebar,

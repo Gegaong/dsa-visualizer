@@ -58,7 +58,6 @@ export type CycleDetectionPlaybackHandle = {
   cycleDetectionResult: CycleDetectionResult | null
   isCycleDetectionRunning: boolean
   cycleDetectionStatusText: string
-  cycleDetectionCurrentExplanation: string
   cycleCurrentPhase: CyclePhase | null
   cycleVarsRows: string[][] | null
   cycleGoalEdgeIds: string[]
@@ -341,14 +340,6 @@ export function useCycleDetectionPlayback({
         [`visited = [${visitedLabels.join(', ')}]`],
       ]
     })(),
-    cycleDetectionCurrentExplanation: (() => {
-      const stepExplanation = pb.result?.steps[pb.stepIndex]?.explanation ?? ''
-      if (!pb.isPlaybackComplete || !pb.result) return stepExplanation
-      const completionMessage = pb.result.hasCycle
-        ? ` ✓ Cycle detected.`
-        : ` ✓ No cycle found. Graph is acyclic.`
-      return stepExplanation + completionMessage
-    })(),
     cycleGoalEdgeIds,
     cycleDetectionStartNodeLabel: startNodeLabel,
 
@@ -366,7 +357,7 @@ export function useCycleDetectionPlayback({
     clearCycleDetectionAlgorithmStateOnly: pb.clearStateOnly,
     runCycleDetectionFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
-    handleCycleDetectionStartNodeLabelChange: setStartNodeLabel,
+    handleCycleDetectionStartNodeLabelChange: (value: string) => setStartNodeLabel(value.toUpperCase()),
     stepCycleDetectionForward: pb.stepForward,
     stepCycleDetectionBackward: pb.stepBackward,
     playCycleDetection: pb.play,

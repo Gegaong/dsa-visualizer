@@ -78,12 +78,17 @@ export function runDirectedGoalTraversal(
       const currentNode = nodeById.get(currentId)
       if (!currentNode) return
 
-      const newNeighbors = sortIdsByLabel(neighborsById.get(currentId) ?? [], nodeById).filter(id => !visited.has(id))
-      // Mirror the real frontier ordering: BFS enqueues at the back, DFS pushes on top (front, so index 0 = next to pop).
+      // A matched target is returned the instant it's dequeued — before its own neighbors are
+      // enqueued — so its frontier must exclude them to match the "return node" pseudocode line.
+      const matched = matchesGoal(currentNode, input.goal)
       frontierOrder = frontierOrder.filter((id) => id !== currentId)
-      frontierOrder = strategy === 'bfs'
-        ? [...frontierOrder, ...newNeighbors]
-        : [...newNeighbors, ...frontierOrder]
+      if (!matched) {
+        const newNeighbors = sortIdsByLabel(neighborsById.get(currentId) ?? [], nodeById).filter(id => !visited.has(id))
+        // Mirror the real frontier ordering: BFS enqueues at the back, DFS pushes on top (front, so index 0 = next to pop).
+        frontierOrder = strategy === 'bfs'
+          ? [...frontierOrder, ...newNeighbors]
+          : [...newNeighbors, ...frontierOrder]
+      }
       const stepFrontierNodeIds = [...frontierOrder]
 
       if (input.goal.type === 'max-value' || input.goal.type === 'min-value') {
@@ -104,7 +109,7 @@ export function runDirectedGoalTraversal(
         steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, runningBest: extremeValue, frontierNodeIds: stepFrontierNodeIds })
       } else {
         steps.push({ nodeId: currentNode.id, nodeLabel: currentNode.label, order, fromNodeId: parentId, frontierNodeIds: stepFrontierNodeIds })
-        if (matchesGoal(currentNode, input.goal)) {
+        if (matched) {
           foundNode = currentNode
           order += 1
           return 'stop'

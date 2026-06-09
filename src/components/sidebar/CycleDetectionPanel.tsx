@@ -137,7 +137,6 @@ export type CycleDetectionPanelProps = {
   cycleDetectionOutput: CycleDetectionOutput
   cycleDetectionStepIndex: number
   cycleDetectionStepTotal: number
-  cycleDetectionCurrentExplanation: string
   cycleCurrentPhase: CyclePhase | null
   cycleVarsRows: string[][] | null
   pseudocodeShowLogic: boolean
