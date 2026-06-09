@@ -405,11 +405,13 @@ function App() {
   // Commits the typed weight to the edge; falls back to 0 if empty.
   const handleCommitEdgeWeight = (edgeId: string, rawValue: string) => {
     const parsed = parseEdgeWeightInput(rawValue)
-    setEdges((prev) =>
-      prev.map((e) =>
-        e.id === edgeId ? { ...e, weight: parsed !== null ? parsed : 0 } : e,
-      ),
-    )
+    if (parsed !== null) {
+      setEdges((prev) =>
+        prev.map((e) =>
+          e.id === edgeId ? { ...e, weight: parsed } : e,
+        ),
+      )
+    }
     setEditingEdgeWeightId(null)
     setDraftEdgeWeight('')
   }
@@ -553,16 +555,7 @@ function App() {
     setEdges((prev) =>
       prev.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId),
     )
-    setSelectedEdgeIds((prev) =>
-      prev.filter(
-        (edgeId) =>
-          !edges.some(
-            (edge) =>
-              edge.id === edgeId &&
-              (edge.fromNodeId === nodeId || edge.toNodeId === nodeId),
-          ),
-      ),
-    )
+    setSelectedEdgeIds([])
   }
 
   // Deletes every selected node and edges touching those nodes, then reindexes labels.
@@ -576,16 +569,7 @@ function App() {
     setEdges((prev) =>
       prev.filter((edge) => !idSet.has(edge.fromNodeId) && !idSet.has(edge.toNodeId)),
     )
-    setSelectedEdgeIds((prev) =>
-      prev.filter(
-        (edgeId) =>
-          !edges.some(
-            (edge) =>
-              edge.id === edgeId &&
-              (idSet.has(edge.fromNodeId) || idSet.has(edge.toNodeId)),
-          ),
-      ),
-    )
+    setSelectedEdgeIds([])
   }
 
   // Deletes every edge whose id is in the given list.
@@ -730,7 +714,7 @@ function App() {
     if (nodeDragging.consumeSuppressedCanvasClick()) return
 
     if (contextMenu) closeContextMenu()
-    if (isDeleteMode || isDeleteEdgeMode || isConnectMode) return
+    if (isDeleteMode || isDeleteEdgeMode) return
 
     const rect = event.currentTarget.getBoundingClientRect()
     const pointer = getCanvasPointerPosition(event.clientX, event.clientY, rect)

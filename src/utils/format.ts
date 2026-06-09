@@ -24,12 +24,13 @@ export const parseNumberInput = (value: string) => {
   return Number.isNaN(numberValue) ? null : numberValue
 }
 
-// Parses a decimal edge weight; strips trailing '.' so "3." commits as 3.
+// Parses a decimal edge weight; must be positive. Strips trailing '.' so "3." commits as 3.
 export const parseEdgeWeightInput = (value: string): number | null => {
   const trimmed = value.trim().replace(/\.$/, '')
   if (trimmed === '' || trimmed === '.') return null
   const num = Number(trimmed)
-  return Number.isNaN(num) ? null : num
+  if (Number.isNaN(num) || num <= 0) return null
+  return num
 }
 
 // Formats a cost value for display: rounds to 4 decimal places to clean float noise,

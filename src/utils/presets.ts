@@ -454,17 +454,19 @@ export const buildPresetGraph = (
     return node
   })
 
-  const edges: GraphEdge[] = preset.edges.map(([fromIndex, toIndex, direction, weight]) => {
-    const edge: GraphEdge = {
-      id: `edge-${counter}`,
-      fromNodeId: nodes[fromIndex].id,
-      toNodeId: nodes[toIndex].id,
-      direction: direction ?? 'forward',
-      ...(weight !== undefined && { weight }),
-    }
-    counter += 1
-    return edge
-  })
+  const edges: GraphEdge[] = preset.edges
+    .filter(([fromIndex, toIndex]) => fromIndex >= 0 && fromIndex < nodes.length && toIndex >= 0 && toIndex < nodes.length)
+    .map(([fromIndex, toIndex, direction, weight]) => {
+      const edge: GraphEdge = {
+        id: `edge-${counter}`,
+        fromNodeId: nodes[fromIndex].id,
+        toNodeId: nodes[toIndex].id,
+        direction: direction ?? 'forward',
+        ...(weight !== undefined && { weight }),
+      }
+      counter += 1
+      return edge
+    })
 
   return { nodes, edges, nextId: counter }
 }
