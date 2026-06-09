@@ -125,15 +125,17 @@ export function useBipartitePlayback({
       const boundedIndex = Math.min(index, result.steps.length - 1)
       const currentStep = result.steps[boundedIndex]
       const visitedSteps = result.steps.slice(0, boundedIndex + 1)
+      // The conflict step re-visits an already-colored node, so exclude it from the coloring state.
+      const coloringSteps = visitedSteps.filter((s) => !s.conflict)
 
       const groupA: string[] = []
       const groupB: string[] = []
-      visitedSteps.forEach((s) => {
+      coloringSteps.forEach((s) => {
         if (s.color === 0) groupA.push(s.nodeId)
         else groupB.push(s.nodeId)
       })
 
-      const visitedIds = visitedSteps.map((s) => s.nodeId)
+      const visitedIds = coloringSteps.map((s) => s.nodeId)
       const findEdgeId = (fromId: string, toId: string) =>
         edges.find(
           (e) =>
@@ -142,7 +144,7 @@ export function useBipartitePlayback({
         )?.id ?? null
 
       const visitedEdgeIds = new Set<string>()
-      visitedSteps.forEach((s) => {
+      coloringSteps.forEach((s) => {
         if (s.fromNodeId === null) return
         const edgeId = findEdgeId(s.fromNodeId, s.nodeId)
         if (edgeId) visitedEdgeIds.add(edgeId)
@@ -160,9 +162,16 @@ export function useBipartitePlayback({
       setTraversalGoalNodeIds([])
       setBipartiteGroupANodeIds(groupA)
       setBipartiteGroupBNodeIds(groupB)
-      setStatusText(
-        `Coloring ${currentStep.nodeLabel} → Group ${currentStep.color === 0 ? 'A' : 'B'} (step ${currentStep.order}/${result.steps.length}) · ${strategyLabel}`,
-      )
+      if (currentStep.conflict) {
+        const uLabel = nodes.find((n) => n.id === currentStep.fromNodeId)?.label ?? '?'
+        setStatusText(
+          `Conflict: ${currentStep.nodeLabel} and ${uLabel} are both Group ${currentStep.color === 0 ? 'A' : 'B'} — odd cycle, not bipartite. · ${strategyLabel}`,
+        )
+      } else {
+        setStatusText(
+          `Coloring ${currentStep.nodeLabel} → Group ${currentStep.color === 0 ? 'A' : 'B'} (step ${currentStep.order}/${result.steps.length}) · ${strategyLabel}`,
+        )
+      }
     },
     onResetVisualization: () => {
       setStatusText(IDLE_STATUS)
@@ -229,10 +238,12 @@ export function useBipartitePlayback({
     bipartiteCurrentPhase: (() => {
       if (!pb.isRunning) return null as BipartitePhase | null
       if (pb.stepIndex < 0) return 'ready' as BipartitePhase
+      const currentStep = pb.result?.steps[pb.stepIndex]
+      // The conflict step is terminal — pin it to done-not-bipartite even mid-play (before onComplete fires).
+      if (currentStep?.conflict) return 'done-not-bipartite' as BipartitePhase
       if (pb.isPlaybackComplete) {
         return pb.result?.isBipartite ? 'done-bipartite' as BipartitePhase : 'done-not-bipartite' as BipartitePhase
       }
-      const currentStep = pb.result?.steps[pb.stepIndex]
       return currentStep?.fromNodeId === null ? 'step-root' as BipartitePhase : 'step-neighbor' as BipartitePhase
     })(),
     bipartiteVarsRows: (() => {
@@ -244,12 +255,27 @@ export function useBipartitePlayback({
       }
       const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
       const step = pb.result.steps[si]
+      const algoKey = currentStrategy === 'bfs' ? 'queue' : 'stack'
+      // Color map excludes the conflict step, which re-names an already-colored node.
+      const colorEntries = pb.result.steps
+        .slice(0, si + 1)
+        .filter(s => !s.conflict)
+        .map(s => `${s.nodeLabel}: ${s.color === 0 ? 'red' : 'blue'}`)
+
+      // Conflict step: show the clashing pair — u (being processed) and nb (its same-colored neighbor).
+      if (step.conflict) {
+        const uLabel = nodes.find(n => n.id === step.fromNodeId)?.label ?? '?'
+        return [
+          [`u = ${uLabel}`, `nb = ${step.nodeLabel}`],
+          [`${algoKey} = []`],
+          [`color = {${colorEntries.join(', ')}}`],
+        ]
+      }
+
       const isDone = pb.isPlaybackComplete
       const nodeVal = isDone ? '—' : step.nodeLabel
-      const algoKey = currentStrategy === 'bfs' ? 'queue' : 'stack'
       const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
       const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
-      const colorEntries = pb.result.steps.slice(0, si + 1).map(s => `${s.nodeLabel}: ${s.color === 0 ? 'red' : 'blue'}`)
       let vLabel = isDone ? '—' : step.nodeLabel
       if (!isDone) {
         for (let i = si; i >= 0; i--) {

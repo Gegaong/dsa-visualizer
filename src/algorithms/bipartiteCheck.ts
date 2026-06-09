@@ -37,7 +37,7 @@ type Coloring = {
 // BFS 2-coloring: assigns alternating colors level by level; emits a step when each node is colored.
 function colorBfs(
   lookups: GraphLookups,
-  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[]) => void,
+  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[], conflict?: boolean) => void,
 ): Coloring {
   const { neighborsById, sortedNodeIds } = lookups
   const colorMap: ColorMap = new Map()
@@ -65,7 +65,10 @@ function colorBfs(
           operationCount++  // frontier push
           emitStep(neighborId, neighborColor, id, [...queue])
         } else if (colorMap.get(neighborId) === nodeColor) {
+          // Same-colored neighbor → odd cycle. Record the clashing edge (u→nb) and stop (return false).
           isBipartite = false
+          emitStep(neighborId, nodeColor, id, [], true)
+          return { colorMap, isBipartite, operationCount }
         }
       }
     }
@@ -78,7 +81,7 @@ function colorBfs(
 // Neighbors pushed in reverse so the smallest-label neighbor is explored first (deterministic).
 function colorDfs(
   lookups: GraphLookups,
-  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[]) => void,
+  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[], conflict?: boolean) => void,
 ): Coloring {
   const { neighborsById, sortedNodeIds } = lookups
   const colorMap: ColorMap = new Map()
@@ -97,7 +100,12 @@ function colorDfs(
       operationCount++  // node pop (V term) — counts all pops including already-colored
 
       if (colorMap.has(id)) {
-        if (colorMap.get(id) !== targetColor) isBipartite = false
+        if (colorMap.get(id) !== targetColor) {
+          // Already colored the opposite of what this edge requires → odd cycle. Record and stop.
+          isBipartite = false
+          emitStep(id, colorMap.get(id)!, parentId, [], true)
+          return { colorMap, isBipartite, operationCount }
+        }
         continue
       }
 
@@ -144,10 +152,10 @@ export function runBipartiteCheck(
   const steps: BipartiteStep[] = []
   let order = 1
 
-  const emitStep = (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[]) => {
+  const emitStep = (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[], conflict = false) => {
     const node = lookups.nodeById.get(nodeId)
     if (!node) return
-    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId, color, frontierNodeIds })
+    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId, color, frontierNodeIds, conflict })
     order += 1
   }
 

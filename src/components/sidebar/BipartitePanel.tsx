@@ -10,14 +10,15 @@ import { PseudocodePanel } from './PseudocodePanel'
 
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
 
-// ─── Code pseudocode strings (18 lines each, 0–17) ──────────────────────────
+// ─── Code pseudocode strings (20 lines each, 0–19) ──────────────────────────
 
 const BFS_CODE = `function BipartiteCheck(graph):
     color ← {}
     for each node v in graph:
         if v ∉ color:
             color[v] ← red
-            BFS(v, color, graph)
+            if not BFS(v, color, graph):
+                return false
     return true
 
 function BFS(start, color, graph):
@@ -26,17 +27,19 @@ function BFS(start, color, graph):
         u ← queue.dequeue()
         for each nb of u in graph:
             if nb ∉ color:
-                color[nb] ← opposite(color[u])
+                color[nb] ← ¬color[u]
                 queue.enqueue(nb)
             elif color[nb] = color[u]:
-                return false`
+                return false
+    return true`
 
 const DFS_CODE = `function BipartiteCheck(graph):
     color ← {}
     for each node v in graph:
         if v ∉ color:
             color[v] ← red
-            DFS(v, color, graph)
+            if not DFS(v, color, graph):
+                return false
     return true
 
 function DFS(start, color, graph):
@@ -45,10 +48,11 @@ function DFS(start, color, graph):
         u ← stack.pop()
         for each nb of u in graph:
             if nb ∉ color:
-                color[nb] ← opposite(color[u])
+                color[nb] ← ¬color[u]
                 stack.push(nb)
             elif color[nb] = color[u]:
-                return false`
+                return false
+    return true`
 
 // ─── Logic pseudocode strings (12 lines each, 0–11) ─────────────────────────
 
@@ -80,13 +84,15 @@ All colored with no conflict → return true.`
 
 // ─── Highlight maps ──────────────────────────────────────────────────────────
 
-// Code: 18 lines (0–17). Same structure for BFS and DFS — only function name differs.
+// Code: 20 lines (0–19). Same structure for BFS and DFS — only function name differs.
+// done-not-bipartite lights the full propagation chain: inner conflict (17,18) → caller checks
+// the result (5) → outer return false (6).
 const CODE_HIGHLIGHTS: Record<BipartitePhase, number[]> = {
   ready:                [0, 1],
-  'step-root':          [2, 3, 4, 5, 9],
-  'step-neighbor':      [10, 11, 12, 13, 14, 15],
-  'done-bipartite':     [6],
-  'done-not-bipartite': [16, 17],
+  'step-root':          [2, 3, 4, 5, 10],
+  'step-neighbor':      [11, 12, 13, 14, 15, 16],
+  'done-bipartite':     [7, 19],
+  'done-not-bipartite': [5, 6, 17, 18],
 }
 
 // Logic: 12 lines (0–11). Shared between BFS and DFS.

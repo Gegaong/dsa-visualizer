@@ -78,6 +78,9 @@ export type ShortestPathResult = {
 export type BipartiteStep = BfsStep & {
   // 0 = group A (yellow), 1 = group B (blue)
   color: 0 | 1
+  // True only for the terminal step reporting a same-color clash (odd cycle); not a real coloring.
+  // nodeId = the already-colored neighbor (nb), fromNodeId = the node being processed (u).
+  conflict?: boolean
 }
 
 export type BipartiteResult = {
