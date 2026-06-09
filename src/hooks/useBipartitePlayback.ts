@@ -280,7 +280,7 @@ export function useBipartitePlayback({
     clearBipartiteAlgorithmStateOnly: pb.clearStateOnly,
     runBipartiteFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
-    handleBipartiteStartNodeLabelChange: setStartNodeLabel,
+    handleBipartiteStartNodeLabelChange: (value: string) => setStartNodeLabel(value.toUpperCase()),
     stepBipartiteForward: pb.stepForward,
     stepBipartiteBackward: pb.stepBackward,
     playBipartite: pb.play,

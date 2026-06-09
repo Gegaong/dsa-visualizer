@@ -413,9 +413,17 @@ export function useTraversalPlayback({
       const step = traversalResult.steps[si]
       const algoKey = algorithmTab === 'bfs' ? 'queue' : 'stack'
       const isDone = traversalPlayback.isPlaybackComplete
-      const nodeVal = isDone ? '—' : step.nodeLabel
-      const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
-      const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
+      // A found target lands on the final step in the 'step-matched' phase (highlighting "node ← dequeue" /
+      // "if node = goal → return node"), so keep showing the matched node and its frontier. Every other
+      // completion is terminal (queue exhausted / max-min finished) and blanks out to node = — , empty frontier.
+      const isMatchedDone =
+        isDone &&
+        (goalType === 'target-node' || goalType === 'target-value') &&
+        traversalResult.foundNodeId === step.nodeId
+      const showTerminal = isDone && !isMatchedDone
+      const nodeVal = showTerminal ? '—' : step.nodeLabel
+      const nodeById = showTerminal ? null : new Map(nodes.map(n => [n.id, n]))
+      const frontier = showTerminal ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
       const visitedLabels = traversalResult.steps.slice(0, si + 1).map(s => s.nodeLabel)
       const row2 = [`${algoKey} = [${frontier.join(', ')}]`]
       const row3 = [`visited = [${visitedLabels.join(', ')}]`]

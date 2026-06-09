@@ -297,24 +297,32 @@ export function useShortestPathPlayback({
       if (pb.stepIndex < 0) {
         if (currentStrategy === 'bfs') {
           const startLabel = pb.result.steps[0].nodeLabel
-          return [[`u = —`], [`queue = [${startLabel}]`], [`parent = {}`]]
+          return [[`u = —`], [`queue = [${startLabel}]`], [`parent = {${startLabel}: —}`]]
         }
         return [[`u = —`, `nb = —`], [`inPath = {}`], [`bestPath = null`]]
       }
       const si = Math.min(pb.stepIndex, pb.result.steps.length - 1)
       const step = pb.result.steps[si]
       const isDone = pb.isPlaybackComplete
-      const nodeVal = isDone ? '—' : step.nodeLabel
       if (currentStrategy === 'bfs') {
-        const nodeById = isDone ? null : new Map(nodes.map(n => [n.id, n]))
-        const frontier = isDone ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
-        const labelByNodeId = new Map(pb.result.steps.map(s => [s.nodeId, s.nodeLabel]))
-        const parentEntries = pb.result.steps.slice(0, si + 1).map(s => {
-          const parentLabel = s.fromNodeId ? (labelByNodeId.get(s.fromNodeId) ?? s.fromNodeId) : '—'
-          return `${s.nodeLabel}: ${parentLabel}`
-        })
+        // The goal is BFS's final step, so completion lands here in 'step-goal' (highlighting
+        // "u ← dequeue" / "if u = goal"). Keep showing u and the queue rather than blanking to —.
+        const isGoalDone = isDone && step.nodeId === pb.result.goalNodeId && pb.result.pathFound
+        const blank = isDone && !isGoalDone
+        const nodeById = blank ? null : new Map(nodes.map(n => [n.id, n]))
+        const frontier = blank ? [] : step.frontierNodeIds.map(id => nodeById?.get(id)?.label ?? id)
+        // parent fills on enqueue (`parent[nb] ← u`), so list every discovered node in enqueue
+        // order — start, then each node as a step enqueued it — including still-queued ones.
+        const labelByNodeId = new Map(nodes.map(n => [n.id, n.label]))
+        const labelOf = (id: string) => labelByNodeId.get(id) ?? id
+        const parentEntries = [`${pb.result.steps[0].nodeLabel}: —`]
+        for (const s of pb.result.steps.slice(0, si + 1)) {
+          for (const childId of s.enqueuedNodeIds ?? []) {
+            parentEntries.push(`${labelOf(childId)}: ${s.nodeLabel}`)
+          }
+        }
         return [
-          [`u = ${nodeVal}`],
+          [`u = ${blank ? '—' : step.nodeLabel}`],
           [`queue = [${frontier.join(', ')}]`],
           [`parent = {${parentEntries.join(', ')}}`],
         ]

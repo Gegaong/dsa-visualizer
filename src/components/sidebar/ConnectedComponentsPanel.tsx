@@ -90,11 +90,13 @@ const CODE_HIGHLIGHTS: Record<CCPhase, number[]> = {
 }
 
 // Logic: 12 lines (0–11). Shared between BFS and DFS (only text differs).
+// Line 9 ("component is complete") lives in `done`, not `step-inner`: mid-component the queue
+// is not empty yet, so it would otherwise light on every inner step and falsely imply completion.
 const LOGIC_HIGHLIGHTS: Record<CCPhase, number[]> = {
   ready:        [0, 1, 2],
   'step-root':  [0, 1, 2, 4, 5, 6, 7, 8],
-  'step-inner': [4, 6, 7, 8, 9],
-  done:         [11],
+  'step-inner': [4, 6, 7, 8],
+  done:         [9, 11],
 }
 
 function getHighlights(phase: CCPhase | null, isLogic: boolean): Set<number> {

@@ -60,6 +60,9 @@ export type CycleDetectionResult = {
 
 export type ShortestPathStep = BfsStep & {
   dfsBestPathLength?: number | null
+  // BFS only: node ids first discovered (parent set + enqueued) while processing this step.
+  // Lets the sidebar rebuild the parent map exactly as `parent[nb] ← u` fills it.
+  enqueuedNodeIds?: string[]
 }
 
 export type ShortestPathResult = {

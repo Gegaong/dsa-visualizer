@@ -294,7 +294,7 @@ export function useConnectedComponentsPlayback({
     clearConnectedComponentsAlgorithmStateOnly: pb.clearStateOnly,
     runConnectedComponentsFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
-    handleCCStartNodeLabelChange: setStartNodeLabel,
+    handleCCStartNodeLabelChange: (value: string) => setStartNodeLabel(value.toUpperCase()),
     stepConnectedComponentsForward: pb.stepForward,
     stepConnectedComponentsBackward: pb.stepBackward,
     playConnectedComponents: pb.play,

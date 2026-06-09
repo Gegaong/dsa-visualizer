@@ -50,9 +50,7 @@ type PathOutcome = {
 // Visits nodes level by level; stops as soon as the goal is dequeued.
 function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): PathOutcome {
   const { nodeById, outNeighborsById } = lookups
-  const labelOf = (id: string) => nodeById.get(id)?.label ?? '?'
   const parentById = new Map<string, string | null>([[startId, null]])
-  const distance = new Map<string, number>([[startId, 0]])
   const queue: string[] = [startId]
   const steps: ShortestPathStep[] = []
   let order = 1
@@ -65,7 +63,6 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
     const node = nodeById.get(id)
     if (!node) continue
     const parentId = parentById.get(id) ?? null
-    const myDist = distance.get(id) ?? 0
 
     if (id === goalId) {
       steps.push({
@@ -74,36 +71,28 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
         order,
         fromNodeId: parentId,
         frontierNodeIds: [...queue],
-        explanation: `BFS processes nodes in non-decreasing distance order. This is the first time the goal was dequeued — by BFS invariant, distance ${myDist} is the minimum possible. Any path arriving later must be at least this long.`,
       })
       return { steps, pathNodeIds: reconstructPath(parentById, startId, goalId), operationCount }
     }
 
-    const newlyQueued: string[] = []
     const outNeighbors = outNeighborsById.get(id) ?? []
+    const enqueuedNodeIds: string[] = []
     for (const neighborId of outNeighbors) {
       operationCount++  // edge examination (E term)
       if (!parentById.has(neighborId)) {
         parentById.set(neighborId, id)
-        distance.set(neighborId, myDist + 1)
         queue.push(neighborId)
         operationCount++  // frontier push
-        newlyQueued.push(labelOf(neighborId))
+        enqueuedNodeIds.push(neighborId)
       }
     }
-    const enqueueNote = newlyQueued.length === 0
-      ? `No new neighbors — this branch is exhausted.`
-      : `First-seen neighbors ${newlyQueued.join(', ')} queued at distance ${myDist + 1} — they will be processed only after all distance-${myDist} nodes are done.`
-    const explanation = parentId === null
-      ? `Distance 0 by definition. BFS expands level by level — all distance-1 neighbors before distance-2, etc. This ordering guarantees the first dequeue of any node gives its shortest path. ${enqueueNote}`
-      : `Queue dequeued ${node.label}. BFS guarantees this is the shortest-edge path to this node — all shorter distances are already settled. ${enqueueNote}`
     steps.push({
       nodeId: id,
       nodeLabel: node.label,
       order,
       fromNodeId: parentId,
       frontierNodeIds: [...queue],
-      explanation,
+      enqueuedNodeIds,
     })
     order += 1
   }
@@ -116,7 +105,6 @@ function findPathBfs(lookups: GraphLookups, startId: string, goalId: string): Pa
 // path (inPath guards against cycles). Prunes branches that can no longer beat the current best.
 function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): PathOutcome {
   const { nodeById, outNeighborsById } = lookups
-  const labelOf = (id: string) => nodeById.get(id)?.label ?? '?'
   const steps: ShortestPathStep[] = []
   let order = 1
   let bestPath: string[] = []
@@ -126,48 +114,21 @@ function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): Pa
     operationCount++  // node entry (V term)
     const node = nodeById.get(currentId)
     if (!node) return
-    const lengthHere = currentPath.length - 1
     if (currentId === goalId) {
-      const prevBestLen = bestPath.length > 0 ? bestPath.length - 1 : null
       const improved = bestPath.length === 0 || currentPath.length < bestPath.length
       if (improved) bestPath = [...currentPath]
-      const bestLenAfter = bestPath.length - 1
-      const pathComparison = prevBestLen === null
-        ? `First path found: ${lengthHere} edges.`
-        : improved
-          ? `New shortest: ${lengthHere} edges < ${prevBestLen} edges.`
-          : lengthHere === prevBestLen
-            ? `Ties current best: ${lengthHere} edges = ${prevBestLen} edges.`
-            : `Longer than best: ${lengthHere} edges > ${prevBestLen} edges.`
       steps.push({
         nodeId: currentId,
         nodeLabel: node.label,
         order,
         fromNodeId: fromId,
-        dfsBestPathLength: bestLenAfter,
+        dfsBestPathLength: bestPath.length - 1,
         frontierNodeIds: [],
-        explanation: `${pathComparison} DFS continues exploring all remaining branches to ensure this is truly the shortest.`,
       })
       order += 1
       return
     }
     const dfsBest = bestPath.length > 0 ? bestPath.length - 1 : null
-    const willPrune = bestPath.length > 0 && currentPath.length + 1 >= bestPath.length
-    const candidates = (outNeighborsById.get(currentId) ?? [])
-      .filter((nid) => !inPath.has(nid))
-      .map(labelOf)
-    let explanation: string
-    if (fromId === null) {
-      const candidatesNote = candidates.length === 0 ? 'No neighbors to explore.' : `Exploring ${candidates.join(', ')} depth-first.`
-      explanation = `DFS explores every acyclic path — it may hit the goal quickly but must exhaust all branches to guarantee shortest. Pruning kicks in once a best length is known. ${candidatesNote}`
-    } else if (willPrune) {
-      explanation = `Pruning: even one more step from here (current depth ${lengthHere}) would tie or exceed the best known path (${dfsBest} edges). No need to descend further.`
-    } else {
-      const candidatesNote = candidates.length === 0
-        ? 'No unvisited neighbors — exploring other branches from the stack.'
-        : `Trying ${candidates.join(', ')} next.`
-      explanation = `${dfsBest !== null ? `Current best: ${dfsBest} edges — any path ≥ this will be pruned.` : `No best path yet — all branches are explored.`} ${candidatesNote}`
-    }
     steps.push({
       nodeId: currentId,
       nodeLabel: node.label,
@@ -175,7 +136,6 @@ function findPathDfs(lookups: GraphLookups, startId: string, goalId: string): Pa
       fromNodeId: fromId,
       dfsBestPathLength: dfsBest,
       frontierNodeIds: [],
-      explanation,
     })
     order += 1
     // Even reaching goal in one more step can't improve best — prune.
@@ -224,7 +184,6 @@ export function runShortestPath(
       order: 1,
       fromNodeId: null,
       frontierNodeIds: [],
-      explanation: `Start and goal are the same node — path length is 0 by definition, no traversal needed.`,
     }
     return {
       steps: [trivialStep],

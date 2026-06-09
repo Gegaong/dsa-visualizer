@@ -37,7 +37,7 @@ type Coloring = {
 // BFS 2-coloring: assigns alternating colors level by level; emits a step when each node is colored.
 function colorBfs(
   lookups: GraphLookups,
-  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string, frontierNodeIds: string[]) => void,
+  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[]) => void,
 ): Coloring {
   const { neighborsById, sortedNodeIds } = lookups
   const colorMap: ColorMap = new Map()
@@ -49,7 +49,7 @@ function colorBfs(
     colorMap.set(rootId, 0)
     const queue: string[] = [rootId]
     operationCount++  // initial push of root into the queue
-    emitStep(rootId, 0, null, `New component — group A assigned arbitrarily. All neighbors will get group B, their neighbors group A, and so on. A conflict (neighbor forced to the same group) would prove a cycle of odd length exists.`, [])
+    emitStep(rootId, 0, null, [...queue])
 
     while (queue.length > 0) {
       const id = queue.shift()!
@@ -63,13 +63,7 @@ function colorBfs(
           colorMap.set(neighborId, neighborColor)
           queue.push(neighborId)
           operationCount++  // frontier push
-          emitStep(
-            neighborId,
-            neighborColor,
-            id,
-            `Must be opposite group to its neighbor — same group neighbors would mean an odd-length cycle exists, which proves non-bipartite. If already colored the same as its neighbor, the check fails.`,
-            [...queue],
-          )
+          emitStep(neighborId, neighborColor, id, [...queue])
         } else if (colorMap.get(neighborId) === nodeColor) {
           isBipartite = false
         }
@@ -84,7 +78,7 @@ function colorBfs(
 // Neighbors pushed in reverse so the smallest-label neighbor is explored first (deterministic).
 function colorDfs(
   lookups: GraphLookups,
-  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string, frontierNodeIds: string[]) => void,
+  emitStep: (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[]) => void,
 ): Coloring {
   const { neighborsById, sortedNodeIds } = lookups
   const colorMap: ColorMap = new Map()
@@ -108,10 +102,6 @@ function colorDfs(
       }
 
       colorMap.set(id, targetColor)
-      const explanation = parentId === null
-        ? `New component — group A assigned arbitrarily. All neighbors will get group B, their neighbors group A, and so on. A conflict (neighbor forced to the same group) would prove a cycle of odd length exists.`
-        : `Must be opposite group to its neighbor — same group neighbors would mean an odd-length cycle exists, which proves non-bipartite. If already colored the same as its neighbor, the check fails.`
-
       const oppositeColor = (1 - targetColor) as 0 | 1
       const neighbors = neighborsById.get(id) ?? []
       for (let i = neighbors.length - 1; i >= 0; i -= 1) {
@@ -120,8 +110,17 @@ function colorDfs(
         operationCount++  // frontier push
       }
 
-      const frontierNodeIds = [...new Set(stack.filter(f => !colorMap.has(f.id)).map(f => f.id))]
-      emitStep(id, targetColor, parentId, explanation, frontierNodeIds)
+      // Frontier top-first (next to pop first), deduped by topmost occurrence — matches the
+      // queue/stack ordering the other traversals display.
+      const seen = new Set<string>()
+      const frontierNodeIds: string[] = []
+      for (let i = stack.length - 1; i >= 0; i -= 1) {
+        const fid = stack[i].id
+        if (colorMap.has(fid) || seen.has(fid)) continue
+        seen.add(fid)
+        frontierNodeIds.push(fid)
+      }
+      emitStep(id, targetColor, parentId, frontierNodeIds)
     }
   }
 
@@ -145,10 +144,10 @@ export function runBipartiteCheck(
   const steps: BipartiteStep[] = []
   let order = 1
 
-  const emitStep = (nodeId: string, color: 0 | 1, fromNodeId: string | null, explanation: string, frontierNodeIds: string[]) => {
+  const emitStep = (nodeId: string, color: 0 | 1, fromNodeId: string | null, frontierNodeIds: string[]) => {
     const node = lookups.nodeById.get(nodeId)
     if (!node) return
-    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId, color, frontierNodeIds, explanation })
+    steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId, color, frontierNodeIds })
     order += 1
   }
 
