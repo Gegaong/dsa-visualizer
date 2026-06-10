@@ -221,10 +221,10 @@ export function useAlgorithmPlayback<TResult extends { steps: BfsStep[] }>({
     onClearCompletionRef.current?.()
   }, [result, playback])
 
-  // Starts or resumes auto-play; restarts from the beginning if already at the last step.
+  // Starts or resumes auto-play; restarts from the beginning only from the terminal complete state.
   const play = useCallback(() => {
     if (!result) return
-    const replayFromEnd = playback.stepIndex >= result.steps.length - 1
+    const replayFromEnd = playback.isPlaybackComplete
     playback.togglePlay()
     if (replayFromEnd) {
       setIsRunning(true)

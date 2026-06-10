@@ -59,7 +59,18 @@ export function useHoldRepeat(callback: () => void, disabled: boolean) {
     timeoutsRef.current.push(t0)
   }, [disabled])
 
-  useEffect(() => stop, [stop])
+  // Release must always stop the repeat. The button's own onMouseUp/onMouseLeave can be
+  // swallowed when it becomes disabled mid-hold (browsers drop mouse events on disabled
+  // elements), which would leave the interval running forever — so listen on window too.
+  useEffect(() => {
+    window.addEventListener('mouseup', stop)
+    window.addEventListener('blur', stop)
+    return () => {
+      window.removeEventListener('mouseup', stop)
+      window.removeEventListener('blur', stop)
+      stop()
+    }
+  }, [stop])
 
   return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop }
 }

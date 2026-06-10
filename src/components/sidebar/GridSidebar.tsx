@@ -401,6 +401,11 @@ function formatStepDisplay(stepIndex: number, stepCount: number): string {
   return `Ready / ${stepCount}`
 }
 
+// Final hint once the scan is fully stepped through (the terminal complete state).
+function buildGridCompletionStatus(islandCount: number): string {
+  return `Search complete. ${islandCount} island${islandCount === 1 ? '' : 's'} found.`
+}
+
 export const GridSidebar = ({
   mode,
   onModeChange,
@@ -567,7 +572,11 @@ export const GridSidebar = ({
             onSpeedChange={onSpeedChange}
           />
           {isRunning && (
-            <p className="hint">Step {formatStepDisplay(stepIndex, stepCount)}</p>
+            <p className="hint">
+              {isPlaybackComplete
+                ? buildGridCompletionStatus(gridOutput?.islandCount ?? 0)
+                : `Step ${formatStepDisplay(stepIndex, stepCount)}`}
+            </p>
           )}
         </div>
 

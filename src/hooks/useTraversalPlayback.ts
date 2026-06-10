@@ -308,7 +308,7 @@ export function useTraversalPlayback({
 
   const playTraversal = () => {
     if (!traversalResult) return
-    const replayFromEnd = traversalPlayback.stepIndex >= traversalResult.steps.length - 1
+    const replayFromEnd = traversalPlayback.isPlaybackComplete
     traversalPlayback.togglePlay()
     if (replayFromEnd) {
       setTraversalGoalNodeIds(initialGoalNodeIdsRef.current)

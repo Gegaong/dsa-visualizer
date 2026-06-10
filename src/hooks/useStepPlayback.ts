@@ -35,6 +35,10 @@ export function useStepPlayback({
 }: UseStepPlaybackOptions) {
   const [stepIndex, setStepIndex] = useState(-1)
   const [isPlaying, setIsPlaying] = useState(false)
+  // Terminal "complete" state, reached one step past the last content step. This — not
+  // "stepIndex is at the last step" — is the single source of truth for playback completion,
+  // so stepping to the final step shows that step, and one more Next lands on the conclusion.
+  const [isComplete, setIsComplete] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(initialSpeed)
   const timerRef = useRef<number | null>(null)
 
@@ -62,6 +66,7 @@ export function useStepPlayback({
   const reset = useCallback(() => {
     clearTimerOnly()
     setIsPlaying(false)
+    setIsComplete(false)
     setStepIndex(-1)
     onStepIndexChangeRef.current(-1)
   }, [clearTimerOnly])
@@ -71,6 +76,7 @@ export function useStepPlayback({
       queueMicrotask(() => {
         clearTimerOnly()
         setIsPlaying(false)
+        setIsComplete(false)
         setStepIndex(-1)
       })
       return
@@ -78,6 +84,7 @@ export function useStepPlayback({
     queueMicrotask(() => {
       clearTimerOnly()
       setIsPlaying(false)
+      setIsComplete(false)
       setStepIndex(-1)
       onStepIndexChangeRef.current(-1)
     })
@@ -106,6 +113,7 @@ export function useStepPlayback({
           if (next >= total) {
             clearTimerOnly()
             setIsPlaying(false)
+            setIsComplete(true)
             onCompleteRef.current()
             return total - 1
           }
@@ -118,25 +126,34 @@ export function useStepPlayback({
   )
 
   const stepForward = useCallback(() => {
-    if (stepCount <= 0 || isPlaying) return
-    setStepIndex((prev) => {
-      const total = stepCountRef.current
-      const next = prev + 1
-      if (next >= total) {
-        onCompleteRef.current()
-        return total - 1
-      }
-      onStepIndexChangeRef.current(next)
-      return next
-    })
-  }, [isPlaying, stepCount])
+    if (stepCount <= 0 || isPlaying || isComplete) return
+    const total = stepCountRef.current
+    const next = stepIndex + 1
+    // Stepping past the last content step lands on the terminal complete state: the index
+    // stays put, isComplete flips on, and onComplete fires the finalize (same as the timer).
+    if (next >= total) {
+      setIsComplete(true)
+      onCompleteRef.current()
+      return
+    }
+    onStepIndexChangeRef.current(next)
+    setStepIndex(next)
+  }, [isComplete, isPlaying, stepCount, stepIndex])
 
   const stepBackward = useCallback(() => {
-    if (stepCount <= 0 || isPlaying || stepIndex < 0) return
+    if (stepCount <= 0 || isPlaying) return
+    // From the terminal complete state, the first step back just clears completion and
+    // re-applies the last content step (the index is already there).
+    if (isComplete) {
+      setIsComplete(false)
+      onStepIndexChangeRef.current(stepIndex)
+      return
+    }
+    if (stepIndex < 0) return
     const prev = stepIndex - 1
     onStepIndexChangeRef.current(prev)
     setStepIndex(prev)
-  }, [isPlaying, stepCount, stepIndex])
+  }, [isComplete, isPlaying, stepCount, stepIndex])
 
   const togglePlay = useCallback(() => {
     if (stepCount <= 0) return
@@ -144,13 +161,16 @@ export function useStepPlayback({
       stopPlayback()
       return
     }
-    if (stepIndex >= stepCount - 1) {
+    // Replay restarts only from the terminal complete state; from the last content step,
+    // Play resumes forward and the next tick lands on completion.
+    if (isComplete) {
+      setIsComplete(false)
       onStepIndexChangeRef.current(-1)
       setStepIndex(-1)
     }
     setIsPlaying(true)
     startTimer()
-  }, [isPlaying, startTimer, stepCount, stepIndex, stopPlayback])
+  }, [isComplete, isPlaying, startTimer, stepCount, stopPlayback])
 
   const setPlaybackSpeedClamped = useCallback(
     (value: number) => {
@@ -163,10 +183,10 @@ export function useStepPlayback({
     [clearTimerOnly, isPlaying, startTimer, stepCount],
   )
 
-  const canStepBackward = stepCount > 0 && stepIndex >= 0 && !isPlaying
-  const canStepForward = stepCount > 0 && stepIndex < stepCount - 1 && !isPlaying
+  const canStepBackward = stepCount > 0 && !isPlaying && (isComplete || stepIndex >= 0)
+  const canStepForward = stepCount > 0 && !isPlaying && !isComplete
   const canTogglePlay = stepCount > 0
-  const isPlaybackComplete = stepCount > 0 && stepIndex >= stepCount - 1 && !isPlaying
+  const isPlaybackComplete = stepCount > 0 && !isPlaying && isComplete
 
   return {
     stepIndex,

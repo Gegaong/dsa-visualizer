@@ -132,6 +132,12 @@ function formatStepDisplay(stepIndex: number, stepCount: number): string {
   return `Ready / ${stepCount}`
 }
 
+// Final hint once the search is fully stepped through (the terminal complete state).
+function buildNQueensCompletionStatus(n: number, solutionsFound: number): string {
+  if (solutionsFound === 0) return `Search complete. No solutions exist for ${n} queens.`
+  return `Search complete. ${solutionsFound} solution${solutionsFound === 1 ? '' : 's'} found.`
+}
+
 // Sidebar for the N-Queens solver — playback controls, pseudocode panel with live variable state, and solution output.
 export const NQueensSidebar = ({
   n,
@@ -192,7 +198,11 @@ export const NQueensSidebar = ({
           onSpeedChange={onSpeedChange}
         />
         {isRunning && (
-          <p className="hint">Step {formatStepDisplay(stepIndex, stepCount)}</p>
+          <p className="hint">
+            {isPlaybackComplete
+              ? buildNQueensCompletionStatus(n, solutionsFound)
+              : `Step ${formatStepDisplay(stepIndex, stepCount)}`}
+          </p>
         )}
       </div>
 

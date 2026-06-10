@@ -494,7 +494,7 @@ export function useWeightedPathfindingPlayback({
 
   const playWP = useCallback(() => {
     if (!result) return
-    const replayFromEnd = playback.stepIndex >= result.steps.length - 1
+    const replayFromEnd = playback.isPlaybackComplete
     playback.togglePlay()
     if (replayFromEnd) {
       setIsRunning(true)
