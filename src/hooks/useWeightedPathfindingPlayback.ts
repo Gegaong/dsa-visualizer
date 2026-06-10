@@ -152,7 +152,7 @@ export function useWeightedPathfindingPlayback({
       const label = algorithmLabel(algorithmRef.current)
 
       if (r.kind === 'bfsdfs') {
-        const activeSteps = r.detailedSteps
+        const activeSteps = r.steps
 
         if (index < 0) {
           setWpSettledNodeIds([])
@@ -358,10 +358,7 @@ export function useWeightedPathfindingPlayback({
 
   const finalizeRef = useRef<(r: AnyResult) => void>(() => {})
 
-  const activeStepCount = result === null ? 0
-    : result.kind === 'priority'
-      ? result.steps.length
-      : result.detailedSteps.length
+  const activeStepCount = result === null ? 0 : result.steps.length
 
   const playback = useStepPlayback({
     stepCount: activeStepCount,
@@ -497,10 +494,7 @@ export function useWeightedPathfindingPlayback({
 
   const playWP = useCallback(() => {
     if (!result) return
-    const activeLen = result.kind === 'priority'
-      ? result.steps.length
-      : result.detailedSteps.length
-    const replayFromEnd = playback.stepIndex >= activeLen - 1
+    const replayFromEnd = playback.stepIndex >= result.steps.length - 1
     playback.togglePlay()
     if (replayFromEnd) {
       setIsRunning(true)
@@ -587,7 +581,7 @@ export function useWeightedPathfindingPlayback({
       if (playback.stepIndex < 0) return 'ready' as WPPhase
       if (playback.isPlaybackComplete) return (result.pathFound ? 'done-found' : 'done-empty') as WPPhase
       if (result.kind === 'bfsdfs') {
-        const activeSteps = result.detailedSteps
+        const activeSteps = result.steps
         const si = Math.min(playback.stepIndex, activeSteps.length - 1)
         const step = activeSteps[si]
         if (step.eventType === 'settle') return 'step-settle' as WPPhase
@@ -617,7 +611,7 @@ export function useWeightedPathfindingPlayback({
       }
 
       if (result.kind === 'bfsdfs') {
-        const activeSteps = result.detailedSteps
+        const activeSteps = result.steps
         const si = Math.min(playback.stepIndex, activeSteps.length - 1)
         const step = activeSteps[si]
         const settledSet = new Set<string>()

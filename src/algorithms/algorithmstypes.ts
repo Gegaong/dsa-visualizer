@@ -95,24 +95,16 @@ export type WeightedPathStep = {
   order: number
   fromNodeId: string | null
   costToNode: number
-  // Min cost among all frontier paths after this step's expansion finished.
-  // applyStep uses this to confirm (green) nodes without emitting separate settle steps.
-  minPendingCostAfter: number
   // 'discover' = node added to frontier (yellow). 'settle' = node confirmed optimal (green).
-  // Settle steps only appear in detailedSteps; steps contains discovers only.
   eventType: 'discover' | 'settle'
-  // Human-readable explanation of why this node turned green. Only on settle steps.
+  // Human-readable reason shown in the sidebar when this node turned green. Only on settle steps.
   settleReason?: string
-  // Internal narration shown in the sidebar during playback (what just happened inside the algorithm).
-  explanation?: string
 }
 
 export type WeightedPathResult = {
   kind: 'bfsdfs'
-  // Discover-only step sequence — settlement is inferred from minPendingCostAfter.
+  // Discover + settle steps interleaved in playback order.
   steps: WeightedPathStep[]
-  // Discover + explicit settle steps interleaved — used when detail mode is on.
-  detailedSteps: WeightedPathStep[]
   pathNodeIds: string[]
   startNodeId: string
   goalNodeId: string
@@ -138,8 +130,6 @@ export type PriorityPathStep = {
   eventType: 'discover' | 'settle' | 'assumed'
   queueSizeAfter: number
   settleReason?: string
-  // Internal narration shown in the sidebar during playback (what just happened inside the algorithm).
-  explanation?: string
 }
 
 export type PriorityPathResult = {

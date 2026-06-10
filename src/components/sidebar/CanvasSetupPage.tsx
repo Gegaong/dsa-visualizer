@@ -38,6 +38,7 @@ export const CanvasSetupPage = ({
               onChange={onHeuristicPixelsPerUnitChange}
               onBlur={onHeuristicPixelsPerUnitBlur}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur() } }}
+              disabled={blockGraphEdits}
             />
             <span className="field-unit-suffix">px</span>
           </div>

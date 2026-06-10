@@ -151,7 +151,9 @@ function App() {
 
   // Only WP algorithms and canvas display need distance-computed weights.
   // Non-WP hooks receive undirectedEdges so they don't re-run effects on every drag frame.
-  const effectiveEdges = distanceMode && isWeightedMode
+  // Requires pixelsPerUnit > 0: with no scale set there is no meaningful distance→weight
+  // conversion (it would divide by zero), so distance mode stays inert until a scale is entered.
+  const effectiveEdges = distanceMode && isWeightedMode && pixelsPerUnit > 0
     ? (() => {
         const nodeById = new Map(nodes.map((n) => [n.id, n]))
         return undirectedEdges.map((edge) => {
@@ -402,7 +404,7 @@ function App() {
     setDraftEdgeWeight(sanitizeDecimalInput(value))
   }
 
-  // Commits the typed weight to the edge; falls back to 0 if empty.
+  // Commits the typed weight to the edge; empty or invalid input leaves the weight unchanged.
   const handleCommitEdgeWeight = (edgeId: string, rawValue: string) => {
     const parsed = parseEdgeWeightInput(rawValue)
     if (parsed !== null) {

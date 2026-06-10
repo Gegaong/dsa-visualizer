@@ -163,12 +163,12 @@ pq empty → no path from start to goal.`
 // ─── Greedy pseudocode ────────────────────────────────────────────────────────
 
 const GREEDY_CODE = `Greedy(graph, start, goal):
-    pq ← [(h(start), start)]; prev ← {}; visited ← {}
+    pq ← [(h(start), start)]; prev ← {start: null}; visited ← {}
     while pq ≠ empty:
         (_, u) ← pq.popMin(); if u ∈ visited: continue
         visited ← visited ∪ {u}; if u = goal: return reconstruct(prev, start, goal)
         for each neighbor nb of u in graph:
-            if nb ∉ visited:
+            if nb ∉ prev:
                 prev[nb] ← u; pq.push((h(nb), nb))
     return no path`
 
@@ -182,9 +182,9 @@ Each step:
     we reached it via a different path.
   · Mark u visited (turn green).
     If u = goal, return the path via prev.
-  · For each unvisited neighbor nb: record
-    prev[nb] ← u and push (h(nb), nb) onto
-    the pq — nb turns yellow.
+  · For each neighbor nb not seen yet:
+    record prev[nb] ← u and push (h(nb),
+    nb) onto the pq — nb turns yellow.
   · No cost tracking — only h drives order.
     Greedy can be fast but gives no
     guarantee of optimality; the found
@@ -209,8 +209,8 @@ const WP_CODE_HIGHLIGHTS: Record<WPPhase, number[]> = {
 
 // BFS/DFS logic: 20 lines (0–19)
 const WP_LOGIC_HIGHLIGHTS: Record<WPPhase, number[]> = {
-  'ready':         [0, 1, 2],
-  'step-start':    [0, 1, 2],
+  'ready':         [0, 1],
+  'step-start':    [0, 1],
   'step-discover': [3, 4, 5, 6, 7, 11, 12, 13, 14],
   'step-settle':   [3, 15, 16, 17],
   'done-found':    [18, 19],
@@ -243,7 +243,8 @@ const PRIORITY_LOGIC_HIGHLIGHTS: Record<WPPhase, number[]> = {
   'step-start':    [0, 1, 2],
   'step-settle':   [8, 9],
   'step-discover': [10, 11, 12],
-  'done-found':    [17, 18],
+  // Goal reached → the "settle u / if u = goal, return path" lines (parallels code line 4).
+  'done-found':    [8, 9],
   'done-empty':    [17, 18],
 }
 

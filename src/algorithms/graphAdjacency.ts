@@ -1,5 +1,7 @@
 import type { GraphEdge, GraphNode } from '../types'
 
+import { sortIdsByLabel } from './sortIdsByLabel'
+
 // Empty adjacency list slot per node before edges are applied.
 function emptyNeighborLists(nodes: GraphNode[]): Map<string, string[]> {
   const neighborsById = new Map<string, string[]>()
@@ -45,4 +47,33 @@ export function buildWeaklyConnectedNeighborsMap(
   })
 
   return neighborsById
+}
+
+export type WeightedLookups = {
+  nodeById: Map<string, GraphNode>
+  // Directed out-neighbors per node, each list sorted by visible label (deterministic playback).
+  outNeighborsById: Map<string, string[]>
+  // Keyed `from:to` (honoring edge direction); value carries the traversal weight + edge id.
+  directedEdgeMap: Map<string, { weight: number; id: string }>
+}
+
+// Node / sorted-neighbor / directed-edge lookups shared by every weighted pathfinding algorithm.
+export function buildWeightedLookups(nodes: GraphNode[], edges: GraphEdge[]): WeightedLookups {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]))
+  const rawNeighbors = buildNeighborsMap(nodes, edges)
+  const outNeighborsById = new Map<string, string[]>()
+  rawNeighbors.forEach((ids, id) => outNeighborsById.set(id, sortIdsByLabel(ids, nodeById)))
+
+  const directedEdgeMap = new Map<string, { weight: number; id: string }>()
+  for (const edge of edges) {
+    const info = { weight: edge.weight ?? 1, id: edge.id }
+    if (edge.direction === 'forward' || edge.direction === 'both') {
+      directedEdgeMap.set(`${edge.fromNodeId}:${edge.toNodeId}`, info)
+    }
+    if (edge.direction === 'backward' || edge.direction === 'both') {
+      directedEdgeMap.set(`${edge.toNodeId}:${edge.fromNodeId}`, info)
+    }
+  }
+
+  return { nodeById, outNeighborsById, directedEdgeMap }
 }
