@@ -19,8 +19,6 @@ const PALETTE: IslandHSL[] = [
   { h: 158, s: 52, l: 50 },  // teal
 ]
 
-
-
 // Returns hue arcs safe to use — the interval complement of FORBIDDEN bands on [0, 360).
 function buildSafeArcs(): Array<[number, number]> {
   const bands = FORBIDDEN.flatMap(({ center, radius }) => {

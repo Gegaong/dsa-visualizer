@@ -2,32 +2,6 @@ import type { GridStep, GridResult, InnerAlgo } from './gridTypes'
 import { runInnerBFS, runInnerDFS } from './gridInnerSearch'
 import { getInBoundsNeighbors, computeDiscoverySteps } from './gridShared'
 
-// After inner search claims an island, add all grid-level neighbors of every island cell
-// to the outer collection so the outer traversal can continue beyond the island boundary.
-// Returns ops: 1 per neighbor examined + 1 per cell actually added to the frontier.
-function addIslandBoundary(
-  cells: string[],
-  globalVisited: Set<string>,
-  seen: Set<string>,
-  out: string[],
-  rows: number,
-  cols: number,
-  connectivity: 4 | 8,
-): number {
-  let ops = 0
-  for (const cell of cells) {
-    for (const nb of getInBoundsNeighbors(cell, rows, cols, connectivity)) {
-      ops++  // neighbor check
-      if (!globalVisited.has(nb) && !seen.has(nb)) {
-        out.push(nb)
-        seen.add(nb)
-        ops++  // frontier push
-      }
-    }
-  }
-  return ops
-}
-
 // Outer BFS island locator: explores all grid cells breadth-first from one or more start cells.
 // Supports multi-source BFS — all startKeys are seeded into the initial queue simultaneously.
 // When the first unvisited island cell is dequeued, the inner algorithm flood-fills the whole
@@ -57,8 +31,8 @@ export function runOuterBFS(
     opsTotal++  // cell dequeue (V term) — counts all dequeues including already-visited
 
     if (globalVisited.has(key)) {
-      // Island cell flood-filled by a prior inner search — all its neighbors were already
-      // added via addIslandBoundary when the island was discovered, so no propagation needed.
+      // Island cell flood-filled by a prior inner search — its water borders were already
+      // enqueued while that island was filled, so no propagation needed.
       steps.push({ phase: 'outer', subPhase: 'bfs-outer-skip', currentCell: key, newVisited: [], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1 })
       continue
     }
@@ -68,24 +42,30 @@ export function runOuterBFS(
     if (!islands.has(key)) {
       const nbs = getInBoundsNeighbors(key, rows, cols, connectivity)
       opsTotal += nbs.length  // edge examinations (E term)
-      const newNeighbors: string[] = []
       for (const nb of nbs) {
         if (!globalVisited.has(nb) && !enqueued.has(nb)) {
           queue.push(nb)
           enqueued.add(nb)
-          newNeighbors.push(nb)
           opsTotal++  // frontier push
         }
       }
       steps.push({ phase: 'outer', subPhase: 'bfs-outer-water', currentCell: key, newVisited: [key], frontierCells: queue.filter(k => !globalVisited.has(k)), islandIndex: -1 })
     } else {
       islandIndex++
-      const { steps: inner, cells, operationCount: innerOps } = runInner(key, islandIndex, islands, globalVisited, rows, cols, connectivity)
+      const { steps: inner, cells, waterBorders, operationCount: innerOps } = runInner(key, islandIndex, islands, globalVisited, rows, cols, connectivity)
       opsTotal += innerOps
       for (const s of inner) steps.push(s)
       islandGroups.push(cells)
       discoveryOps = opsTotal
-      opsTotal += addIslandBoundary(cells, globalVisited, enqueued, queue, rows, cols, connectivity)
+      // Extend the outer frontier with the island's water borders, already read (and counted)
+      // during the fill — so each edge is examined once, not re-scanned here.
+      for (const nb of waterBorders) {
+        if (!globalVisited.has(nb) && !enqueued.has(nb)) {
+          queue.push(nb)
+          enqueued.add(nb)
+          opsTotal++  // frontier push
+        }
+      }
     }
   }
 
@@ -143,20 +123,18 @@ export function runOuterDFS(
       steps.push({ phase: 'outer', subPhase: 'dfs-outer-water', currentCell: key, newVisited: [key], frontierCells: frontier(), islandIndex: -1 })
     } else {
       islandIndex++
-      const { steps: inner, cells, operationCount: innerOps } = runInner(key, islandIndex, islands, globalVisited, rows, cols, connectivity)
+      const { steps: inner, cells, waterBorders, operationCount: innerOps } = runInner(key, islandIndex, islands, globalVisited, rows, cols, connectivity)
       opsTotal += innerOps
       for (const s of inner) steps.push(s)
       islandGroups.push(cells)
       discoveryOps = opsTotal
-      // Collect boundary cells in natural order, push in reverse so first-found is on top.
+      // Extend the outer frontier with the island's water borders, already read (and counted)
+      // during the fill. Dedup in natural order, then push in reverse so first-found is on top.
       const boundary: string[] = []
-      for (const cell of cells) {
-        for (const nb of getInBoundsNeighbors(cell, rows, cols, connectivity)) {
-          opsTotal++  // neighbor check
-          if (!globalVisited.has(nb) && !pushed.has(nb)) {
-            boundary.push(nb)
-            pushed.add(nb)
-          }
+      for (const nb of waterBorders) {
+        if (!globalVisited.has(nb) && !pushed.has(nb)) {
+          boundary.push(nb)
+          pushed.add(nb)
         }
       }
       for (let i = boundary.length - 1; i >= 0; i--) {

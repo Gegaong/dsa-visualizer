@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ConfirmModal } from './Modals'
 import type { IslandHSL } from '../utils/gridIslandColors'
+import { GRID_ROWS_MIN, GRID_ZOOM_STEP } from '../utils/constants'
 
 type GridCanvasProps = {
   rows: number
@@ -87,6 +88,22 @@ export const GridCanvas = ({
     if (cols > 0) onColsChangeRef.current(cols)
   }, [cols])
 
+  // A zoom-in step lowers rows (and, via the container's aspect ratio, cols). Block it when that
+  // would shrink the grid past a placed cell — island or start marker — and orphan it. Predicted
+  // from the real container size, so the bound is exact rather than an aspect approximation.
+  const nextRows = Math.max(GRID_ROWS_MIN, rows - GRID_ZOOM_STEP)
+  const nextCols = containerSize.height > 0
+    ? Math.max(1, Math.round(containerSize.width / containerSize.height * nextRows))
+    : nextRows
+  let maxPlacedRow = -1
+  let maxPlacedCol = -1
+  for (const key of [...islands, ...startMarkers]) {
+    const [r, c] = key.split(',').map(Number)
+    if (r > maxPlacedRow) maxPlacedRow = r
+    if (c > maxPlacedCol) maxPlacedCol = c
+  }
+  const zoomInClipsCells = maxPlacedRow >= nextRows || maxPlacedCol >= nextCols
+
   const getCellKey = (e: React.MouseEvent<HTMLDivElement>): string | null => {
     const el = containerRef.current
     if (!el || cellW === 0 || cellH === 0) return null
@@ -123,7 +140,7 @@ export const GridCanvas = ({
     if (isBlocked) return
 
     // Remove mode on start markers: clicking a marker removes it instead of painting
-    if (removeMode && startMarkersSet.has(key)) {
+    if (removeMode && startMarkers.includes(key)) {
       onRemoveStartMarker(key)
       return
     }
@@ -158,8 +175,6 @@ export const GridCanvas = ({
     }
     return { visitedWater, visitedIsland }
   }, [visitedCells, islands])
-
-  const startMarkersSet = new Set(startMarkers)
 
   const cellStyle = (r: number, c: number, bg: string) => ({
     position: 'absolute' as const,
@@ -224,7 +239,7 @@ export const GridCanvas = ({
             <div className={`grid-zoom-inline${isBlocked || isPickingStart ? ' is-dim' : ''}`}>
               <button className="canvas-zoom-btn" type="button" onClick={onZoomOut} disabled={isBlocked || isPickingStart || !canZoomOut} aria-label="Zoom out">−</button>
               <span className="canvas-zoom-value">{cols}×{rows}</span>
-              <button className="canvas-zoom-btn" type="button" onClick={onZoomIn} disabled={isBlocked || isPickingStart || !canZoomIn} aria-label="Zoom in">+</button>
+              <button className="canvas-zoom-btn" type="button" onClick={onZoomIn} disabled={isBlocked || isPickingStart || !canZoomIn || zoomInClipsCells} aria-label="Zoom in" title={zoomInClipsCells ? 'Zooming in would hide cells near the edge' : undefined}>+</button>
             </div>
             <button
               className={`btn btn-pill connect-toggle-btn ${removeMode ? 'btn-active' : ''}`}

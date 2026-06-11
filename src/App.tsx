@@ -240,6 +240,15 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cc.handleAlgorithmModeChangeFromSidebar, cycleDetection.handleAlgorithmModeChangeFromSidebar, shortestPath.handleAlgorithmModeChangeFromSidebar, bipartite.handleAlgorithmModeChangeFromSidebar])
 
+  // True while any graph or weighted algorithm is running — blocks canvas edits and node dragging.
+  const blockGraphInteraction =
+    traversal.isTraversalRunning ||
+    cc.isConnectedComponentsRunning ||
+    cycleDetection.isCycleDetectionRunning ||
+    shortestPath.isShortestPathRunning ||
+    bipartite.isBipartiteRunning ||
+    weightedPathfinding.isWPRunning
+
   const nodeDragging = useNodeDragging({
     canvasElement,
     canvasZoom,
@@ -252,22 +261,8 @@ function App() {
     isConnectMode,
     isDeleteMode,
     isDeleteEdgeMode,
-    blockDragging:
-      traversal.isTraversalRunning ||
-      cc.isConnectedComponentsRunning ||
-      cycleDetection.isCycleDetectionRunning ||
-      shortestPath.isShortestPathRunning ||
-      bipartite.isBipartiteRunning ||
-      weightedPathfinding.isWPRunning,
+    blockDragging: blockGraphInteraction,
   })
-
-  const blockGraphInteraction =
-    traversal.isTraversalRunning ||
-    cc.isConnectedComponentsRunning ||
-    cycleDetection.isCycleDetectionRunning ||
-    shortestPath.isShortestPathRunning ||
-    bipartite.isBipartiteRunning ||
-    weightedPathfinding.isWPRunning
 
   const ccSessionActive = cc.connectedComponentsResult !== null || cc.isConnectedComponentsRunning
   const cycleSessionActive =

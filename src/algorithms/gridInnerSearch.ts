@@ -10,10 +10,13 @@ export function runInnerBFS(
   rows: number,
   cols: number,
   connectivity: 4 | 8,
-): { steps: GridStep[]; cells: string[]; operationCount: number } {
+): { steps: GridStep[]; cells: string[]; waterBorders: string[]; operationCount: number } {
   const queue = [startKey]
   const cells: string[] = []
   const steps: GridStep[] = []
+  // Water neighbors seen while filling, handed back so the outer search can extend its frontier
+  // without re-reading the island's edges — keeps the op count at one read per edge.
+  const waterBorders: string[] = []
   let first = true
   let operationCount = 1  // initial push of startKey into the queue
 
@@ -24,9 +27,12 @@ export function runInnerBFS(
     const newVisited: string[] = first ? [current] : []
 
     const allNbs = getInBoundsNeighbors(current, rows, cols, connectivity)
-    operationCount += allNbs.length  // all neighbor reads before island filter (E term)
-    const nbs = allNbs.filter(k => islands.has(k))
-    for (const nb of nbs) {
+    operationCount += allNbs.length  // every neighbor read once (E term)
+    for (const nb of allNbs) {
+      if (!islands.has(nb)) {
+        waterBorders.push(nb)
+        continue
+      }
       if (!visited.has(nb)) {
         visited.add(nb)
         queue.push(nb)
@@ -39,7 +45,7 @@ export function runInnerBFS(
     first = false
   }
 
-  return { steps, cells, operationCount }
+  return { steps, cells, waterBorders, operationCount }
 }
 
 // DFS flood-fill from startKey: collects all cells of one island depth-first, emitting one step per pop.
@@ -51,10 +57,13 @@ export function runInnerDFS(
   rows: number,
   cols: number,
   connectivity: 4 | 8,
-): { steps: GridStep[]; cells: string[]; operationCount: number } {
+): { steps: GridStep[]; cells: string[]; waterBorders: string[]; operationCount: number } {
   const stack = [startKey]
   const cells: string[] = []
   const steps: GridStep[] = []
+  // Water neighbors seen while filling, handed back so the outer search can extend its frontier
+  // without re-reading the island's edges — keeps the op count at one read per edge.
+  const waterBorders: string[] = []
   let first = true
   let operationCount = 1  // initial push of startKey into the stack
 
@@ -64,10 +73,14 @@ export function runInnerDFS(
     cells.push(current)
     const newVisited: string[] = first ? [current] : []
 
-    // Push in reverse so DIRS[0] (up / top-left) is popped first — consistent with outer DFS.
     const allNbs = getInBoundsNeighbors(current, rows, cols, connectivity)
-    operationCount += allNbs.length  // all neighbor reads before island filter (E term)
-    const nbs = allNbs.filter(k => islands.has(k))
+    operationCount += allNbs.length  // every neighbor read once (E term)
+    const nbs: string[] = []
+    for (const nb of allNbs) {
+      if (islands.has(nb)) nbs.push(nb)
+      else waterBorders.push(nb)
+    }
+    // Push island neighbors in reverse so DIRS[0] (up / top-left) is popped first — consistent with outer DFS.
     for (let i = nbs.length - 1; i >= 0; i--) {
       const nb = nbs[i]
       if (!visited.has(nb)) {
@@ -82,5 +95,5 @@ export function runInnerDFS(
     first = false
   }
 
-  return { steps, cells, operationCount }
+  return { steps, cells, waterBorders, operationCount }
 }
