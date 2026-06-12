@@ -266,6 +266,7 @@ export const ConnectedComponentsPanel = ({
         varsRows={ccVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
+        canDetach={!isConnectedComponentsPlaybackPlaying}
       />
 
       <div className="sidebar-section">

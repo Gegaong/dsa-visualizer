@@ -288,6 +288,7 @@ export const ShortestPathPanel = ({
         varsRows={spVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
+        canDetach={!isShortestPathPlaybackPlaying}
       />
 
       <div className="sidebar-section">

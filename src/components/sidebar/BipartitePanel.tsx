@@ -269,6 +269,7 @@ export const BipartitePanel = ({
         varsRows={bipartiteVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
+        canDetach={!isBipartitePlaybackPlaying}
       />
 
       <div className="sidebar-section">

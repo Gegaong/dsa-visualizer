@@ -514,6 +514,7 @@ export const WeightedPathfindingPanel = ({
           varsRows={wpVarsRows}
           showLogic={pseudocodeShowLogic}
           onFlip={onPseudocodeFlip}
+          canDetach={!isWPPlaybackPlaying}
         />
       )}
 

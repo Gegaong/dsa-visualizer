@@ -286,6 +286,7 @@ export const CycleDetectionPanel = ({
         varsRows={cycleVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
+        canDetach={!isCycleDetectionPlaybackPlaying}
       />
 
       <div className="sidebar-section">

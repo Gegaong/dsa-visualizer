@@ -210,6 +210,7 @@ export const NQueensSidebar = ({
         varsRows={varsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
+        canDetach={!isPlaying}
       />
 
       <div className="sidebar-section">

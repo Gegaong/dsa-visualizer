@@ -588,6 +588,7 @@ export const GridSidebar = ({
             logicHighlighted={getForHighlights(currentSubPhase, true, lifecycle)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
+            canDetach={!isPlaying}
           />
         )}
 
@@ -599,6 +600,7 @@ export const GridSidebar = ({
             logicHighlighted={getBfsHighlights(currentSubPhase, true, lifecycle)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
+            canDetach={!isPlaying}
           />
         )}
 
@@ -610,6 +612,7 @@ export const GridSidebar = ({
             logicHighlighted={getDfsHighlights(currentSubPhase, true, lifecycle)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
+            canDetach={!isPlaying}
           />
         )}
 

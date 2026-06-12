@@ -443,6 +443,7 @@ export const TraversalPage = ({
         varsRows={traversalVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
+        canDetach={!isTraversalPlaying}
       />
     </div>
   )
