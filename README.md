@@ -36,9 +36,8 @@ Your graph on screen always produces the same animation. Changing edges can chan
 - [x] Grid algorithms (for-loop/BFS/DFS outer × BFS/DFS inner island search, 6 combinations)
 - [x] N-Queens visualizer (N×N chessboard, backtracking solver with step-by-step playback)
 - [x] Animation polish (colors, visited/path states)
-- [ ] Final testing + documentation
-
-I'll manage the actual details of this as I go on with the project so they'll get changed around a bit, the exact suitable algorithms for each dataset, exact steps I'll need, etc.
+- [x] Final testing 
+- [ ] Documentation
 
 ---
 
