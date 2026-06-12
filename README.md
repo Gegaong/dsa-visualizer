@@ -1,44 +1,88 @@
 # Interactive DSA Visualizer
 
-An interactive web-based sandbox for Data Structures and Algorithms. Features a drag-and-drop canvas to build custom graphs and step-by-step animations for visualizing algorithms like BFS, DFS, and weighted algorithms such as Dijkstra.
+An interactive web-based sandbox for Data Structures and Algorithms. Features a drag-and-drop canvas to build custom graphs and step-by-step animations for visualizing algorithms like BFS, DFS, and Dijkstra, etc.
+
+## Features
+
+The visualizer is split into four distinct environments:
+
+### 1. Unweighted Graphs
+- **Canvas:** Drag-and-drop nodes, connect edges, toggle directed/undirected, and use preset templates.
+- **Algorithms:** Breadth-First Search (BFS), Depth-First Search (DFS), Weakly Connected Components, Cycle Detection, Bipartite Check, Shortest Path.
+
+### 2. Weighted Graphs
+- **Canvas:** Edit edge weights, toggle directed/undirected.
+- **Algorithms:** Dijkstra's Algorithm, A* Search (Euclidean heuristic), Greedy Best-First Search.
+
+### 3. Grid Environment
+- **Canvas:** Paint land/water islands, toggle 4-directional or 8-directional connectivity, zoom controls.
+- **Algorithms:** 6 combinations of Island Search (For-loop/BFS/DFS outer loops × BFS/DFS inner flood-fill).
+
+### 4. N-Queens Solver
+- **Canvas:** N×N chessboard (adjustable N).
+- **Algorithms:** Backtracking solver with step-by-step playback, phase tracking, and conflict checking.
 
 ## Tech Stack
 
 - **Framework:** React
 - **Language:** TypeScript
 - **Build Tool:** Vite
+- **Testing:** Vitest (Comprehensive coverage of pure algorithm logic)
 
-## How to run the webapp
+## How to Run Locally
+
+### Prerequisites
+- Ensure you have [Node.js](https://nodejs.org/) installed on your machine.
+
+### Installation Steps
+
+1. Clone the repository and navigate into the project directory:
+
+```bash
+git clone https://github.com/Gegaong/dsa-visualizer.git
+cd dsa-visualizer
+```
+
+2. Install the required dependencies:
 
 ```bash
 npm install
+```
+
+3. Start the development server:
+
+```bash
 npm run dev
 ```
 
-## BFS and DFS visit order
+4. Open your browser and navigate to `http://localhost:5173` to view the application.
 
-When a node has more than one neighbor, the step-by-step order can vary. The app , of course, runs a correct BFS or DFS.s However, exact sequence of visits may change depending on how neighbors are ordered.
+### Running Tests
 
-Here, neighbor order matches the order your edges are stored in after you build the graph. BFS and DFS both use that same order (BFS with a queue, DFS with a stack).
+To run the algorithm test suites (powered by Vitest):
 
-Your graph on screen always produces the same animation. Changing edges can change the order of steps. That is normal.
+```bash
+npm run test
+```
 
-## Project Roadmap
+## Codebase Structure
 
-- [x] Project setup + tooling
-- [x] Base UI layout (top bar, canvas, sidebar)
-- [x] Node creation + basic canvas rendering
-- [x] Graph canvas environment (drag, connect edges, edit nodes, directed/undirected toggle, preset templates)
-- [x] Graph algorithms (BFS, DFS, weakly connected components, cycle detection, bipartite check, shortest path)
-- [x] Weighted graph canvas environment (edge weights, weight editing, directed/undirected toggle, preset templates)
-- [x] Weighted graph algorithms (Dijkstra, greedy best-first search, A\*)
-- [x] Grid canvas environment (island painting, 4-dir/8-dir connectivity, zoom, start point markers)
-- [x] Grid algorithms (for-loop/BFS/DFS outer × BFS/DFS inner island search, 6 combinations)
-- [x] N-Queens visualizer (N×N chessboard, backtracking solver with step-by-step playback)
-- [x] Animation polish (colors, visited/path states)
-- [x] Final testing 
-- [ ] Documentation
+The project is architected to strictly separate pure algorithmic logic from React UI and playback state:
+
+- `src/algorithms/` - Pure TypeScript implementations of all algorithms. These functions return arrays of "Steps" (snapshots of state) and are fully unit-tested.
+- `src/hooks/` - Custom React hooks that consume algorithm steps and manage playback controls (play, pause, step forward/backward, speed).
+- `src/components/` - The UI layer, including the interactive Canvas environments and Sidebars with live pseudocode highlighting.
+- `src/utils/` - Shared helpers for geometry (node/edge math), graph rules, canvas drawing, and visual constants (like island colors).
+
+## Note on Traversal Order
+
+When an algorithm (like BFS or DFS) reaches a node with multiple neighbors, the sequence in which those neighbors are visited can vary depending on the underlying implementation. While any valid order produces a mathematically correct traversal, unpredictable sequences can be confusing for educational purposes, so I made it deterministic.
+
+To ensure the animations are intuitive and perfectly reproducible, **this visualizer strictly orders neighbors by their visible labels**. 
+
+Shorter labels are prioritized first, followed by standard alphabetical/numerical sorting. For example, the algorithm will always enqueue neighbor `A` before `B`, assuming it's normal BFS of course, between its "equal" neighbors. This guarantees that your graph will always produce the exact same step-by-step animation.
 
 ---
 
-**Author:** Gega Ormotsadze
+**Author:** Gega Ormotsadze  
+*Bachelor's Degree Project — Free University of Tbilisi (MACS[E])*
