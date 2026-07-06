@@ -259,10 +259,6 @@
 	height: 680px;
 }
 
-.sidebar.is-binary-tree {
-	height: 680px;
-}
-
 
 .step-explanation--pseudocode {
 	position: relative;
@@ -502,16 +498,17 @@
 	box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 20px rgba(46, 32, 23, 0.14);
 }
 
-.binary-tree-node.is-delete-mode:hover {
-	border-color: #b3462c;
-	box-shadow: 0 0 0 3px rgba(179, 70, 44, 0.18), 0 10px 20px rgba(46, 32, 23, 0.14);
+.binary-tree-node.is-delete-mode {
+	border-color: var(--accent);
+	border-width: 2px;
+	box-shadow: 0 10px 20px rgba(58, 111, 90, 0.2);
 }
 
 .binary-tree-node.is-selected {
-	background: rgba(179, 70, 44, 0.15);
-	border-color: #b3462c;
+	background: rgba(58, 111, 90, 0.15);
+	border-color: var(--accent);
 	border-width: 2px;
-	box-shadow: 0 0 0 3px rgba(179, 70, 44, 0.2), 0 10px 20px rgba(46, 32, 23, 0.14);
+	box-shadow: 0 0 0 3px rgba(58, 111, 90, 0.2);
 }
 
 .binary-tree-node-value {
@@ -559,6 +556,46 @@
 .binary-tree-node-wrap:hover .binary-tree-node-hover-value {
 	opacity: 1;
 	transition-delay: 0.5s;
+}
+
+.binary-tree-stats {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	height: var(--action-height);
+	padding: 0 18px;
+	margin-right: auto;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--panel);
+}
+
+.binary-tree-stat {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.binary-tree-stat + .binary-tree-stat {
+	padding-left: 14px;
+	border-left: 1px solid var(--border);
+}
+
+.binary-tree-stat-label {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--muted);
+}
+
+.binary-tree-stat-value {
+	min-width: 1ch;
+	font-size: 15px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	color: var(--ink);
 }
 
 .binary-tree-node-input {
@@ -1189,6 +1226,16 @@
 
 .sidebar-page-tab.is-active::after {
 	background: var(--accent);
+}
+
+.sidebar-page-tab:disabled {
+	color: var(--muted);
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.sidebar-page-tab:disabled:hover {
+	color: var(--muted);
 }
 
 .sidebar-page-tab:focus-visible {

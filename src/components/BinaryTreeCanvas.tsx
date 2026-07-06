@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 
 import type { BinaryTree, BinaryTreeContextMenuState, BinaryTreeSide } from '../types'
+import { getNodeCount, getTreeHeight } from '../algorithms/binaryTreeShared'
 import { computeBinaryTreeLayout } from '../utils/binaryTreeLayout'
 import { TREE_NODE_SIZE } from '../utils/constants'
 import { sanitizeNumericInput, parseNumberInput, formatNodeValueDisplay } from '../utils/format'
@@ -71,7 +72,8 @@ export const BinaryTreeCanvas = ({
     [tree, containerSize.width, containerSize.height],
   )
 
-  const nodeCount = Object.keys(tree.nodesById).length
+  const nodeCount = getNodeCount(tree)
+  const treeHeight = getTreeHeight(tree)
 
   const commitEditing = (nodeId: string, rawValue: string) => {
     onCommitNodeValue(nodeId, parseDraftValue(rawValue))
@@ -152,8 +154,27 @@ export const BinaryTreeCanvas = ({
   }
 
   const nodeSize = TREE_NODE_SIZE * layout.scale
+  const nodeRadius = nodeSize / 2
   const addSlotIconSize = Math.max(14, nodeSize * 0.4)
   const inputFontSize = Math.max(VALUE_FONT_MIN_PX, INPUT_FONT_SIZE_BASE * layout.scale)
+
+  // Trims each edge to stop right at the node's circle boundary instead of running through its
+  // center — otherwise the line would show through a selected node's translucent fill and look
+  // like a z-index/stacking bug.
+  const trimEdgeToNodeRadius = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+    const dist = Math.hypot(dx, dy)
+    if (dist < 0.001) return { x1: from.x, y1: from.y, x2: to.x, y2: to.y }
+    const unitX = dx / dist
+    const unitY = dy / dist
+    return {
+      x1: from.x + unitX * nodeRadius,
+      y1: from.y + unitY * nodeRadius,
+      x2: to.x - unitX * nodeRadius,
+      y2: to.y - unitY * nodeRadius,
+    }
+  }
 
   return (
     <>
@@ -180,6 +201,16 @@ export const BinaryTreeCanvas = ({
             <p>Click a + indicator to grow the tree, click a node to edit its value.</p>
           </div>
           <div className="canvas-actions">
+            <div className="binary-tree-stats">
+              <div className="binary-tree-stat">
+                <span className="binary-tree-stat-label">Nodes</span>
+                <span className="binary-tree-stat-value">{nodeCount}</span>
+              </div>
+              <div className="binary-tree-stat">
+                <span className="binary-tree-stat-label">Height</span>
+                <span className="binary-tree-stat-value">{treeHeight}</span>
+              </div>
+            </div>
             <button
               className={`btn btn-pill connect-toggle-btn ${deleteMode ? 'btn-active' : ''}`}
               type="button"
@@ -187,9 +218,9 @@ export const BinaryTreeCanvas = ({
             >
               {deleteMode
                 ? selectedNodeIds.length > 0
-                  ? `Delete selected (${selectedNodeIds.length})`
-                  : 'Cancel delete'
-                : 'Delete'}
+                  ? 'Delete selected nodes'
+                  : 'Cancel node delete'
+                : 'Delete nodes'}
             </button>
             <button
               className="btn"
@@ -215,11 +246,13 @@ export const BinaryTreeCanvas = ({
                 <g key={node.id}>
                   {node.leftId && layout.nodePositions.has(node.leftId) && (() => {
                     const to = layout.nodePositions.get(node.leftId!)!
-                    return <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} />
+                    const { x1, y1, x2, y2 } = trimEdgeToNodeRadius(from, to)
+                    return <line x1={x1} y1={y1} x2={x2} y2={y2} />
                   })()}
                   {node.rightId && layout.nodePositions.has(node.rightId) && (() => {
                     const to = layout.nodePositions.get(node.rightId!)!
-                    return <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} />
+                    const { x1, y1, x2, y2 } = trimEdgeToNodeRadius(from, to)
+                    return <line x1={x1} y1={y1} x2={x2} y2={y2} />
                   })()}
                 </g>
               )

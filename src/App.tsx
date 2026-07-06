@@ -86,6 +86,8 @@ function App() {
   const [draftValue, setDraftValue] = useState('')
   const [fillMin, setFillMin] = useState('1')
   const [fillMax, setFillMax] = useState('10')
+  const [edgeFillMin, setEdgeFillMin] = useState('1')
+  const [edgeFillMax, setEdgeFillMax] = useState('10')
   const [heuristicPixelsPerUnit, setHeuristicPixelsPerUnit] = useState('100')
   const [showEmptyAllConfirm, setShowEmptyAllConfirm] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -110,6 +112,9 @@ function App() {
   const [isPickingStart, setIsPickingStart] = useState(false)
   const [nQueensN, setNQueensN] = useState(8)
   const [binaryTree, setBinaryTree] = useState<BinaryTree>({ rootId: null, nodesById: {} })
+  const [binaryTreeFillMin, setBinaryTreeFillMin] = useState('1')
+  const [binaryTreeFillMax, setBinaryTreeFillMax] = useState('10')
+  const [binaryTreeEmptyAllConfirmOpen, setBinaryTreeEmptyAllConfirmOpen] = useState(false)
   const [isUndirectedMode, setIsUndirectedMode] = useState(false)
   const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
   const [canvasType, setCanvasType] = useState<CanvasType>('graph')
@@ -549,6 +554,69 @@ function App() {
     setBinaryTree({ rootId: null, nodesById: {} })
   }
 
+  // Sidebar: updates the binary tree fill-range minimum (digits only).
+  const handleBinaryTreeFillMinChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setBinaryTreeFillMin(sanitizeNumericInput(event.target.value))
+  }
+
+  // Sidebar: updates the binary tree fill-range maximum (digits only).
+  const handleBinaryTreeFillMaxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setBinaryTreeFillMax(sanitizeNumericInput(event.target.value))
+  }
+
+  // If min exceeds max after parsing, snaps max up to min so the fill range stays valid.
+  const syncBinaryTreeFillRange = () => {
+    const minValue = parseNumberInput(binaryTreeFillMin)
+    const maxValue = parseNumberInput(binaryTreeFillMax)
+    if (minValue !== null && maxValue !== null && maxValue < minValue) {
+      setBinaryTreeFillMax(String(minValue))
+    }
+  }
+
+  // Sidebar: on Enter in fill min/max fields, normalizes order and blurs the active input.
+  const handleBinaryTreeFillRangeKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      syncBinaryTreeFillRange()
+      event.currentTarget.blur()
+    }
+  }
+
+  // Sidebar: assigns random integers in the fill range to every node that is still empty.
+  const fillBinaryTreeEmptyValues = () => {
+    const minValue = parseNumberInput(binaryTreeFillMin)
+    const maxValue = parseNumberInput(binaryTreeFillMax)
+    if (minValue === null || maxValue === null) return
+
+    const low = Math.min(minValue, maxValue)
+    const high = Math.max(minValue, maxValue)
+
+    setBinaryTree((prev) => {
+      const nodesById = { ...prev.nodesById }
+      for (const node of Object.values(nodesById)) {
+        if (node.value === 'empty') nodesById[node.id] = { ...node, value: getRandomIntInclusive(low, high) }
+      }
+      return { ...prev, nodesById }
+    })
+  }
+
+  // Sidebar: opens the confirm dialog before emptying every node's value.
+  const handleBinaryTreeEmptyAllClick = () => {
+    if (Object.values(binaryTree.nodesById).every((node) => node.value === 'empty')) return
+    setBinaryTreeEmptyAllConfirmOpen(true)
+  }
+
+  const confirmBinaryTreeEmptyAll = () => {
+    setBinaryTree((prev) => {
+      const nodesById: BinaryTree['nodesById'] = {}
+      for (const node of Object.values(prev.nodesById)) nodesById[node.id] = { ...node, value: 'empty' }
+      return { ...prev, nodesById }
+    })
+    setBinaryTreeEmptyAllConfirmOpen(false)
+  }
+
+  const cancelBinaryTreeEmptyAll = () => setBinaryTreeEmptyAllConfirmOpen(false)
+
   // Changes grid search mode; always exits picking mode since the new mode may not need it.
   const handleGridModeChange = (mode: GridSearchMode) => {
     setGridSearchMode(mode)
@@ -892,6 +960,33 @@ function App() {
     }
   }
 
+  // Weighted mode has its own, independent fill range for edge weights — separate state from the
+  // (unweighted) graph's node-value fill range, so editing one never changes the other.
+  // Uses sanitizeDecimalInput (no minus sign) since edge weights must stay positive.
+  const handleEdgeFillMinChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setEdgeFillMin(sanitizeDecimalInput(event.target.value))
+  }
+
+  const handleEdgeFillMaxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setEdgeFillMax(sanitizeDecimalInput(event.target.value))
+  }
+
+  const syncEdgeFillRange = () => {
+    const minValue = parseEdgeWeightInput(edgeFillMin)
+    const maxValue = parseEdgeWeightInput(edgeFillMax)
+    if (minValue !== null && maxValue !== null && maxValue < minValue) {
+      setEdgeFillMax(String(minValue))
+    }
+  }
+
+  const handleEdgeFillRangeKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      syncEdgeFillRange()
+      event.currentTarget.blur()
+    }
+  }
+
   // Writes a parsed numeric value (or empty) to a node and closes the inline editor.
   const commitNodeValue = (nodeId: string, rawValue: string) => {
     if (blockGraphInteraction) return
@@ -954,8 +1049,8 @@ function App() {
   const randomizeEdgeWeights = () => {
     if (blockGraphInteraction) return
     resetAllGraphAlgorithmVisualizations()
-    const minValue = parseNumberInput(fillMin)
-    const maxValue = parseNumberInput(fillMax)
+    const minValue = parseEdgeWeightInput(edgeFillMin)
+    const maxValue = parseEdgeWeightInput(edgeFillMax)
     if (minValue === null || maxValue === null) return
 
     const low = Math.min(minValue, maxValue)
@@ -1165,10 +1260,19 @@ function App() {
   const hasDefaultEdges = edges.some((edge) => (edge.weight ?? 1) === 1)
   const hasNonOneEdges = edges.some((edge) => (edge.weight ?? 1) !== 1)
   const fillRangeReady = parseNumberInput(fillMin) !== null && parseNumberInput(fillMax) !== null
+  const edgeFillRangeReady = parseEdgeWeightInput(edgeFillMin) !== null && parseEdgeWeightInput(edgeFillMax) !== null
   const canFillEmpty = isWeightedMode
-    ? hasDefaultEdges && fillRangeReady
+    ? hasDefaultEdges && edgeFillRangeReady
     : hasEmptyNodes && fillRangeReady
   const canEmptyAll = isWeightedMode ? hasNonOneEdges : hasNonEmptyNodes
+
+  const binaryTreeNodes = Object.values(binaryTree.nodesById)
+  const binaryTreeHasEmptyNodes = binaryTreeNodes.some((node) => node.value === 'empty')
+  const binaryTreeHasNonEmptyNodes = binaryTreeNodes.some((node) => node.value !== 'empty')
+  const binaryTreeFillRangeReady =
+    parseNumberInput(binaryTreeFillMin) !== null && parseNumberInput(binaryTreeFillMax) !== null
+  const binaryTreeCanFillEmpty = binaryTreeHasEmptyNodes && binaryTreeFillRangeReady
+  const binaryTreeCanEmptyAll = binaryTreeHasNonEmptyNodes
 
   return (
     <div className="app">
@@ -1362,7 +1466,20 @@ function App() {
           />
         )}
         {canvasType === 'binary-tree' && (
-          <BinaryTreeSidebar tree={binaryTree} />
+          <BinaryTreeSidebar
+            canvasSetup={{
+              fillMin: binaryTreeFillMin,
+              fillMax: binaryTreeFillMax,
+              onFillMinChange: handleBinaryTreeFillMinChange,
+              onFillMaxChange: handleBinaryTreeFillMaxChange,
+              onFillRangeBlur: syncBinaryTreeFillRange,
+              onFillRangeKeyDown: handleBinaryTreeFillRangeKeyDown,
+              onFillEmptyValues: fillBinaryTreeEmptyValues,
+              canFillEmpty: binaryTreeCanFillEmpty,
+              onEmptyAllValues: handleBinaryTreeEmptyAllClick,
+              canEmptyAll: binaryTreeCanEmptyAll,
+            }}
+          />
         )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && canvasType !== 'binary-tree' && <Sidebar
           activePage={isWeightedMode ? weightedSidebarPage : graphSidebarPage}
@@ -1403,12 +1520,12 @@ function App() {
           canvasSetup={{
             blockGraphEdits: blockGraphInteraction,
             isWeightedMode,
-            fillMin,
-            fillMax,
-            onFillMinChange: handleFillMinChange,
-            onFillMaxChange: handleFillMaxChange,
-            onFillRangeBlur: syncFillRange,
-            onFillRangeKeyDown: handleFillRangeKeyDown,
+            fillMin: isWeightedMode ? edgeFillMin : fillMin,
+            fillMax: isWeightedMode ? edgeFillMax : fillMax,
+            onFillMinChange: isWeightedMode ? handleEdgeFillMinChange : handleFillMinChange,
+            onFillMaxChange: isWeightedMode ? handleEdgeFillMaxChange : handleFillMaxChange,
+            onFillRangeBlur: isWeightedMode ? syncEdgeFillRange : syncFillRange,
+            onFillRangeKeyDown: isWeightedMode ? handleEdgeFillRangeKeyDown : handleFillRangeKeyDown,
             onFillEmptyValues: isWeightedMode ? randomizeEdgeWeights : fillEmptyValues,
             canFillEmpty,
 
@@ -1592,6 +1709,15 @@ function App() {
         confirmLabel={isWeightedMode ? 'Reset all' : 'Empty all'}
         onConfirm={confirmEmptyAll}
         onCancel={cancelEmptyAll}
+      />
+
+      <ConfirmModal
+        open={binaryTreeEmptyAllConfirmOpen}
+        title="Empty all values?"
+        body="This resets every node back to empty, wiping any numbers you've set."
+        confirmLabel="Empty all"
+        onConfirm={confirmBinaryTreeEmptyAll}
+        onCancel={cancelBinaryTreeEmptyAll}
       />
 
       <NodeContextMenu
