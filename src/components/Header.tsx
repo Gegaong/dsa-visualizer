@@ -42,6 +42,13 @@ export const Header = ({ activeCanvas, onCanvasTypeChange }: HeaderProps) => {
           Graph
         </button>
         <button
+          className={`btn btn-pill ${activeCanvas === 'binary-tree' ? 'btn-active' : ''}`}
+          type="button"
+          onClick={() => onCanvasTypeChange('binary-tree')}
+        >
+          Binary Tree
+        </button>
+        <button
           className={`btn btn-pill ${activeCanvas === 'weighted-graph' ? 'btn-active' : ''}`}
           type="button"
           onClick={() => onCanvasTypeChange('weighted-graph')}

@@ -1,6 +1,6 @@
 import type { GraphNode } from '../types'
 
-import type { PriorityPathResult, TraversalStrategy, WeightedAlgorithm, WeightedPathResult } from './algorithmstypes'
+import type { PriorityPathResult, TraversalStrategy, WeightedAlgorithm, WeightedPathResult } from './algorithmTypes'
 
 import { formatCost } from '../utils/format'
 

@@ -14,7 +14,7 @@ import type {
 import type {
   BfsResult,
   TraversalStrategy,
-} from '../algorithms/algorithmstypes'
+} from '../algorithms/algorithmTypes'
 
 import {
   PLAYBACK_MIN_DELAY_MS,

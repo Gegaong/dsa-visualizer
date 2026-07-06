@@ -4,26 +4,19 @@ import type { GraphNode } from '../types'
 
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 
-import { formatCost } from '../utils/format'
+import { formatCost, formatNodeValueDisplay, type NodeValueSizeTier } from '../utils/format'
+
+const SIZE_TIER_CLASS: Record<NodeValueSizeTier, string> = {
+  normal: '',
+  small: 'node-value--small',
+  tiny: 'node-value--tiny',
+}
 
 // Pick the right text + size class for a node's value.
 // 'empty' renders as a blank circle; numbers shrink (or get truncated to "...") to fit.
 const formatNodeValue = (value: number | 'empty') => {
-  if (value === 'empty') {
-    return { text: '', sizeClass: '' }
-  }
-
-  const text = String(value)
-
-  if (text.length <= 3) {
-    return { text, sizeClass: '' }
-  }
-
-  if (text.length <= 5) {
-    return { text, sizeClass: 'node-value--small' }
-  }
-
-  return { text: '...', sizeClass: 'node-value--tiny' }
+  const { text, sizeTier } = formatNodeValueDisplay(value)
+  return { text, sizeClass: SIZE_TIER_CLASS[sizeTier] }
 }
 
 type GraphNodeLayerProps = {

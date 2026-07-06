@@ -1,4 +1,4 @@
-import type { TraversalStrategy } from './algorithmstypes'
+import type { TraversalStrategy } from './algorithmTypes'
 
 export type VisitOutcome = void | 'stop'
 

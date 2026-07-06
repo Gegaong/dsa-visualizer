@@ -1,6 +1,6 @@
 import type { GraphEdge, GraphNode } from '../types'
 
-import type { PriorityPathResult, PriorityPathStep } from './algorithmstypes'
+import type { PriorityPathResult, PriorityPathStep } from './algorithmTypes'
 
 import { buildWeightedLookups } from './graphAdjacency'
 

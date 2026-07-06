@@ -13,7 +13,7 @@ import type {
 import type {
   ConnectedComponentsResult,
   TraversalStrategy,
-} from '../algorithms/algorithmstypes'
+} from '../algorithms/algorithmTypes'
 
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 

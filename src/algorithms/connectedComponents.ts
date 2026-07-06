@@ -4,7 +4,7 @@ import type {
   ConnectedComponentsResult,
   ConnectedComponentsStep,
   TraversalStrategy,
-} from './algorithmstypes'
+} from './algorithmTypes'
 
 import { buildWeaklyConnectedNeighborsMap } from './graphAdjacency'
 

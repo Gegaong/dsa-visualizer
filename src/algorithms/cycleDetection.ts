@@ -4,7 +4,7 @@ import type {
   CycleDetectionResult,
   CycleDetectionStep,
   TraversalStrategy,
-} from './algorithmstypes'
+} from './algorithmTypes'
 
 import { buildNeighborsMap } from './graphAdjacency'
 

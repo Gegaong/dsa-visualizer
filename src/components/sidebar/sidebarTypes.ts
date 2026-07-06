@@ -4,7 +4,7 @@ import type { WeightedPathfindingPanelProps } from './WeightedPathfindingPanel'
 
 export type { WeightedPathfindingPanelProps }
 
-import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+import type { TraversalStrategy } from '../../algorithms/algorithmTypes'
 
 import type { TraversalPhase } from '../../hooks/useTraversalPlayback'
 

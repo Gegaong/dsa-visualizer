@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { GraphEdge, GraphNode } from '../types'
 
-import type { BipartiteResult, TraversalStrategy } from '../algorithms/algorithmstypes'
+import type { BipartiteResult, TraversalStrategy } from '../algorithms/algorithmTypes'
 
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 

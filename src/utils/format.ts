@@ -1,4 +1,4 @@
-import type { GraphNode } from '../types'
+import type { BinaryTree, GraphNode } from '../types'
 
 // Keep only digits and an optional leading '-'.
 export const sanitizeNumericInput = (value: string) =>
@@ -45,8 +45,26 @@ export const getRandomIntInclusive = (min: number, max: number) => {
   return Math.floor(Math.random() * (high - low + 1)) + low
 }
 
+export type NodeValueSizeTier = 'normal' | 'small' | 'tiny'
+
+// Picks how a numeric node value should render inside a fixed-size circular node: full digits
+// up to 3 chars, slightly smaller for 4-5, and truncated to "..." beyond that. Shared by every
+// canvas that draws value-bearing node circles (graph, binary tree) so they behave identically.
+export const formatNodeValueDisplay = (
+  value: number | 'empty',
+): { text: string; sizeTier: NodeValueSizeTier } => {
+  if (value === 'empty') return { text: '', sizeTier: 'normal' }
+
+  const text = String(value)
+
+  if (text.length <= 3) return { text, sizeTier: 'normal' }
+  if (text.length <= 5) return { text, sizeTier: 'small' }
+
+  return { text: '...', sizeTier: 'tiny' }
+}
+
 // Convert array index (0, 1, 2, ...) to Alphabetical style column labels (A, B, C, ..., Z, AA, AB, ...)
-const indexToLabel = (index: number) => {
+export const indexToLabel = (index: number) => {
   let label = ''
   let remaining = index + 1
 
@@ -66,3 +84,16 @@ export const reindexNodes = (list: GraphNode[]) =>
     ...node,
     label: indexToLabel(index),
   }))
+
+// Same idea as reindexNodes, for the binary tree canvas: relabel every node from its position
+// in insertion order (object key order) so labels stay contiguous (A, B, C, ...) after add/delete.
+export const relabelBinaryTree = (tree: BinaryTree): BinaryTree => {
+  const ids = Object.keys(tree.nodesById)
+  const nodesById: BinaryTree['nodesById'] = {}
+
+  ids.forEach((id, index) => {
+    nodesById[id] = { ...tree.nodesById[id], label: indexToLabel(index) }
+  })
+
+  return { rootId: tree.rootId, nodesById }
+}

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import type { TraversalStrategy } from './algorithmstypes'
+import type { TraversalStrategy } from './algorithmTypes'
 
 import type { GraphEdge } from '../types'
 

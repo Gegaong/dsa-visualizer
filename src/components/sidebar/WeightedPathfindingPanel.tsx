@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { WeightedAlgorithm } from '../../algorithms/algorithmstypes'
+import type { WeightedAlgorithm } from '../../algorithms/algorithmTypes'
 
 import type { AlgorithmInfoKey } from '../../algorithms/algorithmInfo'
 

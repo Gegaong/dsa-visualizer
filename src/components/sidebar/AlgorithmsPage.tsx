@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+import type { TraversalStrategy } from '../../algorithms/algorithmTypes'
 
 import type { AlgorithmMode, AlgorithmsPageProps } from './sidebarTypes'
 

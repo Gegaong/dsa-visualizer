@@ -28,7 +28,7 @@ export type GraphEdge = {
   weight?: number
 }
 
-export type CanvasType = 'graph' | 'weighted-graph' | 'grid' | 'nqueens'
+export type CanvasType = 'graph' | 'weighted-graph' | 'grid' | 'nqueens' | 'binary-tree'
 
 export type EdgeContextMenuState = {
   edgeId: string
@@ -52,4 +52,28 @@ export type DragState = {
   startPointerX: number
   startPointerY: number
   hasMoved: boolean
+}
+
+// Plain binary tree node: no parent pointer, matches the textbook {value, left, right} shape.
+// leftId/rightId are null when that child slot is empty (renders as an "add" indicator).
+export type BinaryTreeNode = {
+  id: string
+  // Display name (A, B, C, ...), recomputed after every add/delete — same convention as GraphNode.
+  label: string
+  value: number | 'empty'
+  leftId: string | null
+  rightId: string | null
+}
+
+export type BinaryTree = {
+  rootId: string | null
+  nodesById: Record<string, BinaryTreeNode>
+}
+
+export type BinaryTreeSide = 'left' | 'right'
+
+export type BinaryTreeContextMenuState = {
+  nodeId: string
+  x: number
+  y: number
 }

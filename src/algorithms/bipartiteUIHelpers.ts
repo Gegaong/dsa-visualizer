@@ -1,6 +1,6 @@
 import type { GraphNode } from '../types'
 
-import type { BipartiteResult } from './algorithmstypes'
+import type { BipartiteResult } from './algorithmTypes'
 
 import { sortIdsByLabel } from './sortIdsByLabel'
 

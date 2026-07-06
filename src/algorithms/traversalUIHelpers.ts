@@ -1,4 +1,4 @@
-import type { BfsGoal, BfsResult, TraversalStrategy } from './algorithmstypes'
+import type { BfsGoal, BfsResult, TraversalStrategy } from './algorithmTypes'
 
 import type { GoalType, GraphNode } from '../types'
 

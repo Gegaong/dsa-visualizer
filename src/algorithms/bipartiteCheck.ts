@@ -1,6 +1,6 @@
 import type { GraphEdge, GraphNode } from '../types'
 
-import type { BipartiteResult, BipartiteStep } from './algorithmstypes'
+import type { BipartiteResult, BipartiteStep } from './algorithmTypes'
 
 import { buildWeaklyConnectedNeighborsMap } from './graphAdjacency'
 

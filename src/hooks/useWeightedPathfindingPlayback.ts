@@ -14,7 +14,7 @@ import type {
   PriorityPathResult,
   WeightedAlgorithm,
   WeightedPathResult,
-} from '../algorithms/algorithmstypes'
+} from '../algorithms/algorithmTypes'
 
 import type { WPOutput } from '../components/sidebar/sidebarTypes'
 

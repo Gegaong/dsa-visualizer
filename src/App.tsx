@@ -1,4 +1,4 @@
-import {
+﻿import {
   useCallback,
   useEffect,
   useRef,
@@ -13,6 +13,9 @@ import type {
   GraphPreset,
   CanvasType,
   EdgeContextMenuState,
+  BinaryTree,
+  BinaryTreeNode,
+  BinaryTreeSide,
 } from './types'
 
 import {
@@ -35,6 +38,8 @@ import { GridCanvas } from './components/GridCanvas'
 import { GridSidebar } from './components/sidebar/GridSidebar'
 import { NQueensCanvas } from './components/NQueensCanvas'
 import { NQueensSidebar } from './components/sidebar/NQueensSidebar'
+import { BinaryTreeCanvas } from './components/BinaryTreeCanvas'
+import { BinaryTreeSidebar } from './components/sidebar/BinaryTreeSidebar'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
 import { NodeContextMenu } from './components/NodeContextMenu'
@@ -48,6 +53,7 @@ import {
   parseEdgeWeightInput,
   getRandomIntInclusive,
   reindexNodes,
+  relabelBinaryTree,
 } from './utils/format'
 import {
   canCreateEdge,
@@ -56,7 +62,7 @@ import {
 import { clampToRange, getVisibleCanvasRegion, isOverlapping } from './utils/geometry'
 import { buildPresetGraph } from './utils/presets'
 
-import type { TraversalStrategy, WeightedAlgorithm } from './algorithms/algorithmstypes'
+import type { TraversalStrategy, WeightedAlgorithm } from './algorithms/algorithmTypes'
 
 import { useTraversalPlayback } from './hooks/useTraversalPlayback'
 import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPlayback'
@@ -68,8 +74,9 @@ import { useNodeDragging } from './hooks/useNodeDragging'
 import { useForLoopBFSPlayback } from './hooks/useForLoopBFSPlayback'
 import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
 import { useNQueensPlayback } from './hooks/useNQueensPlayback'
+import { collectSubtreeIds, findParentId, findChildSide } from './algorithms/binaryTreeShared'
 
-const CANVAS_ORDER: CanvasType[] = ['graph', 'weighted-graph', 'grid', 'nqueens']
+const CANVAS_ORDER: CanvasType[] = ['graph', 'binary-tree', 'weighted-graph', 'grid', 'nqueens']
 
 // Root component: owns all graph and algorithm state, wires hooks, renders layout.
 function App() {
@@ -102,6 +109,7 @@ function App() {
   const [dfsStartCell, setDfsStartCell] = useState<string | null>(null)
   const [isPickingStart, setIsPickingStart] = useState(false)
   const [nQueensN, setNQueensN] = useState(8)
+  const [binaryTree, setBinaryTree] = useState<BinaryTree>({ rootId: null, nodesById: {} })
   const [isUndirectedMode, setIsUndirectedMode] = useState(false)
   const [algorithmTab, setAlgorithmTab] = useState<TraversalStrategy>('bfs')
   const [canvasType, setCanvasType] = useState<CanvasType>('graph')
@@ -117,6 +125,7 @@ function App() {
 
   // useRef instead of useState: changing nextId doesn't trigger a re-render
   const nextId = useRef(1)
+  const nextBinaryTreeId = useRef(1)
 
   // Saved state per canvas type so switching between them preserves each canvas independently.
   type SavedCanvasState = { nodes: GraphNode[]; edges: GraphEdge[]; nextId: number; isUndirectedMode: boolean; canvasZoom: number }
@@ -474,6 +483,70 @@ function App() {
   const handleNQueensNChange = (newN: number) => {
     nQueens.stop()
     setNQueensN(newN)
+  }
+
+  // Adds a node either as the tree's root (parentId === null) or as a specific child of an
+  // existing node, growing the tree by exactly one node per click.
+  const handleBinaryTreeAddNode = (parentId: string | null, side: BinaryTreeSide | null) => {
+    const newId = `bt-${nextBinaryTreeId.current}`
+    nextBinaryTreeId.current += 1
+    const newNode: BinaryTreeNode = { id: newId, label: '', value: 'empty', leftId: null, rightId: null }
+
+    setBinaryTree((prev) => {
+      if (parentId === null) {
+        if (prev.rootId) return prev // root slot already filled — ignore a stale/duplicate click
+        return relabelBinaryTree({ rootId: newId, nodesById: { ...prev.nodesById, [newId]: newNode } })
+      }
+      const parent = prev.nodesById[parentId]
+      if (!parent || side === null) return prev
+      if (side === 'left' ? parent.leftId : parent.rightId) return prev // slot already filled
+      const updatedParent = side === 'left' ? { ...parent, leftId: newId } : { ...parent, rightId: newId }
+      return relabelBinaryTree({
+        rootId: prev.rootId,
+        nodesById: { ...prev.nodesById, [parentId]: updatedParent, [newId]: newNode },
+      })
+    })
+  }
+
+  const handleBinaryTreeCommitValue = (nodeId: string, value: number | 'empty') => {
+    setBinaryTree((prev) => {
+      const node = prev.nodesById[nodeId]
+      if (!node) return prev
+      return { ...prev, nodesById: { ...prev.nodesById, [nodeId]: { ...node, value } } }
+    })
+  }
+
+  // Removes every selected node along with each one's full subtree, then detaches any surviving
+  // parent link (or clears the root pointer if the root itself was among the selected nodes).
+  const handleBinaryTreeDeleteSelected = (nodeIds: string[]) => {
+    if (nodeIds.length === 0) return
+    setBinaryTree((prev) => {
+      const idsToRemove = new Set<string>()
+      for (const nodeId of nodeIds) {
+        if (!prev.nodesById[nodeId]) continue
+        for (const id of collectSubtreeIds(prev, nodeId)) idsToRemove.add(id)
+      }
+      if (idsToRemove.size === 0) return prev
+
+      const nodesById = { ...prev.nodesById }
+      for (const id of idsToRemove) delete nodesById[id]
+
+      const rootId = prev.rootId && idsToRemove.has(prev.rootId) ? null : prev.rootId
+
+      for (const id of idsToRemove) {
+        const parentId = findParentId(prev, id)
+        if (!parentId || !nodesById[parentId] || idsToRemove.has(parentId)) continue
+        const side = findChildSide(prev, parentId, id)
+        if (side === 'left') nodesById[parentId] = { ...nodesById[parentId], leftId: null }
+        else if (side === 'right') nodesById[parentId] = { ...nodesById[parentId], rightId: null }
+      }
+
+      return relabelBinaryTree({ rootId, nodesById })
+    })
+  }
+
+  const handleBinaryTreeClear = () => {
+    setBinaryTree({ rootId: null, nodesById: {} })
   }
 
   // Changes grid search mode; always exits picking mode since the new mode may not need it.
@@ -1139,7 +1212,16 @@ function App() {
             currentStep={nQueens.currentStep}
           />
         )}
-        {canvasType !== 'grid' && canvasType !== 'nqueens' && <GraphCanvas
+        {canvasType === 'binary-tree' && (
+          <BinaryTreeCanvas
+            tree={binaryTree}
+            onAddNode={handleBinaryTreeAddNode}
+            onCommitNodeValue={handleBinaryTreeCommitValue}
+            onDeleteNodes={handleBinaryTreeDeleteSelected}
+            onClearTree={handleBinaryTreeClear}
+          />
+        )}
+        {canvasType !== 'grid' && canvasType !== 'nqueens' && canvasType !== 'binary-tree' && <GraphCanvas
           nodes={nodes}
           edges={effectiveEdges}
           isConnectMode={isConnectMode}
@@ -1279,7 +1361,10 @@ function App() {
             onPseudocodeFlip={() => setPseudocodeShowLogic(v => !v)}
           />
         )}
-        {canvasType !== 'grid' && canvasType !== 'nqueens' && <Sidebar
+        {canvasType === 'binary-tree' && (
+          <BinaryTreeSidebar tree={binaryTree} />
+        )}
+        {canvasType !== 'grid' && canvasType !== 'nqueens' && canvasType !== 'binary-tree' && <Sidebar
           activePage={isWeightedMode ? weightedSidebarPage : graphSidebarPage}
           onActivePage={(page) => isWeightedMode ? setWeightedSidebarPage(page) : setGraphSidebarPage(page)}
           onSidebarSectionChange={handleSidebarSectionChange}

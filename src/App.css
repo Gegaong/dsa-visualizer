@@ -259,6 +259,10 @@
 	height: 680px;
 }
 
+.sidebar.is-binary-tree {
+	height: 680px;
+}
+
 
 .step-explanation--pseudocode {
 	position: relative;
@@ -443,6 +447,168 @@
 	min-height: 560px;
 }
 
+.binary-tree-canvas-area {
+	position: relative;
+	flex: 1;
+	overflow: hidden;
+	border-radius: 12px;
+	border: 1px solid var(--border);
+	background: linear-gradient(180deg, #fffdfb 0%, #f8f2ea 100%);
+	min-height: 560px;
+}
+
+.binary-tree-edges-svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+}
+
+.binary-tree-edges-svg line {
+	stroke: var(--muted);
+	stroke-width: 2;
+}
+
+.binary-tree-node-wrap {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	z-index: 2;
+}
+
+.binary-tree-node {
+	position: relative;
+	border-radius: 999px;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	display: grid;
+	place-items: center;
+	font-weight: 600;
+	color: var(--ink);
+	box-shadow: 0 10px 20px rgba(46, 32, 23, 0.14);
+	cursor: pointer;
+	user-select: none;
+	transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.binary-tree-node:hover {
+	border-color: var(--accent);
+}
+
+.binary-tree-node.is-editing {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 20px rgba(46, 32, 23, 0.14);
+}
+
+.binary-tree-node.is-delete-mode:hover {
+	border-color: #b3462c;
+	box-shadow: 0 0 0 3px rgba(179, 70, 44, 0.18), 0 10px 20px rgba(46, 32, 23, 0.14);
+}
+
+.binary-tree-node.is-selected {
+	background: rgba(179, 70, 44, 0.15);
+	border-color: #b3462c;
+	border-width: 2px;
+	box-shadow: 0 0 0 3px rgba(179, 70, 44, 0.2), 0 10px 20px rgba(46, 32, 23, 0.14);
+}
+
+.binary-tree-node-value {
+	display: block;
+	user-select: none;
+	pointer-events: none;
+}
+
+.binary-tree-node-label {
+	margin-top: 6px;
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--ink);
+	letter-spacing: 0.08em;
+	user-select: none;
+	text-shadow:
+		0 0 3px #fffdfb,
+		0 0 3px #fffdfb,
+		0 0 5px #fffdfb;
+}
+
+.binary-tree-node-hover-value {
+	position: absolute;
+	left: 50%;
+	bottom: calc(100% + 10px);
+	transform: translateX(-50%);
+	padding: 4px 8px;
+	border-radius: 8px;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	font-size: 12px;
+	color: var(--ink);
+	box-shadow: 0 8px 18px rgba(24, 20, 16, 0.12);
+	white-space: nowrap;
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+	user-select: none;
+	z-index: 3;
+}
+
+.binary-tree-node-wrap:hover .binary-tree-node-hover-value {
+	opacity: 1;
+	transition-delay: 0.5s;
+}
+
+.binary-tree-node-input {
+	width: 70%;
+	border: none;
+	background: transparent;
+	text-align: center;
+	font-weight: 600;
+	color: var(--ink);
+	outline: none;
+	user-select: text;
+}
+
+.binary-tree-add-slot {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	border-radius: 999px;
+	border: 1.5px dashed var(--accent);
+	background: var(--accent-soft);
+	color: var(--accent);
+	display: grid;
+	place-items: center;
+	padding: 0;
+	cursor: pointer;
+	transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+	z-index: 1;
+}
+
+.binary-tree-add-slot:hover:not(:disabled) {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-ink);
+	transform: translate(-50%, -50%) scale(1.08);
+}
+
+.binary-tree-add-slot:disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
+}
+
+.binary-tree-add-slot-icon {
+	display: grid;
+	place-items: center;
+}
+
+.binary-tree-add-slot-icon svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
 
 .canvas-panel {
 	background: var(--panel);

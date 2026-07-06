@@ -1,6 +1,6 @@
 import type { GraphNode } from '../types'
 
-import type { ShortestPathResult } from './algorithmstypes'
+import type { ShortestPathResult } from './algorithmTypes'
 
 // Looks up a node's label by id; falls back to the id itself if missing.
 function nodeLabel(nodes: GraphNode[], nodeId: string): string {

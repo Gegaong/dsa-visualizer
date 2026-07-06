@@ -1,4 +1,4 @@
-import type { TraversalStrategy } from '../../algorithms/algorithmstypes'
+import type { TraversalStrategy } from '../../algorithms/algorithmTypes'
 
 import type { CycleDetectionOutput, CyclePhase } from './sidebarTypes'
 

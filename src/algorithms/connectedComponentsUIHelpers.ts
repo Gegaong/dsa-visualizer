@@ -1,6 +1,6 @@
 import type { GraphNode } from '../types'
 
-import type { ConnectedComponentsResult } from './algorithmstypes'
+import type { ConnectedComponentsResult } from './algorithmTypes'
 
 import { sortIdsByLabel } from './sortIdsByLabel'
 

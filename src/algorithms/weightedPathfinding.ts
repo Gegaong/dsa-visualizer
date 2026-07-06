@@ -1,6 +1,6 @@
 import type { GraphEdge, GraphNode } from '../types'
 
-import type { TraversalStrategy, WeightedPathResult, WeightedPathStep } from './algorithmstypes'
+import type { TraversalStrategy, WeightedPathResult, WeightedPathStep } from './algorithmTypes'
 
 import { buildWeightedLookups } from './graphAdjacency'
 

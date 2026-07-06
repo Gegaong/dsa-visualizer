@@ -4,7 +4,7 @@ import type {
   ShortestPathResult,
   ShortestPathStep,
   TraversalStrategy,
-} from './algorithmstypes'
+} from './algorithmTypes'
 
 import { buildNeighborsMap } from './graphAdjacency'
 

@@ -9,7 +9,7 @@ import {
   type SetStateAction,
 } from 'react'
 
-import type { BfsStep } from '../algorithms/algorithmstypes'
+import type { BfsStep } from '../algorithms/algorithmTypes'
 
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 

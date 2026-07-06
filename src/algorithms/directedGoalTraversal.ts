@@ -1,6 +1,6 @@
 import type { GraphNode } from '../types'
 
-import type { BfsInput, BfsResult, BfsStep, TraversalStrategy } from './algorithmstypes'
+import type { BfsInput, BfsResult, BfsStep, TraversalStrategy } from './algorithmTypes'
 
 import { buildNeighborsMap } from './graphAdjacency'
 
