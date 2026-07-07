@@ -1,4 +1,4 @@
-﻿import {
+import {
   useCallback,
   useEffect,
   useRef,
@@ -1479,6 +1479,8 @@ function App() {
               onEmptyAllValues: handleBinaryTreeEmptyAllClick,
               canEmptyAll: binaryTreeCanEmptyAll,
             }}
+            pseudocodeShowLogic={pseudocodeShowLogic}
+            onPseudocodeFlip={() => setPseudocodeShowLogic((v) => !v)}
           />
         )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && canvasType !== 'binary-tree' && <Sidebar

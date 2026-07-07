@@ -1,5 +1,6 @@
 // Per-algorithm metadata shown in the sidebar info card (name, complexity, key properties).
-// V = number of nodes, E = number of edges.
+// V = number of nodes, E = number of edges. For the binary tree traversals: n = number of
+// nodes, h = tree height (recursion depth), w = the tree's widest level (max queue size).
 
 export type AlgorithmInfoKey =
   | 'grid-for-bfs'
@@ -24,6 +25,10 @@ export type AlgorithmInfoKey =
   | 'wp-astar'
   | 'wp-greedy'
   | 'nqueens'
+  | 'bt-preorder'
+  | 'bt-inorder'
+  | 'bt-postorder'
+  | 'bt-levelorder'
 
 export type AlgorithmInfo = {
   name: string
@@ -288,6 +293,58 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     ],
     cons: [
       'Work grows factorially — large N values are slow',
+    ],
+  },
+  'bt-preorder': {
+    name: 'Preorder Traversal',
+    time: 'O(n)',
+    space: 'O(h)',
+    summary: 'Visits each node before its children: the node itself, then its entire left subtree, then its entire right subtree.',
+    pros: [
+      'Visits parents before children — natural for copying or serializing a tree',
+      'Simple recursive structure',
+    ],
+    cons: [
+      "Doesn't produce sorted output, even on a binary search tree",
+    ],
+  },
+  'bt-inorder': {
+    name: 'Inorder Traversal',
+    time: 'O(n)',
+    space: 'O(h)',
+    summary: 'Visits the left subtree, then the node itself, then the right subtree — each node is visited in between its two children.',
+    pros: [
+      'Produces values in sorted order on a binary search tree',
+      'Simple recursive structure',
+    ],
+    cons: [
+      'Not meaningful as a copy/serialization order',
+    ],
+  },
+  'bt-postorder': {
+    name: 'Postorder Traversal',
+    time: 'O(n)',
+    space: 'O(h)',
+    summary: 'Visits both children before their parent: the entire left subtree, then the entire right subtree, then the node itself.',
+    pros: [
+      'Children are visited before their parent — safe order for deleting or freeing a tree',
+      'Simple recursive structure',
+    ],
+    cons: [
+      'Every node below a subtree must be visited before that subtree\'s root is',
+    ],
+  },
+  'bt-levelorder': {
+    name: 'Level-Order Traversal',
+    time: 'O(n)',
+    space: 'O(w)',
+    summary: 'Visits nodes level by level from the root down, left to right within each level — the same breadth-first idea as graph BFS.',
+    pros: [
+      'Visits nodes closest to the root first',
+      'Reveals the tree\'s shape one level at a time',
+    ],
+    cons: [
+      'Needs a queue — more memory than the recursive traversals on wide trees',
     ],
   },
 }
