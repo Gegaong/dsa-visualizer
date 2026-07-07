@@ -1,14 +1,11 @@
-import { useState } from 'react'
-
 import type { AlgorithmInfoKey } from '../../algorithms/algorithmInfo'
+import type { BinaryTreeTraversalAlgorithm } from '../../algorithms/binaryTreeTraversal'
 import type { GoalType } from '../../types'
 
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 import { PlaybackControls } from './PlaybackControls'
 import { PseudocodePanel } from './PseudocodePanel'
 import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
-
-export type BinaryTreeTraversalAlgorithm = 'preorder' | 'inorder' | 'postorder' | 'level-order'
 
 const ALGORITHM_OPTIONS: { value: BinaryTreeTraversalAlgorithm; label: string }[] = [
   { value: 'preorder', label: 'Preorder' },
@@ -114,10 +111,35 @@ Each step:
 Queue empties → every node has been visited.`,
 }
 
-// No step is currently highlighted since there's no playback engine behind this page yet.
+// No pseudocode line is highlighted yet — only node highlighting on the canvas reflects live
+// playback for now.
 const NO_HIGHLIGHTS = new Set<number>()
 
-type BinaryTreeTraversalPageProps = {
+export type BinaryTreeTraversalPageProps = {
+  algorithm: BinaryTreeTraversalAlgorithm
+  onAlgorithmChange: (algorithm: BinaryTreeTraversalAlgorithm) => void
+  goalType: GoalType
+  onGoalTypeChange: (type: GoalType) => void
+  goalNodeLabel: string
+  onGoalNodeLabelChange: (value: string) => void
+  goalValueInput: string
+  onGoalValueInputChange: (value: string) => void
+  isTraversalRunning: boolean
+  onRunTraversal: () => void
+  onStopTraversal: () => void
+  canRunTraversal: boolean
+  traversalStatusText: string
+  isTraversalPlaying: boolean
+  traversalPlaybackSpeed: number
+  onTraversalPlaybackSpeedChange: (value: number) => void
+  onPlayTraversal: () => void
+  onPauseTraversal: () => void
+  onNextTraversalStep: () => void
+  onPreviousTraversalStep: () => void
+  canStepForward: boolean
+  canStepBackward: boolean
+  canTogglePlay: boolean
+  isTraversalPlaybackComplete: boolean
   pseudocodeShowLogic: boolean
   onPseudocodeFlip: () => void
 }
@@ -125,15 +147,36 @@ type BinaryTreeTraversalPageProps = {
 // Sidebar page: tree-traversal setup, visually mirroring the graph canvas's TraversalPage.
 // Uses a dropdown instead of a BFS/DFS pill toggle (4 traversal orders instead of 2), and the
 // Inputs section drops the "Start node" field since a tree traversal always starts at the root.
-// Playback is a visual placeholder — the actual traversal engine isn't wired up yet.
+// Only preorder is actually wired up to a real algorithm so far — the rest just report as
+// not-yet-implemented when Run is pressed (see useBinaryTreeTraversalPlayback).
 export const BinaryTreeTraversalPage = ({
+  algorithm,
+  onAlgorithmChange,
+  goalType,
+  onGoalTypeChange,
+  goalNodeLabel,
+  onGoalNodeLabelChange,
+  goalValueInput,
+  onGoalValueInputChange,
+  isTraversalRunning,
+  onRunTraversal,
+  onStopTraversal,
+  canRunTraversal,
+  traversalStatusText,
+  isTraversalPlaying,
+  traversalPlaybackSpeed,
+  onTraversalPlaybackSpeedChange,
+  onPlayTraversal,
+  onPauseTraversal,
+  onNextTraversalStep,
+  onPreviousTraversalStep,
+  canStepForward,
+  canStepBackward,
+  canTogglePlay,
+  isTraversalPlaybackComplete,
   pseudocodeShowLogic,
   onPseudocodeFlip,
 }: BinaryTreeTraversalPageProps) => {
-  const [algorithm, setAlgorithm] = useState<BinaryTreeTraversalAlgorithm>('preorder')
-  const [goalType, setGoalType] = useState<GoalType>('target-node')
-  const [goalNodeLabel, setGoalNodeLabel] = useState('')
-  const [goalValueInput, setGoalValueInput] = useState('')
   const algoLabel = SHORT_LABEL_BY_ALGORITHM[algorithm]
 
   return (
@@ -144,7 +187,8 @@ export const BinaryTreeTraversalPage = ({
           <span>Algorithm</span>
           <select
             value={algorithm}
-            onChange={(event) => setAlgorithm(event.target.value as BinaryTreeTraversalAlgorithm)}
+            onChange={(event) => onAlgorithmChange(event.target.value as BinaryTreeTraversalAlgorithm)}
+            disabled={isTraversalRunning}
           >
             {ALGORITHM_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
@@ -161,7 +205,8 @@ export const BinaryTreeTraversalPage = ({
           <span>Goal type</span>
           <select
             value={goalType}
-            onChange={(event) => setGoalType(event.target.value as GoalType)}
+            onChange={(event) => onGoalTypeChange(event.target.value as GoalType)}
+            disabled={isTraversalRunning}
           >
             <option value="target-node">Target node</option>
             <option value="target-value">Target value</option>
@@ -177,8 +222,9 @@ export const BinaryTreeTraversalPage = ({
             <input
               type="text"
               value={goalNodeLabel}
-              onChange={(event) => setGoalNodeLabel(event.target.value)}
+              onChange={(event) => onGoalNodeLabelChange(event.target.value)}
               onKeyDown={confirmNodeLabelFieldOnEnter}
+              disabled={isTraversalRunning}
             />
           </label>
         )}
@@ -191,7 +237,8 @@ export const BinaryTreeTraversalPage = ({
               type="text"
               inputMode="numeric"
               value={goalValueInput}
-              onChange={(event) => setGoalValueInput(event.target.value)}
+              onChange={(event) => onGoalValueInputChange(event.target.value)}
+              disabled={isTraversalRunning}
             />
           </label>
         )}
@@ -205,22 +252,21 @@ export const BinaryTreeTraversalPage = ({
         <PlaybackControls
           runLabel={`Run ${algoLabel}`}
           stopLabel={`Stop ${algoLabel}`}
-          isRunActive={false}
-          onRunToggle={() => {}}
-          runDisabled
-          onPrevious={() => {}}
-          onNext={() => {}}
-          onPlayPauseToggle={() => {}}
-          isPlaying={false}
-          isPlaybackComplete={false}
-          canStepBackward={false}
-          canStepForward={false}
-          canTogglePlay={false}
-          stepControlsDisabled
-          speed={50}
-          onSpeedChange={() => {}}
+          isRunActive={isTraversalRunning}
+          onRunToggle={isTraversalRunning ? onStopTraversal : onRunTraversal}
+          runDisabled={!isTraversalRunning && !canRunTraversal}
+          onPrevious={onPreviousTraversalStep}
+          onNext={onNextTraversalStep}
+          onPlayPauseToggle={isTraversalPlaying ? onPauseTraversal : onPlayTraversal}
+          isPlaying={isTraversalPlaying}
+          isPlaybackComplete={isTraversalPlaybackComplete}
+          canStepBackward={canStepBackward}
+          canStepForward={canStepForward}
+          canTogglePlay={canTogglePlay}
+          speed={traversalPlaybackSpeed}
+          onSpeedChange={onTraversalPlaybackSpeedChange}
         />
-        <p className="hint">Traversal playback hasn't been implemented yet.</p>
+        <p className="hint">{traversalStatusText}</p>
       </div>
 
       <PseudocodePanel
@@ -231,6 +277,7 @@ export const BinaryTreeTraversalPage = ({
         varsRows={null}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
+        canDetach={!isTraversalPlaying}
       />
     </div>
   )

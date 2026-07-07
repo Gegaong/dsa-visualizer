@@ -16,6 +16,11 @@ type BinaryTreeCanvasProps = {
   onCommitNodeValue: (nodeId: string, value: number | 'empty') => void
   onDeleteNodes: (nodeIds: string[]) => void
   onClearTree: () => void
+  isTraversalRunning: boolean
+  traversalVisitedNodeIds: string[]
+  traversalCurrentNodeId: string | null
+  traversalStartNodeId: string | null
+  traversalGoalNodeIds: string[]
 }
 
 const parseDraftValue = (raw: string): number | 'empty' => {
@@ -46,6 +51,11 @@ export const BinaryTreeCanvas = ({
   onCommitNodeValue,
   onDeleteNodes,
   onClearTree,
+  isTraversalRunning,
+  traversalVisitedNodeIds,
+  traversalCurrentNodeId,
+  traversalStartNodeId,
+  traversalGoalNodeIds,
 }: BinaryTreeCanvasProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -55,6 +65,14 @@ export const BinaryTreeCanvas = ({
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [draftValue, setDraftValue] = useState('')
   const [contextMenu, setContextMenu] = useState<BinaryTreeContextMenuState | null>(null)
+
+  // A running traversal owns the canvas: fall back to these instead of the raw state so any
+  // edit mode that was active before the run started stops affecting the UI, without having to
+  // reset that state from an effect (which would just fire an extra render for no benefit).
+  const effectiveDeleteMode = deleteMode && !isTraversalRunning
+  const effectiveSelectedNodeIds = isTraversalRunning ? [] : selectedNodeIds
+  const effectiveEditingNodeId = isTraversalRunning ? null : editingNodeId
+  const effectiveContextMenu = isTraversalRunning ? null : contextMenu
 
   useLayoutEffect(() => {
     const el = containerRef.current
@@ -91,6 +109,7 @@ export const BinaryTreeCanvas = ({
   }
 
   const handleNodeClick = (nodeId: string) => {
+    if (isTraversalRunning) return
     if (deleteMode) {
       setSelectedNodeIds((prev) =>
         prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId],
@@ -105,6 +124,7 @@ export const BinaryTreeCanvas = ({
   const handleNodeContextMenu = (event: MouseEvent<HTMLDivElement>, nodeId: string) => {
     event.preventDefault()
     event.stopPropagation()
+    if (isTraversalRunning) return
 
     const menuWidth = 220
     const menuHeight = 160
@@ -124,6 +144,7 @@ export const BinaryTreeCanvas = ({
   // Toolbar: toggles delete mode; turning it off while nodes are selected deletes them (and their
   // subtrees) all at once, mirroring the graph canvas's multi-select delete flow.
   const handleDeleteModeToggle = () => {
+    if (isTraversalRunning) return
     if (deleteMode) {
       if (selectedNodeIds.length > 0) onDeleteNodes(selectedNodeIds)
       setDeleteMode(false)
@@ -149,7 +170,7 @@ export const BinaryTreeCanvas = ({
   }
 
   const handleClearClick = () => {
-    if (nodeCount === 0) return
+    if (nodeCount === 0 || isTraversalRunning) return
     setClearConfirmOpen(true)
   }
 
@@ -176,6 +197,14 @@ export const BinaryTreeCanvas = ({
     }
   }
 
+  // A tree edge has no id of its own — it's uniquely identified by its child node's id, since
+  // every node has exactly one incoming edge (or none, for the root).
+  const edgeClassName = (childId: string) => {
+    if (traversalCurrentNodeId === childId) return 'is-traversal-current'
+    if (traversalVisitedNodeIds.includes(childId)) return 'is-traversal-visited'
+    return undefined
+  }
+
   return (
     <>
       <ConfirmModal
@@ -187,9 +216,9 @@ export const BinaryTreeCanvas = ({
         onCancel={() => setClearConfirmOpen(false)}
       />
       <BinaryTreeNodeContextMenu
-        contextMenu={contextMenu}
+        contextMenu={effectiveContextMenu}
         tree={tree}
-        isDeleteMode={deleteMode}
+        isDeleteMode={effectiveDeleteMode}
         onClose={() => setContextMenu(null)}
         onEditValue={startEditingNode}
         onDelete={(nodeId) => onDeleteNodes([nodeId])}
@@ -212,12 +241,13 @@ export const BinaryTreeCanvas = ({
               </div>
             </div>
             <button
-              className={`btn btn-pill connect-toggle-btn ${deleteMode ? 'btn-active' : ''}`}
+              className={`btn btn-pill connect-toggle-btn ${effectiveDeleteMode ? 'btn-active' : ''}`}
               type="button"
+              disabled={isTraversalRunning}
               onClick={handleDeleteModeToggle}
             >
-              {deleteMode
-                ? selectedNodeIds.length > 0
+              {effectiveDeleteMode
+                ? effectiveSelectedNodeIds.length > 0
                   ? 'Delete selected nodes'
                   : 'Cancel node delete'
                 : 'Delete nodes'}
@@ -225,7 +255,7 @@ export const BinaryTreeCanvas = ({
             <button
               className="btn"
               type="button"
-              disabled={nodeCount === 0}
+              disabled={nodeCount === 0 || isTraversalRunning}
               onClick={handleClearClick}
             >
               Clear tree
@@ -247,12 +277,12 @@ export const BinaryTreeCanvas = ({
                   {node.leftId && layout.nodePositions.has(node.leftId) && (() => {
                     const to = layout.nodePositions.get(node.leftId!)!
                     const { x1, y1, x2, y2 } = trimEdgeToNodeRadius(from, to)
-                    return <line x1={x1} y1={y1} x2={x2} y2={y2} />
+                    return <line x1={x1} y1={y1} x2={x2} y2={y2} className={edgeClassName(node.leftId!)} />
                   })()}
                   {node.rightId && layout.nodePositions.has(node.rightId) && (() => {
                     const to = layout.nodePositions.get(node.rightId!)!
                     const { x1, y1, x2, y2 } = trimEdgeToNodeRadius(from, to)
-                    return <line x1={x1} y1={y1} x2={x2} y2={y2} />
+                    return <line x1={x1} y1={y1} x2={x2} y2={y2} className={edgeClassName(node.rightId!)} />
                   })()}
                 </g>
               )
@@ -265,7 +295,7 @@ export const BinaryTreeCanvas = ({
               type="button"
               className="binary-tree-add-slot"
               style={{ left: slot.x, top: slot.y, width: nodeSize, height: nodeSize }}
-              disabled={deleteMode}
+              disabled={effectiveDeleteMode || isTraversalRunning}
               title={slot.parentId === null ? 'Add root node' : `Add ${slot.side} child`}
               aria-label={slot.parentId === null ? 'Add root node' : `Add ${slot.side} child`}
               onClick={() => onAddNode(slot.parentId, slot.side)}
@@ -279,23 +309,33 @@ export const BinaryTreeCanvas = ({
           {Object.values(tree.nodesById).map((node) => {
             const pos = layout.nodePositions.get(node.id)
             if (!pos) return null
-            const isEditing = editingNodeId === node.id
-            const isSelected = selectedNodeIds.includes(node.id)
+            const isEditing = effectiveEditingNodeId === node.id
+            const isSelected = effectiveSelectedNodeIds.includes(node.id)
             const { text: displayValue, sizeTier } = formatNodeValueDisplay(node.value)
             const fontSize = Math.max(VALUE_FONT_MIN_PX, VALUE_FONT_SIZE_BY_TIER[sizeTier] * layout.scale)
             const showHoverValue = typeof node.value === 'number'
 
+            const isTraversalCurrent = traversalCurrentNodeId === node.id
+            const isTraversalGoal = traversalGoalNodeIds.includes(node.id)
+            const isTraversalVisited = !isTraversalCurrent && !isTraversalGoal && traversalVisitedNodeIds.includes(node.id)
+            const isTraversalStart = !isTraversalGoal && traversalStartNodeId === node.id
+            const traversalWrapClass =
+              `${isTraversalVisited ? ' is-traversal-visited' : ''}` +
+              `${isTraversalStart ? ' is-traversal-start' : ''}` +
+              `${isTraversalGoal ? ' is-traversal-goal' : ''}` +
+              `${isTraversalCurrent ? ' is-traversal-current' : ''}`
+
             return (
               <div
                 key={node.id}
-                className="binary-tree-node-wrap"
+                className={`binary-tree-node-wrap${traversalWrapClass}`}
                 style={{ left: pos.x - nodeSize / 2, top: pos.y - nodeSize / 2 }}
               >
                 <div
-                  className={`binary-tree-node${deleteMode ? ' is-delete-mode' : ''}${isSelected ? ' is-selected' : ''}${isEditing ? ' is-editing' : ''}`}
+                  className={`binary-tree-node${effectiveDeleteMode ? ' is-delete-mode' : ''}${isSelected ? ' is-selected' : ''}${isEditing ? ' is-editing' : ''}`}
                   style={{ width: nodeSize, height: nodeSize }}
                   onClick={() => handleNodeClick(node.id)}
-                  onContextMenu={deleteMode ? undefined : (e) => handleNodeContextMenu(e, node.id)}
+                  onContextMenu={effectiveDeleteMode ? undefined : (e) => handleNodeContextMenu(e, node.id)}
                 >
                   {isEditing ? (
                     <input

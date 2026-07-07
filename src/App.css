@@ -511,6 +511,47 @@
 	box-shadow: 0 0 0 3px rgba(58, 111, 90, 0.2);
 }
 
+/* Traversal playback highlighting — same colors/keyframes as the graph canvas's node-wrap
+   states, applied to the tree's node-wrap so both canvases read consistently. */
+.binary-tree-node-wrap.is-traversal-visited .binary-tree-node {
+	background: rgba(245, 200, 56, 0.24);
+	border-color: #f5c838;
+	border-width: 1px;
+	box-shadow: 0 6px 14px rgba(46, 32, 23, 0.1);
+}
+
+.binary-tree-node-wrap.is-traversal-start .binary-tree-node {
+	border-color: #2f7d32;
+	box-shadow: 0 0 0 4px rgba(47, 125, 50, 0.2), 0 10px 20px rgba(46, 32, 23, 0.14);
+}
+
+.binary-tree-node-wrap.is-traversal-goal .binary-tree-node {
+	background: rgba(42, 79, 156, 0.22);
+	border-color: #2a4f9c;
+	border-width: 2px;
+	box-shadow: 0 0 0 4px rgba(42, 79, 156, 0.24), 0 12px 22px rgba(46, 32, 23, 0.2);
+	transform: scale(1.1);
+	animation: traversal-goal-pop 420ms ease-out;
+}
+
+.binary-tree-node-wrap.is-traversal-current .binary-tree-node {
+	background: rgba(58, 111, 90, 0.24);
+	border-color: #3a6f5a;
+	border-width: 3px;
+	box-shadow: 0 0 0 6px rgba(58, 111, 90, 0.24), 0 0 0 12px rgba(58, 111, 90, 0.12), 0 14px 24px rgba(46, 32, 23, 0.2);
+	animation: traversal-current-pulse 1s ease-in-out infinite;
+}
+
+.binary-tree-edges-svg line.is-traversal-visited {
+	stroke: #e07b39;
+	stroke-width: 2.5px;
+}
+
+.binary-tree-edges-svg line.is-traversal-current {
+	stroke: #3a6f5a;
+	stroke-width: 3px;
+}
+
 .binary-tree-node-value {
 	display: block;
 	user-select: none;

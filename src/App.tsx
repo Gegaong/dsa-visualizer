@@ -74,6 +74,7 @@ import { useNodeDragging } from './hooks/useNodeDragging'
 import { useForLoopBFSPlayback } from './hooks/useForLoopBFSPlayback'
 import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
 import { useNQueensPlayback } from './hooks/useNQueensPlayback'
+import { useBinaryTreeTraversalPlayback } from './hooks/useBinaryTreeTraversalPlayback'
 import { collectSubtreeIds, findParentId, findChildSide } from './algorithms/binaryTreeShared'
 
 const CANVAS_ORDER: CanvasType[] = ['graph', 'binary-tree', 'weighted-graph', 'grid', 'nqueens']
@@ -188,6 +189,8 @@ function App() {
       cycleDetection.clearCycleDetectionAlgorithmStateOnly()
     },
   })
+
+  const binaryTreeTraversal = useBinaryTreeTraversalPlayback({ tree: binaryTree })
 
   const traversalVisualSetters = {
     setTraversalVisitedNodeIds: traversal.setTraversalVisitedNodeIds,
@@ -1323,6 +1326,11 @@ function App() {
             onCommitNodeValue={handleBinaryTreeCommitValue}
             onDeleteNodes={handleBinaryTreeDeleteSelected}
             onClearTree={handleBinaryTreeClear}
+            isTraversalRunning={binaryTreeTraversal.isRunning}
+            traversalVisitedNodeIds={binaryTreeTraversal.visitedNodeIds}
+            traversalCurrentNodeId={binaryTreeTraversal.currentNodeId}
+            traversalStartNodeId={binaryTreeTraversal.startNodeId}
+            traversalGoalNodeIds={binaryTreeTraversal.goalNodeIds}
           />
         )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && canvasType !== 'binary-tree' && <GraphCanvas
@@ -1479,8 +1487,34 @@ function App() {
               onEmptyAllValues: handleBinaryTreeEmptyAllClick,
               canEmptyAll: binaryTreeCanEmptyAll,
             }}
-            pseudocodeShowLogic={pseudocodeShowLogic}
-            onPseudocodeFlip={() => setPseudocodeShowLogic((v) => !v)}
+            traversal={{
+              algorithm: binaryTreeTraversal.algorithm,
+              onAlgorithmChange: binaryTreeTraversal.setAlgorithm,
+              goalType: binaryTreeTraversal.goalType,
+              onGoalTypeChange: binaryTreeTraversal.setGoalType,
+              goalNodeLabel: binaryTreeTraversal.goalNodeLabel,
+              onGoalNodeLabelChange: binaryTreeTraversal.handleGoalNodeLabelChange,
+              goalValueInput: binaryTreeTraversal.goalValueInput,
+              onGoalValueInputChange: binaryTreeTraversal.handleGoalValueInputChange,
+              isTraversalRunning: binaryTreeTraversal.isRunning,
+              onRunTraversal: binaryTreeTraversal.runTraversal,
+              onStopTraversal: binaryTreeTraversal.resetVisualization,
+              canRunTraversal: binaryTreeTraversal.canRunTraversal,
+              traversalStatusText: binaryTreeTraversal.sidebarStatusText,
+              isTraversalPlaying: binaryTreeTraversal.isPlaying,
+              traversalPlaybackSpeed: binaryTreeTraversal.playbackSpeed,
+              onTraversalPlaybackSpeedChange: binaryTreeTraversal.onPlaybackSpeedChange,
+              onPlayTraversal: binaryTreeTraversal.play,
+              onPauseTraversal: binaryTreeTraversal.pause,
+              onNextTraversalStep: binaryTreeTraversal.stepForward,
+              onPreviousTraversalStep: binaryTreeTraversal.stepBackward,
+              canStepForward: binaryTreeTraversal.canStepForward,
+              canStepBackward: binaryTreeTraversal.canStepBackward,
+              canTogglePlay: binaryTreeTraversal.canTogglePlay,
+              isTraversalPlaybackComplete: binaryTreeTraversal.isPlaybackComplete,
+              pseudocodeShowLogic,
+              onPseudocodeFlip: () => setPseudocodeShowLogic((v) => !v),
+            }}
           />
         )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && canvasType !== 'binary-tree' && <Sidebar
