@@ -29,86 +29,414 @@ const INFO_KEY_BY_ALGORITHM: Record<BinaryTreeTraversalAlgorithm, AlgorithmInfoK
   'level-order': 'bt-levelorder',
 }
 
-const CODE_BY_ALGORITHM: Record<BinaryTreeTraversalAlgorithm, string> = {
-  preorder: `function preorder(node):
-    if node = null:
-        return
-    visit(node)
-    preorder(node.left)
-    preorder(node.right)`,
-  inorder: `function inorder(node):
-    if node = null:
-        return
-    inorder(node.left)
-    visit(node)
-    inorder(node.right)`,
-  postorder: `function postorder(node):
-    if node = null:
-        return
-    postorder(node.left)
-    postorder(node.right)
-    visit(node)`,
-  'level-order': `function levelOrder(root):
+const CODE_BY_ALGORITHM_AND_GOAL: Record<
+  BinaryTreeTraversalAlgorithm,
+  Record<GoalType, string>
+> = {
+  preorder: {
+    'target-node': `function preorder(root, goal):
     if root = null:
-        return
+        return null
+    if root.label = goal:
+        return root
+    leftResult ← preorder(root.left, goal)
+    if leftResult ≠ null:
+        return leftResult
+    rightResult ← preorder(root.right, goal)
+    return rightResult`,
+    'target-value': `function preorder(root, target):
+    if root = null:
+        return null
+    if root.value = target:
+        return root
+    leftResult ← preorder(root.left, target)
+    if leftResult ≠ null:
+        return leftResult
+    rightResult ← preorder(root.right, target)
+    return rightResult`,
+    'max-value': `function preorderMax(root):
+    best ← -∞
+    bestNodes ← []
+    function preorder(node):
+        if node = null:
+            return
+        if node.value > best:
+            best ← node.value
+            bestNodes ← [node]
+        else if node.value = best:
+            bestNodes.append(node)
+        preorder(node.left)
+        preorder(node.right)
+    preorder(root)
+    return bestNodes`,
+    'min-value': `function preorderMin(root):
+    best ← +∞
+    bestNodes ← []
+    function preorder(node):
+        if node = null:
+            return
+        if node.value < best:
+            best ← node.value
+            bestNodes ← [node]
+        else if node.value = best:
+            bestNodes.append(node)
+        preorder(node.left)
+        preorder(node.right)
+    preorder(root)
+    return bestNodes`,
+  },
+
+  inorder: {
+    'target-node': `function inorder(root, goal):
+    if root = null:
+        return null
+    leftResult ← inorder(root.left, goal)
+    if leftResult ≠ null:
+        return leftResult
+    if root.label = goal:
+        return root
+    rightResult ← inorder(root.right, goal)
+    return rightResult`,
+    'target-value': `function inorder(root, target):
+    if root = null:
+        return null
+    leftResult ← inorder(root.left, target)
+    if leftResult ≠ null:
+        return leftResult
+    if root.value = target:
+        return root
+    rightResult ← inorder(root.right, target)
+    return rightResult`,
+    'max-value': `function inorderMax(root):
+    best ← -∞
+    bestNodes ← []
+    function inorder(node):
+        if node = null:
+            return
+        inorder(node.left)
+        if node.value > best:
+            best ← node.value
+            bestNodes ← [node]
+        else if node.value = best:
+            bestNodes.append(node)
+        inorder(node.right)
+    inorder(root)
+    return bestNodes`,
+    'min-value': `function inorderMin(root):
+    best ← +∞
+    bestNodes ← []
+    function inorder(node):
+        if node = null:
+            return
+        inorder(node.left)
+        if node.value < best:
+            best ← node.value
+            bestNodes ← [node]
+        else if node.value = best:
+            bestNodes.append(node)
+        inorder(node.right)
+    inorder(root)
+    return bestNodes`,
+  },
+
+  postorder: {
+    'target-node': `function postorder(root, goal):
+    if root = null:
+        return null
+    leftResult ← postorder(root.left, goal)
+    if leftResult ≠ null:
+        return leftResult
+    rightResult ← postorder(root.right, goal)
+    if rightResult ≠ null:
+        return rightResult
+    if root.label = goal:
+        return root
+    return null`,
+    'target-value': `function postorder(root, target):
+    if root = null:
+        return null
+    leftResult ← postorder(root.left, target)
+    if leftResult ≠ null:
+        return leftResult
+    rightResult ← postorder(root.right, target)
+    if rightResult ≠ null:
+        return rightResult
+    if root.value = target:
+        return root
+    return null`,
+    'max-value': `function postorderMax(root):
+    best ← -∞
+    bestNodes ← []
+    function postorder(node):
+        if node = null:
+            return
+        postorder(node.left)
+        postorder(node.right)
+        if node.value > best:
+            best ← node.value
+            bestNodes ← [node]
+        else if node.value = best:
+            bestNodes.append(node)
+    postorder(root)
+    return bestNodes`,
+    'min-value': `function postorderMin(root):
+    best ← +∞
+    bestNodes ← []
+    function postorder(node):
+        if node = null:
+            return
+        postorder(node.left)
+        postorder(node.right)
+        if node.value < best:
+            best ← node.value
+            bestNodes ← [node]
+        else if node.value = best:
+            bestNodes.append(node)
+    postorder(root)
+    return bestNodes`,
+  },
+
+  'level-order': {
+    'target-node': `function levelOrder(root, goal):
+    if root = null:
+        return null
     queue ← [root]
     while queue ≠ empty:
         node ← queue.dequeue()
-        visit(node)
+        if node.label = goal:
+            return node
         if node.left ≠ null:
             queue.enqueue(node.left)
         if node.right ≠ null:
-            queue.enqueue(node.right)`,
+            queue.enqueue(node.right)
+    return null`,
+    'target-value': `function levelOrder(root, target):
+    if root = null:
+        return null
+    queue ← [root]
+    while queue ≠ empty:
+        node ← queue.dequeue()
+        if node.value = target:
+            return node
+        if node.left ≠ null:
+            queue.enqueue(node.left)
+        if node.right ≠ null:
+            queue.enqueue(node.right)
+    return null`,
+    'max-value': `function levelOrderMax(root):
+    best ← -∞
+    bestNodes ← []
+    if root = null:
+        return bestNodes
+    queue ← [root]
+    while queue ≠ empty:
+        node ← queue.dequeue()
+        if node.value > best:
+            best ← node.value
+            bestNodes ← [node]
+        else if node.value = best:
+            bestNodes.append(node)
+        if node.left ≠ null:
+            queue.enqueue(node.left)
+        if node.right ≠ null:
+            queue.enqueue(node.right)
+    return bestNodes`,
+    'min-value': `function levelOrderMin(root):
+    best ← +∞
+    bestNodes ← []
+    if root = null:
+        return bestNodes
+    queue ← [root]
+    while queue ≠ empty:
+        node ← queue.dequeue()
+        if node.value < best:
+            best ← node.value
+            bestNodes ← [node]
+        else if node.value = best:
+            bestNodes.append(node)
+        if node.left ≠ null:
+            queue.enqueue(node.left)
+        if node.right ≠ null:
+            queue.enqueue(node.right)
+    return bestNodes`,
+  },
 }
 
-const LOGIC_BY_ALGORITHM: Record<BinaryTreeTraversalAlgorithm, string> = {
-  preorder: `Recursion visits a node before its
-children — handy for copying or
-serializing a tree structure.
+// Keep each intro wrapped to short lines so the top-right panel controls never overlap the
+// first lines of text (same convention used on the graph pseudocode cards).
+const LOGIC_BY_ALGORITHM_AND_GOAL: Record<
+  BinaryTreeTraversalAlgorithm,
+  Record<GoalType, string>
+> = {
+  preorder: {
+    'target-node': `Preorder visits node
+before its children.
 ──────────────────────────────────────────
 Each step:
-  · Visit the current node and record its value.
-  · Recurse into the left child, applying this
-    same rule to it and everything below it.
-  · Once that call returns, recurse into the
-    right child the same way.
+  · Visit the current node.
+  · If it matches the goal → stop now.
+  · Otherwise: recurse left, then right.
 ──────────────────────────────────────────
-No children left → return to the caller.`,
-  inorder: `Recursion visits a node strictly
-between its two children — on a
-binary search tree this yields
-sorted values.
+No nodes left → goal is unreachable.`,
+    'target-value': `Preorder visits node
+before its children.
 ──────────────────────────────────────────
 Each step:
-  · Recurse into the left child first, applying
-    this same rule to it and everything below it.
-  · Once that call returns, visit the current
-    node and record its value.
-  · Recurse into the right child the same way.
+  · Visit the current node.
+  · If its value matches → stop now.
+  · Otherwise: recurse left, then right.
 ──────────────────────────────────────────
-No children left → return to the caller.`,
-  postorder: `Recursion visits a node only after
-both children are done — handy for
-safely deleting or freeing a tree.
+No nodes left → target value not found.`,
+    'max-value': `Preorder keeps a
+running max while walking.
 ──────────────────────────────────────────
 Each step:
-  · Recurse into the left child first, applying
-    this same rule to it and everything below it.
-  · Recurse into the right child the same way.
-  · Once both calls return, visit the current
-    node and record its value.
+  · Visit the current node.
+  · Compare node.value with the running best.
+    - Better → update best + reset winners.
+    - Equal → add this node as a tie.
+  · Recurse left, then right.
 ──────────────────────────────────────────
-No children left → visit self, return to caller.`,
-  'level-order': `A queue visits nodes level by
-level, left to right — the same
-idea BFS uses on a graph.
+Walk ends → return best (with ties).`,
+    'min-value': `Preorder keeps a
+running min while walking.
 ──────────────────────────────────────────
 Each step:
-  · Dequeue the front node and visit it.
-  · Enqueue its left child, if it has one.
-  · Enqueue its right child, if it has one.
+  · Visit the current node.
+  · Compare node.value with the running best.
+    - Better (smaller) → update best + reset winners.
+    - Equal → add this node as a tie.
+  · Recurse left, then right.
 ──────────────────────────────────────────
-Queue empties → every node has been visited.`,
+Walk ends → return best (with ties).`,
+  },
+
+  inorder: {
+    'target-node': `Inorder visits left,
+then node, then right.
+──────────────────────────────────────────
+Each step:
+  · Recurse into the left child.
+  · If current node matches → stop now.
+  · Otherwise: recurse into the right child.
+──────────────────────────────────────────
+No nodes left → goal is unreachable.`,
+    'target-value': `Inorder visits left,
+then node, then right.
+──────────────────────────────────────────
+Each step:
+  · Recurse into the left child.
+  · If current.value matches → stop now.
+  · Otherwise: recurse into the right child.
+──────────────────────────────────────────
+No nodes left → target value not found.`,
+    'max-value': `Inorder updates max
+when each node is visited.
+──────────────────────────────────────────
+Each step:
+  · Recurse left.
+  · Visit current node; compare to running best.
+    - Better → update best + reset winners.
+    - Equal → add this node as a tie.
+  · Recurse right.
+──────────────────────────────────────────
+Walk ends → return best (with ties).`,
+    'min-value': `Inorder updates min
+when each node is visited.
+──────────────────────────────────────────
+Each step:
+  · Recurse left.
+  · Visit current node; compare to running best.
+    - Better (smaller) → update best + reset winners.
+    - Equal → add this node as a tie.
+  · Recurse right.
+──────────────────────────────────────────
+Walk ends → return best (with ties).`,
+  },
+
+  postorder: {
+    'target-node': `Postorder visits
+children before node.
+──────────────────────────────────────────
+Each step:
+  · Recurse left subtree.
+  · Then recurse right subtree.
+  · If current node matches → stop now.
+──────────────────────────────────────────
+No nodes left → goal is unreachable.`,
+    'target-value': `Postorder visits
+children before node.
+──────────────────────────────────────────
+Each step:
+  · Recurse left subtree.
+  · Then recurse right subtree.
+  · If current.value matches → stop now.
+──────────────────────────────────────────
+No nodes left → target value not found.`,
+    'max-value': `Postorder updates max
+after both subtrees.
+──────────────────────────────────────────
+Each step:
+  · Recurse left, then right.
+  · After children: compare current node.value to best.
+    - Better → update best + reset winners.
+    - Equal → add this node as a tie.
+──────────────────────────────────────────
+Walk ends → return best (with ties).`,
+    'min-value': `Postorder updates min
+after both subtrees.
+──────────────────────────────────────────
+Each step:
+  · Recurse left, then right.
+  · After children: compare current node.value to best.
+    - Better (smaller) → update best + reset winners.
+    - Equal → add this node as a tie.
+──────────────────────────────────────────
+Walk ends → return best (with ties).`,
+  },
+
+  'level-order': {
+    'target-node': `Level-order visits
+nodes level by level.
+──────────────────────────────────────────
+Each step:
+  · Dequeue a node to visit.
+  · If it matches the goal → stop now.
+  · Otherwise enqueue left/right children.
+──────────────────────────────────────────
+Queue empties → goal is unreachable.`,
+    'target-value': `Level-order visits
+nodes level by level.
+──────────────────────────────────────────
+Each step:
+  · Dequeue a node to visit.
+  · If its value matches → stop now.
+  · Otherwise enqueue left/right children.
+──────────────────────────────────────────
+Queue empties → target value not found.`,
+    'max-value': `Level-order walks all
+nodes with a running max.
+──────────────────────────────────────────
+Each step:
+  · Dequeue the current node.
+  · Compare node.value with the running best.
+    - Better → update best + reset winners.
+    - Equal → add this node as a tie.
+  · Enqueue left/right children if present.
+──────────────────────────────────────────
+Queue empties → return best (with ties).`,
+    'min-value': `Level-order walks all
+nodes with a running min.
+──────────────────────────────────────────
+Each step:
+  · Dequeue the current node.
+  · Compare node.value with the running best.
+    - Better (smaller) → update best + reset winners.
+    - Equal → add this node as a tie.
+  · Enqueue left/right children if present.
+──────────────────────────────────────────
+Queue empties → return best (with ties).`,
+  },
 }
 
 // No pseudocode line is highlighted yet — only node highlighting on the canvas reflects live
@@ -270,8 +598,8 @@ export const BinaryTreeTraversalPage = ({
       </div>
 
       <PseudocodePanel
-        codeText={CODE_BY_ALGORITHM[algorithm]}
-        logicText={LOGIC_BY_ALGORITHM[algorithm]}
+        codeText={CODE_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
+        logicText={LOGIC_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
         codeHighlighted={NO_HIGHLIGHTS}
         logicHighlighted={NO_HIGHLIGHTS}
         varsRows={null}
