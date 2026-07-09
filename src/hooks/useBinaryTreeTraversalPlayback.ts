@@ -99,11 +99,18 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
   const rootLabel = tree.rootId ? (tree.nodesById[tree.rootId]?.label ?? '—') : '—'
 
   const buildVarsRows = useCallback(
-    (nodeLabel: string, runningBest: number | null | undefined): string[][] => {
+    (
+      nodeLabel: string,
+      runningBest: number | null | undefined,
+      subtreeResults?: { leftResult: string; rightResult: string },
+    ): string[][] => {
       if (goalType === 'max-value') return [[`node = ${nodeLabel}`, `max = ${runningBest ?? '—'}`]]
       if (goalType === 'min-value') return [[`node = ${nodeLabel}`, `min = ${runningBest ?? '—'}`]]
-      if (goalType === 'target-node') return [[`node = ${nodeLabel}`, `goal = "${goalNodeLabel}"`]]
-      return [[`node = ${nodeLabel}`, `goal = ${goalValueInput}`]]
+      const goalCell =
+        goalType === 'target-node' ? `goal = "${goalNodeLabel}"` : `goal = ${goalValueInput}`
+      const row1 = [`node = ${nodeLabel}`, goalCell]
+      if (!subtreeResults) return [row1]
+      return [row1, [`leftResult = ${subtreeResults.leftResult}`, `rightResult = ${subtreeResults.rightResult}`]]
     },
     [goalNodeLabel, goalType, goalValueInput],
   )
@@ -314,7 +321,11 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     if (!isRunning || !IMPLEMENTED_ALGORITHMS.has(algorithm) || !execResult) return null
 
     if (playback.stepIndex < 0) {
-      return buildVarsRows(rootLabel, goalType === 'max-value' || goalType === 'min-value' ? null : undefined)
+      const subtreeResults =
+        goalType === 'target-node' || goalType === 'target-value'
+          ? { leftResult: '—', rightResult: '—' }
+          : undefined
+      return buildVarsRows(rootLabel, goalType === 'max-value' || goalType === 'min-value' ? null : undefined, subtreeResults)
     }
 
     const si = Math.min(playback.stepIndex, execResult.steps.length - 1)
@@ -325,7 +336,11 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
       goalType === 'max-value' || goalType === 'min-value'
         ? (isDone ? execResult.foundValue : (step.runningBest ?? null))
         : undefined
-    return buildVarsRows(nodeLabel, bestVal)
+    const subtreeResults =
+      step.leftResult !== undefined && step.rightResult !== undefined
+        ? { leftResult: step.leftResult, rightResult: step.rightResult }
+        : undefined
+    return buildVarsRows(nodeLabel, bestVal, subtreeResults)
   }, [
     algorithm,
     buildVarsRows,

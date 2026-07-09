@@ -47,6 +47,8 @@ export type BinaryTreeExecStep = {
   visitedNodeIds: string[]
   runningBest?: number | null
   matchedGoal?: boolean
+  leftResult?: string
+  rightResult?: string
 }
 
 export type BinaryTreeExecResult = {
@@ -92,6 +94,12 @@ export function runBinaryTreePreorderExec(tree: BinaryTree, goal: BfsGoal): Bina
   return runPreorderTargetExec(tree, goal)
 }
 
+function formatSubtreeResult(node: BinaryTreeNode | null | undefined): string {
+  if (node === undefined) return '—'
+  if (node === null) return 'null'
+  return node.label
+}
+
 function runPreorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecResult {
   const L = PREORDER_TARGET_CODE_LINES
   const steps: BinaryTreeExecStep[] = []
@@ -103,6 +111,7 @@ function runPreorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecR
     codeLine: number,
     nodeId: string | null,
     parentNodeId: string | null,
+    frame: { leftResult: BinaryTreeNode | null | undefined; rightResult: BinaryTreeNode | null | undefined },
     opts?: { markVisited?: boolean; matchedGoal?: boolean },
   ) => {
     if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
@@ -116,47 +125,53 @@ function runPreorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecR
       parentNodeId,
       visitedNodeIds: [...visitedOrder],
       matchedGoal: opts?.matchedGoal,
+      leftResult: formatSubtreeResult(frame.leftResult),
+      rightResult: formatSubtreeResult(frame.rightResult),
     })
   }
 
   function preorder(nodeId: string | null, parentNodeId: string | null): BinaryTreeNode | null {
     if (stopped) return foundNode
 
-    push(L.ENTER, nodeId, parentNodeId)
-    push(L.NULL_CHECK, nodeId, parentNodeId)
+    let leftResult: BinaryTreeNode | null | undefined = undefined
+    let rightResult: BinaryTreeNode | null | undefined = undefined
+    const frame = () => ({ leftResult, rightResult })
+
+    push(L.ENTER, nodeId, parentNodeId, frame())
+    push(L.NULL_CHECK, nodeId, parentNodeId, frame())
 
     if (!nodeId) {
-      push(L.RETURN_NULL, null, parentNodeId)
+      push(L.RETURN_NULL, null, parentNodeId, frame())
       return null
     }
 
     const node = tree.nodesById[nodeId]
     if (!node) {
-      push(L.RETURN_NULL, null, parentNodeId)
+      push(L.RETURN_NULL, null, parentNodeId, frame())
       return null
     }
 
-    push(L.MATCH_CHECK, nodeId, parentNodeId, { markVisited: true })
+    push(L.MATCH_CHECK, nodeId, parentNodeId, frame(), { markVisited: true })
 
     if (matchesGoal(node, goal)) {
       foundNode = node
       stopped = true
-      push(L.RETURN_MATCH, nodeId, parentNodeId, { matchedGoal: true })
+      push(L.RETURN_MATCH, nodeId, parentNodeId, frame(), { matchedGoal: true })
       return node
     }
 
-    push(L.RECURSE_LEFT, nodeId, parentNodeId)
-    const leftResult = preorder(node.leftId, nodeId)
-    push(L.CHECK_LEFT, nodeId, parentNodeId)
+    push(L.RECURSE_LEFT, nodeId, parentNodeId, frame())
+    leftResult = preorder(node.leftId, nodeId)
+    push(L.CHECK_LEFT, nodeId, parentNodeId, frame())
     if (leftResult) {
-      push(L.RETURN_LEFT, nodeId, parentNodeId)
+      push(L.RETURN_LEFT, nodeId, parentNodeId, frame())
       return leftResult
     }
     if (stopped) return foundNode
 
-    push(L.RECURSE_RIGHT, nodeId, parentNodeId)
-    const rightResult = preorder(node.rightId, nodeId)
-    push(L.RETURN, nodeId, parentNodeId)
+    push(L.RECURSE_RIGHT, nodeId, parentNodeId, frame())
+    rightResult = preorder(node.rightId, nodeId)
+    push(L.RETURN, nodeId, parentNodeId, frame())
     return rightResult
   }
 

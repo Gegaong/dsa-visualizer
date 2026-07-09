@@ -139,6 +139,16 @@ describe('runBinaryTreePreorderExec', () => {
     const exec = runBinaryTreePreorderExec(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'Z' })
     expect(exec.steps.some((step) => step.codeLine === 2 && step.nodeId === null)).toBe(true)
   })
+
+  it('snapshots leftResult and rightResult per stack frame for target search', () => {
+    const exec = runBinaryTreePreorderExec(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'B' })
+    const checkLeftAtA = exec.steps.find((step) => step.codeLine === 6 && step.nodeLabel === 'A')
+    expect(checkLeftAtA?.leftResult).toBe('B')
+    expect(checkLeftAtA?.rightResult).toBe('—')
+    const returnMatchAtB = exec.steps.find((step) => step.matchedGoal)
+    expect(returnMatchAtB?.leftResult).toBe('—')
+    expect(returnMatchAtB?.rightResult).toBe('—')
+  })
 })
 
 describe('prepareBinaryTreeTraversalRunInputs', () => {
