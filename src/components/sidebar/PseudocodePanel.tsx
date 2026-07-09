@@ -24,7 +24,11 @@ type PseudocodeBodyProps = {
 
 // Renders the variable rows + highlighted pseudocode lines. Shared by the inline card and the
 // detached floating window so the two stay a pixel-identical copy of each other.
+// Code view shows 1-based line numbers in a gutter; logic view stays unnumbered prose.
 function PseudocodeBody({ text, highlighted, varsRows, showLogic }: PseudocodeBodyProps) {
+  const lines = text.split('\n')
+  const gutterDigits = Math.max(2, String(lines.length).length)
+
   return (
     <>
       {!showLogic && varsRows && (
@@ -39,22 +43,46 @@ function PseudocodeBody({ text, highlighted, varsRows, showLogic }: PseudocodeBo
         </div>
       )}
       <pre className="pseudocode-pre">
-        {text.split('\n').map((line, i) => {
+        {lines.map((line, i) => {
           const indent = line.match(/^ */)?.[0].length ?? 0
           const isActive = highlighted.has(i)
-          const style = indent > 0
+          const indentStyle = indent > 0
             ? {
-                paddingLeft: isActive ? `calc(12px + ${indent}ch)` : `${indent}ch`,
+                paddingLeft: `${indent}ch`,
                 textIndent: `-${indent}ch`,
               }
             : undefined
+
+          if (showLogic) {
+            const logicStyle = indent > 0 && isActive
+              ? { paddingLeft: `calc(12px + ${indent}ch)`, textIndent: `-${indent}ch` }
+              : indentStyle
+            return (
+              <span
+                key={i}
+                className={`pseudocode-line${isActive ? ' pseudocode-line--active' : ''}`}
+                style={logicStyle}
+              >
+                {line}
+              </span>
+            )
+          }
+
           return (
             <span
               key={i}
-              className={`pseudocode-line${isActive ? ' pseudocode-line--active' : ''}`}
-              style={style}
+              className={`pseudocode-line-row${isActive ? ' pseudocode-line-row--active' : ''}`}
             >
-              {line}
+              <span
+                className="pseudocode-line-gutter"
+                style={{ minWidth: `${gutterDigits + 1}ch` }}
+                aria-hidden="true"
+              >
+                {i + 1}
+              </span>
+              <span className="pseudocode-line pseudocode-line--code" style={indentStyle}>
+                {line}
+              </span>
             </span>
           )
         })}

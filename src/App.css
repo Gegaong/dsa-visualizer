@@ -326,6 +326,35 @@
 	display: block;
 }
 
+.pseudocode-line-row {
+	display: flex;
+	align-items: flex-start;
+	width: 100%;
+}
+
+.pseudocode-line-gutter {
+	flex: 0 0 auto;
+	padding-right: 10px;
+	text-align: right;
+	color: var(--muted);
+	font-size: 11px;
+	line-height: 1.55;
+	user-select: none;
+	opacity: 0.72;
+}
+
+.pseudocode-line--code {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.pseudocode-line-row--active {
+	background: rgba(58, 111, 90, 0.25);
+	border-radius: 3px;
+	margin: 0 -12px;
+	padding: 0 12px;
+}
+
 .pseudocode-line--active {
 	background: rgba(58, 111, 90, 0.25);
 	border-radius: 3px;
