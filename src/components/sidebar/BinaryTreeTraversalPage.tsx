@@ -34,27 +34,27 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
   Record<GoalType, string>
 > = {
   preorder: {
-    'target-node': `function preorder(root, goal):
-    if root = null:
+    'target-node': `function preorder(node, goal):
+    if node = null:
         return null
-    if root.label = goal:
-        return root
-    leftResult ← preorder(root.left, goal)
+    if node.label = goal:
+        return node
+    leftResult ← preorder(node.left, goal)
     if leftResult ≠ null:
         return leftResult
-    rightResult ← preorder(root.right, goal)
+    rightResult ← preorder(node.right, goal)
     return rightResult`,
-    'target-value': `function preorder(root, target):
-    if root = null:
+    'target-value': `function preorder(node, target):
+    if node = null:
         return null
-    if root.value = target:
-        return root
-    leftResult ← preorder(root.left, target)
+    if node.value = target:
+        return node
+    leftResult ← preorder(node.left, target)
     if leftResult ≠ null:
         return leftResult
-    rightResult ← preorder(root.right, target)
+    rightResult ← preorder(node.right, target)
     return rightResult`,
-    'max-value': `function preorderMax(root):
+    'max-value': `function preorderMax(node):
     best ← -∞
     bestNodes ← []
     function preorder(node):
@@ -67,9 +67,9 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
             bestNodes.append(node)
         preorder(node.left)
         preorder(node.right)
-    preorder(root)
+    preorder(node)
     return bestNodes`,
-    'min-value': `function preorderMin(root):
+    'min-value': `function preorderMin(node):
     best ← +∞
     bestNodes ← []
     function preorder(node):
@@ -82,32 +82,32 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
             bestNodes.append(node)
         preorder(node.left)
         preorder(node.right)
-    preorder(root)
+    preorder(node)
     return bestNodes`,
   },
 
   inorder: {
-    'target-node': `function inorder(root, goal):
-    if root = null:
+    'target-node': `function inorder(node, goal):
+    if node = null:
         return null
-    leftResult ← inorder(root.left, goal)
+    leftResult ← inorder(node.left, goal)
     if leftResult ≠ null:
         return leftResult
-    if root.label = goal:
-        return root
-    rightResult ← inorder(root.right, goal)
+    if node.label = goal:
+        return node
+    rightResult ← inorder(node.right, goal)
     return rightResult`,
-    'target-value': `function inorder(root, target):
-    if root = null:
+    'target-value': `function inorder(node, target):
+    if node = null:
         return null
-    leftResult ← inorder(root.left, target)
+    leftResult ← inorder(node.left, target)
     if leftResult ≠ null:
         return leftResult
-    if root.value = target:
-        return root
-    rightResult ← inorder(root.right, target)
+    if node.value = target:
+        return node
+    rightResult ← inorder(node.right, target)
     return rightResult`,
-    'max-value': `function inorderMax(root):
+    'max-value': `function inorderMax(node):
     best ← -∞
     bestNodes ← []
     function inorder(node):
@@ -120,9 +120,9 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
         else if node.value = best:
             bestNodes.append(node)
         inorder(node.right)
-    inorder(root)
+    inorder(node)
     return bestNodes`,
-    'min-value': `function inorderMin(root):
+    'min-value': `function inorderMin(node):
     best ← +∞
     bestNodes ← []
     function inorder(node):
@@ -135,36 +135,36 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
         else if node.value = best:
             bestNodes.append(node)
         inorder(node.right)
-    inorder(root)
+    inorder(node)
     return bestNodes`,
   },
 
   postorder: {
-    'target-node': `function postorder(root, goal):
-    if root = null:
+    'target-node': `function postorder(node, goal):
+    if node = null:
         return null
-    leftResult ← postorder(root.left, goal)
+    leftResult ← postorder(node.left, goal)
     if leftResult ≠ null:
         return leftResult
-    rightResult ← postorder(root.right, goal)
+    rightResult ← postorder(node.right, goal)
     if rightResult ≠ null:
         return rightResult
-    if root.label = goal:
-        return root
+    if node.label = goal:
+        return node
     return null`,
-    'target-value': `function postorder(root, target):
-    if root = null:
+    'target-value': `function postorder(node, target):
+    if node = null:
         return null
-    leftResult ← postorder(root.left, target)
+    leftResult ← postorder(node.left, target)
     if leftResult ≠ null:
         return leftResult
-    rightResult ← postorder(root.right, target)
+    rightResult ← postorder(node.right, target)
     if rightResult ≠ null:
         return rightResult
-    if root.value = target:
-        return root
+    if node.value = target:
+        return node
     return null`,
-    'max-value': `function postorderMax(root):
+    'max-value': `function postorderMax(node):
     best ← -∞
     bestNodes ← []
     function postorder(node):
@@ -177,9 +177,9 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
             bestNodes ← [node]
         else if node.value = best:
             bestNodes.append(node)
-    postorder(root)
+    postorder(node)
     return bestNodes`,
-    'min-value': `function postorderMin(root):
+    'min-value': `function postorderMin(node):
     best ← +∞
     bestNodes ← []
     function postorder(node):
@@ -192,15 +192,15 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
             bestNodes ← [node]
         else if node.value = best:
             bestNodes.append(node)
-    postorder(root)
+    postorder(node)
     return bestNodes`,
   },
 
   'level-order': {
-    'target-node': `function levelOrder(root, goal):
-    if root = null:
+    'target-node': `function levelOrder(node, goal):
+    if node = null:
         return null
-    queue ← [root]
+    queue ← [node]
     while queue ≠ empty:
         node ← queue.dequeue()
         if node.label = goal:
@@ -210,10 +210,10 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
         if node.right ≠ null:
             queue.enqueue(node.right)
     return null`,
-    'target-value': `function levelOrder(root, target):
-    if root = null:
+    'target-value': `function levelOrder(node, target):
+    if node = null:
         return null
-    queue ← [root]
+    queue ← [node]
     while queue ≠ empty:
         node ← queue.dequeue()
         if node.value = target:
@@ -223,12 +223,12 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
         if node.right ≠ null:
             queue.enqueue(node.right)
     return null`,
-    'max-value': `function levelOrderMax(root):
+    'max-value': `function levelOrderMax(node):
     best ← -∞
     bestNodes ← []
-    if root = null:
+    if node = null:
         return bestNodes
-    queue ← [root]
+    queue ← [node]
     while queue ≠ empty:
         node ← queue.dequeue()
         if node.value > best:
@@ -241,12 +241,12 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
         if node.right ≠ null:
             queue.enqueue(node.right)
     return bestNodes`,
-    'min-value': `function levelOrderMin(root):
+    'min-value': `function levelOrderMin(node):
     best ← +∞
     bestNodes ← []
-    if root = null:
+    if node = null:
         return bestNodes
-    queue ← [root]
+    queue ← [node]
     while queue ≠ empty:
         node ← queue.dequeue()
         if node.value < best:
@@ -439,8 +439,6 @@ Queue empties → return best (with ties).`,
   },
 }
 
-// No pseudocode line is highlighted yet — only node highlighting on the canvas reflects live
-// playback for now.
 const NO_HIGHLIGHTS = new Set<number>()
 
 export type BinaryTreeTraversalPageProps = {
@@ -468,6 +466,8 @@ export type BinaryTreeTraversalPageProps = {
   canStepBackward: boolean
   canTogglePlay: boolean
   isTraversalPlaybackComplete: boolean
+  traversalCodeHighlighted: Set<number>
+  traversalVarsRows: string[][] | null
   pseudocodeShowLogic: boolean
   onPseudocodeFlip: () => void
 }
@@ -502,10 +502,13 @@ export const BinaryTreeTraversalPage = ({
   canStepBackward,
   canTogglePlay,
   isTraversalPlaybackComplete,
+  traversalCodeHighlighted,
+  traversalVarsRows,
   pseudocodeShowLogic,
   onPseudocodeFlip,
 }: BinaryTreeTraversalPageProps) => {
   const algoLabel = SHORT_LABEL_BY_ALGORITHM[algorithm]
+  const codeHighlighted = algorithm === 'preorder' ? traversalCodeHighlighted : NO_HIGHLIGHTS
 
   return (
     <div className="sidebar-page-body">
@@ -600,9 +603,9 @@ export const BinaryTreeTraversalPage = ({
       <PseudocodePanel
         codeText={CODE_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
         logicText={LOGIC_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
-        codeHighlighted={NO_HIGHLIGHTS}
+        codeHighlighted={codeHighlighted}
         logicHighlighted={NO_HIGHLIGHTS}
-        varsRows={null}
+        varsRows={algorithm === 'preorder' ? traversalVarsRows : null}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
         canDetach={!isTraversalPlaying}

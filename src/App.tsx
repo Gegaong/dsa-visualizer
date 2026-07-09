@@ -40,6 +40,7 @@ import { NQueensCanvas } from './components/NQueensCanvas'
 import { NQueensSidebar } from './components/sidebar/NQueensSidebar'
 import { BinaryTreeCanvas } from './components/BinaryTreeCanvas'
 import { BinaryTreeSidebar } from './components/sidebar/BinaryTreeSidebar'
+import type { BinaryTreeSidebarPage } from './components/sidebar/BinaryTreeSidebar'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
 import { NodeContextMenu } from './components/NodeContextMenu'
@@ -340,6 +341,7 @@ function App() {
 
     gridSearch.stop()
     nQueens.stop()
+    binaryTreeTraversal.resetVisualization()
 
     // Save current graph canvas state (grid has no node/edge state to save).
     if (canvasType === 'graph') {
@@ -1258,6 +1260,15 @@ function App() {
     [traversal, cc, cycleDetection, shortestPath, bipartite, weightedPathfinding],
   )
 
+  const handleBinaryTreeSidebarSectionChange = useCallback(
+    ({ from, to }: { from: BinaryTreeSidebarPage; to: BinaryTreeSidebarPage }) => {
+      if (from === 'traversal' && to !== 'traversal') {
+        binaryTreeTraversal.resetVisualization()
+      }
+    },
+    [binaryTreeTraversal],
+  )
+
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
   const hasNonEmptyNodes = nodes.some((node) => node.value !== 'empty')
   const hasDefaultEdges = edges.some((edge) => (edge.weight ?? 1) === 1)
@@ -1475,6 +1486,7 @@ function App() {
         )}
         {canvasType === 'binary-tree' && (
           <BinaryTreeSidebar
+            onSidebarSectionChange={handleBinaryTreeSidebarSectionChange}
             canvasSetup={{
               fillMin: binaryTreeFillMin,
               fillMax: binaryTreeFillMax,
@@ -1512,6 +1524,8 @@ function App() {
               canStepBackward: binaryTreeTraversal.canStepBackward,
               canTogglePlay: binaryTreeTraversal.canTogglePlay,
               isTraversalPlaybackComplete: binaryTreeTraversal.isPlaybackComplete,
+              traversalCodeHighlighted: binaryTreeTraversal.traversalCodeHighlighted,
+              traversalVarsRows: binaryTreeTraversal.traversalVarsRows,
               pseudocodeShowLogic,
               onPseudocodeFlip: () => setPseudocodeShowLogic((v) => !v),
             }}

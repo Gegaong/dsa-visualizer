@@ -6,6 +6,67 @@ import { parseNumberInput } from '../utils/format'
 
 export type BinaryTreeTraversalAlgorithm = 'preorder' | 'inorder' | 'postorder' | 'level-order'
 
+// Line indices in the preorder pseudocode panels (must match BinaryTreeTraversalPage CODE_BY).
+export const PREORDER_TARGET_CODE_LINES = {
+  ENTER: 0,
+  NULL_CHECK: 1,
+  RETURN_NULL: 2,
+  MATCH_CHECK: 3,
+  RETURN_MATCH: 4,
+  RECURSE_LEFT: 5,
+  CHECK_LEFT: 6,
+  RETURN_LEFT: 7,
+  RECURSE_RIGHT: 8,
+  RETURN: 9,
+} as const
+
+export const PREORDER_EXTREME_CODE_LINES = {
+  WRAPPER_ENTER: 0,
+  INIT_BEST: 1,
+  INIT_NODES: 2,
+  INNER_FN: 3,
+  NULL_CHECK: 4,
+  RETURN_VOID: 5,
+  COMPARE: 6,
+  UPDATE_BEST: 7,
+  RESET_NODES: 8,
+  TIE_CHECK: 9,
+  APPEND_NODE: 10,
+  RECURSE_LEFT: 11,
+  RECURSE_RIGHT: 12,
+  CALL: 13,
+  RETURN: 14,
+} as const
+
+export type BinaryTreeExecStep = {
+  order: number
+  codeLine: number
+  nodeId: string | null
+  nodeLabel: string | null
+  parentNodeId: string | null
+  visitedNodeIds: string[]
+  runningBest?: number | null
+  matchedGoal?: boolean
+}
+
+export type BinaryTreeExecResult = {
+  steps: BinaryTreeExecStep[]
+  foundNodeId: string | null
+  foundNodeLabel: string | null
+  foundNodeIds: string[]
+  foundValue: number | null
+  goalType: GoalType
+}
+
+const emptyExecResult = (goalType: GoalType): BinaryTreeExecResult => ({
+  steps: [],
+  foundNodeId: null,
+  foundNodeLabel: null,
+  foundNodeIds: [],
+  foundValue: null,
+  goalType,
+})
+
 // True when the node matches a target-label or target-value goal (not max/min extremes) —
 // same rule as the graph canvas's directed goal traversal.
 const matchesGoal = (node: BinaryTreeNode, goal: BfsGoal): boolean => {
@@ -18,91 +79,227 @@ const matchesGoal = (node: BinaryTreeNode, goal: BfsGoal): boolean => {
   return false
 }
 
-// True preorder recursion (root, then recurse left, then recurse right) — mirrors the pseudocode
-// exactly, the same way solveNQueens() drives its visualization with real backtracking recursion
-// rather than an explicit worklist. There's no queue or stack here, so — unlike the graph
-// canvas's BFS/DFS — steps don't report a "frontier": that concept only makes sense for an
-// explicit worklist of discovered-but-not-yet-visited nodes, which recursion never builds.
-export function runBinaryTreePreorderSearch(tree: BinaryTree, goal: BfsGoal): BfsResult {
-  const emptyResult: BfsResult = {
-    steps: [],
-    foundNodeId: null,
-    foundNodeLabel: null,
-    foundNodeIds: [],
-    foundValue: null,
-    goalType: goal.type,
-  }
-
-  if (!tree.rootId || !tree.nodesById[tree.rootId]) return emptyResult
+// Line-by-line preorder execution trace for pseudocode stepping (C++-style debugger playback).
+export function runBinaryTreePreorderExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecResult {
+  if (!tree.rootId || !tree.nodesById[tree.rootId]) return emptyExecResult(goal.type)
 
   if (goal.type === 'max-value' || goal.type === 'min-value') {
     const hasNumericValue = Object.values(tree.nodesById).some((node) => typeof node.value === 'number')
-    if (!hasNumericValue) return emptyResult
+    if (!hasNumericValue) return emptyExecResult(goal.type)
+    return runPreorderExtremeExec(tree, goal)
   }
 
-  const steps: BfsStep[] = []
-  let order = 1
-  let foundNode: BinaryTreeNode | null = null
+  return runPreorderTargetExec(tree, goal)
+}
+
+function runPreorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecResult {
+  const L = PREORDER_TARGET_CODE_LINES
+  const steps: BinaryTreeExecStep[] = []
+  const visitedOrder: string[] = []
   let stopped = false
-  let extremeValue: number | null = null
-  let extremeNodes: BinaryTreeNode[] = []
+  let foundNode: BinaryTreeNode | null = null
 
-  const isExtremeGoal = goal.type === 'max-value' || goal.type === 'min-value'
+  const push = (
+    codeLine: number,
+    nodeId: string | null,
+    parentNodeId: string | null,
+    opts?: { markVisited?: boolean; matchedGoal?: boolean },
+  ) => {
+    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
+      visitedOrder.push(nodeId)
+    }
+    steps.push({
+      order: steps.length + 1,
+      codeLine,
+      nodeId,
+      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
+      parentNodeId,
+      visitedNodeIds: [...visitedOrder],
+      matchedGoal: opts?.matchedGoal,
+    })
+  }
 
-  function preorder(nodeId: string, parentId: string | null): void {
-    if (stopped) return
-    const node = tree.nodesById[nodeId]
-    if (!node) return
+  function preorder(nodeId: string | null, parentNodeId: string | null): BinaryTreeNode | null {
+    if (stopped) return foundNode
 
-    if (isExtremeGoal) {
-      if (typeof node.value === 'number') {
-        if (extremeValue === null) {
-          extremeValue = node.value
-          extremeNodes = [node]
-        } else if (goal.type === 'max-value' && node.value > extremeValue) {
-          extremeValue = node.value
-          extremeNodes = [node]
-        } else if (goal.type === 'min-value' && node.value < extremeValue) {
-          extremeValue = node.value
-          extremeNodes = [node]
-        } else if (node.value === extremeValue) {
-          extremeNodes.push(node)
-        }
-      }
-      steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId: parentId, runningBest: extremeValue, frontierNodeIds: [] })
-      order += 1
-    } else {
-      steps.push({ nodeId: node.id, nodeLabel: node.label, order, fromNodeId: parentId, frontierNodeIds: [] })
-      order += 1
-      if (matchesGoal(node, goal)) {
-        foundNode = node
-        stopped = true
-        return
-      }
+    push(L.ENTER, nodeId, parentNodeId)
+    push(L.NULL_CHECK, nodeId, parentNodeId)
+
+    if (!nodeId) {
+      push(L.RETURN_NULL, null, parentNodeId)
+      return null
     }
 
-    if (node.leftId) preorder(node.leftId, node.id)
-    if (stopped) return
-    if (node.rightId) preorder(node.rightId, node.id)
+    const node = tree.nodesById[nodeId]
+    if (!node) {
+      push(L.RETURN_NULL, null, parentNodeId)
+      return null
+    }
+
+    push(L.MATCH_CHECK, nodeId, parentNodeId, { markVisited: true })
+
+    if (matchesGoal(node, goal)) {
+      foundNode = node
+      stopped = true
+      push(L.RETURN_MATCH, nodeId, parentNodeId, { matchedGoal: true })
+      return node
+    }
+
+    push(L.RECURSE_LEFT, nodeId, parentNodeId)
+    const leftResult = preorder(node.leftId, nodeId)
+    push(L.CHECK_LEFT, nodeId, parentNodeId)
+    if (leftResult) {
+      push(L.RETURN_LEFT, nodeId, parentNodeId)
+      return leftResult
+    }
+    if (stopped) return foundNode
+
+    push(L.RECURSE_RIGHT, nodeId, parentNodeId)
+    const rightResult = preorder(node.rightId, nodeId)
+    push(L.RETURN, nodeId, parentNodeId)
+    return rightResult
   }
 
   preorder(tree.rootId, null)
 
-  const finalNode = foundNode ?? extremeNodes[0] ?? null
+  const finalNode = foundNode
+  return {
+    steps,
+    foundNodeId: finalNode?.id ?? null,
+    foundNodeLabel: finalNode?.label ?? null,
+    foundNodeIds: finalNode ? [finalNode.id] : [],
+    foundValue: null,
+    goalType: goal.type,
+  }
+}
 
-  const foundNodeId = finalNode?.id ?? null
-  const foundNodeLabel = finalNode?.label ?? null
+function runPreorderExtremeExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecResult {
+  const L = PREORDER_EXTREME_CODE_LINES
+  const steps: BinaryTreeExecStep[] = []
+  const visitedOrder: string[] = []
+  let extremeValue: number | null = null
+  let extremeNodes: BinaryTreeNode[] = []
+  const rootId = tree.rootId!
 
-  let foundNodeIds: string[] = []
-  let foundValue: number | null = null
-  if (goal.type === 'max-value' || goal.type === 'min-value') {
-    foundNodeIds = extremeNodes.map((node) => node.id)
-    foundValue = extremeValue
-  } else if (finalNode) {
-    foundNodeIds = [finalNode.id]
+  const push = (
+    codeLine: number,
+    nodeId: string | null,
+    parentNodeId: string | null,
+    runningBest?: number | null,
+    opts?: { markVisited?: boolean },
+  ) => {
+    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
+      visitedOrder.push(nodeId)
+    }
+    steps.push({
+      order: steps.length + 1,
+      codeLine,
+      nodeId,
+      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
+      parentNodeId,
+      visitedNodeIds: [...visitedOrder],
+      runningBest: runningBest ?? extremeValue,
+    })
   }
 
-  return { steps, foundNodeId, foundNodeLabel, foundNodeIds, foundValue, goalType: goal.type }
+  push(L.WRAPPER_ENTER, rootId, null)
+  push(L.INIT_BEST, rootId, null)
+  push(L.INIT_NODES, rootId, null)
+  push(L.INNER_FN, rootId, null)
+
+  function innerPreorder(nodeId: string | null, parentNodeId: string | null): void {
+    push(L.NULL_CHECK, nodeId, parentNodeId, extremeValue)
+
+    if (!nodeId) {
+      push(L.RETURN_VOID, null, parentNodeId, extremeValue)
+      return
+    }
+
+    const node = tree.nodesById[nodeId]
+    if (!node) {
+      push(L.RETURN_VOID, null, parentNodeId, extremeValue)
+      return
+    }
+
+    push(L.COMPARE, nodeId, parentNodeId, extremeValue)
+
+    if (typeof node.value === 'number') {
+      if (extremeValue === null) {
+        extremeValue = node.value
+        extremeNodes = [node]
+        push(L.UPDATE_BEST, nodeId, parentNodeId, extremeValue)
+        push(L.RESET_NODES, nodeId, parentNodeId, extremeValue)
+      } else if (goal.type === 'max-value' && node.value > extremeValue) {
+        extremeValue = node.value
+        extremeNodes = [node]
+        push(L.UPDATE_BEST, nodeId, parentNodeId, extremeValue)
+        push(L.RESET_NODES, nodeId, parentNodeId, extremeValue)
+      } else if (goal.type === 'min-value' && node.value < extremeValue) {
+        extremeValue = node.value
+        extremeNodes = [node]
+        push(L.UPDATE_BEST, nodeId, parentNodeId, extremeValue)
+        push(L.RESET_NODES, nodeId, parentNodeId, extremeValue)
+      } else if (node.value === extremeValue) {
+        push(L.TIE_CHECK, nodeId, parentNodeId, extremeValue)
+        extremeNodes.push(node)
+        push(L.APPEND_NODE, nodeId, parentNodeId, extremeValue)
+      }
+    }
+
+    push(L.RECURSE_LEFT, nodeId, parentNodeId, extremeValue, { markVisited: true })
+    innerPreorder(node.leftId, nodeId)
+    push(L.RECURSE_RIGHT, nodeId, parentNodeId, extremeValue)
+    innerPreorder(node.rightId, nodeId)
+  }
+
+  push(L.CALL, rootId, null, extremeValue)
+  innerPreorder(rootId, null)
+  push(L.RETURN, rootId, null, extremeValue)
+
+  const finalNode = extremeNodes[0] ?? null
+  return {
+    steps,
+    foundNodeId: finalNode?.id ?? null,
+    foundNodeLabel: finalNode?.label ?? null,
+    foundNodeIds: extremeNodes.map((node) => node.id),
+    foundValue: extremeValue,
+    goalType: goal.type,
+  }
+}
+
+function execStepsToVisitSteps(exec: BinaryTreeExecResult): BfsStep[] {
+  const visits: BfsStep[] = []
+  let prevLen = 0
+  for (const step of exec.steps) {
+    if (step.visitedNodeIds.length <= prevLen) continue
+    prevLen = step.visitedNodeIds.length
+    if (!step.nodeId || !step.nodeLabel) continue
+    visits.push({
+      nodeId: step.nodeId,
+      nodeLabel: step.nodeLabel,
+      order: visits.length + 1,
+      fromNodeId: step.parentNodeId,
+      runningBest: step.runningBest,
+      frontierNodeIds: [],
+    })
+  }
+  return visits
+}
+
+// Visit-order traversal result — derived from the line-by-line execution trace.
+export function binaryTreeExecToBfsResult(exec: BinaryTreeExecResult): BfsResult {
+  return {
+    steps: execStepsToVisitSteps(exec),
+    foundNodeId: exec.foundNodeId,
+    foundNodeLabel: exec.foundNodeLabel,
+    foundNodeIds: exec.foundNodeIds,
+    foundValue: exec.foundValue,
+    goalType: exec.goalType,
+  }
+}
+
+export function runBinaryTreePreorderSearch(tree: BinaryTree, goal: BfsGoal): BfsResult {
+  return binaryTreeExecToBfsResult(runBinaryTreePreorderExec(tree, goal))
 }
 
 type PrepareArgs = {

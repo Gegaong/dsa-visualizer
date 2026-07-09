@@ -5,6 +5,7 @@ import type { BinaryTree } from '../types'
 import {
   buildBinaryTreeTraversalCompletionStatus,
   prepareBinaryTreeTraversalRunInputs,
+  runBinaryTreePreorderExec,
   runBinaryTreePreorderSearch,
 } from './binaryTreeTraversal'
 
@@ -116,6 +117,27 @@ describe('runBinaryTreePreorderSearch', () => {
     const tree = makeTree({ A: [null, null, 'empty'] })
     const result = runBinaryTreePreorderSearch(tree, { type: 'max-value' })
     expect(result.steps).toEqual([])
+  })
+})
+
+describe('runBinaryTreePreorderExec', () => {
+  it('emits more steps than node visits because each line of pseudocode is a step', () => {
+    const exec = runBinaryTreePreorderExec(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'B' })
+    const search = runBinaryTreePreorderSearch(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'B' })
+    expect(exec.steps.length).toBeGreaterThan(search.steps.length)
+    expect(search.steps.map((step) => step.nodeLabel)).toEqual(['A', 'B'])
+  })
+
+  it('highlights the match-return line when the goal is found', () => {
+    const exec = runBinaryTreePreorderExec(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'B' })
+    const matchStep = exec.steps.find((step) => step.matchedGoal)
+    expect(matchStep?.codeLine).toBe(4)
+    expect(matchStep?.nodeLabel).toBe('B')
+  })
+
+  it('walks null-child calls through the null-check and return-null lines', () => {
+    const exec = runBinaryTreePreorderExec(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'Z' })
+    expect(exec.steps.some((step) => step.codeLine === 2 && step.nodeId === null)).toBe(true)
   })
 })
 

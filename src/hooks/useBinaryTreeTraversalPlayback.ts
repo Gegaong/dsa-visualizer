@@ -1,15 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { BinaryTree, GoalType } from '../types'
 
-import type { BfsResult } from '../algorithms/algorithmTypes'
-
 import {
   buildBinaryTreeTraversalCompletionStatus,
+  binaryTreeExecToBfsResult,
   prepareBinaryTreeTraversalRunInputs,
-  runBinaryTreePreorderSearch,
+  runBinaryTreePreorderExec,
 } from '../algorithms/binaryTreeTraversal'
-import type { BinaryTreeTraversalAlgorithm } from '../algorithms/binaryTreeTraversal'
+import type { BinaryTreeExecResult, BinaryTreeTraversalAlgorithm } from '../algorithms/binaryTreeTraversal'
 
 import { PLAYBACK_MIN_DELAY_MS, PLAYBACK_MAX_DELAY_MS } from '../utils/constants'
 
@@ -48,7 +47,6 @@ export type BinaryTreeTraversalHandle = {
   goalNodeIds: string[]
 
   isRunning: boolean
-  result: BfsResult | null
 
   isPlaying: boolean
   playbackSpeed: number
@@ -56,6 +54,9 @@ export type BinaryTreeTraversalHandle = {
   canStepForward: boolean
   canTogglePlay: boolean
   isPlaybackComplete: boolean
+
+  traversalCodeHighlighted: Set<number>
+  traversalVarsRows: string[][] | null
 
   resetVisualization: () => void
   runTraversal: () => void
@@ -80,65 +81,92 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
   const [visitedNodeIds, setVisitedNodeIds] = useState<string[]>([])
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null)
   const [goalNodeIds, setGoalNodeIds] = useState<string[]>([])
+  const [codeHighlighted, setCodeHighlighted] = useState<Set<number>>(new Set())
   const [statusText, setStatusText] = useState('Pick a goal, then run the selected traversal.')
   const [isRunning, setIsRunning] = useState(false)
-  const [result, setResult] = useState<BfsResult | null>(null)
+  const [execResult, setExecResult] = useState<BinaryTreeExecResult | null>(null)
 
-  const resultRef = useRef<BfsResult | null>(null)
+  const execResultRef = useRef<BinaryTreeExecResult | null>(null)
   const initialGoalNodeIdsRef = useRef<string[]>([])
-  const finalizeRunRef = useRef<(r: BfsResult) => void>(() => {})
+  const finalizeRunRef = useRef<(r: BinaryTreeExecResult) => void>(() => {})
   const stopPlaybackRef = useRef(() => {})
   const [playbackSession, setPlaybackSession] = useState(0)
 
   useEffect(() => {
-    resultRef.current = result
-  }, [result])
+    execResultRef.current = execResult
+  }, [execResult])
 
-  const applyStepIndex = (currentResult: BfsResult, index: number) => {
+  const rootLabel = tree.rootId ? (tree.nodesById[tree.rootId]?.label ?? '—') : '—'
+
+  const buildVarsRows = useCallback(
+    (nodeLabel: string, runningBest: number | null | undefined): string[][] => {
+      if (goalType === 'max-value') return [[`node = ${nodeLabel}`, `max = ${runningBest ?? '—'}`]]
+      if (goalType === 'min-value') return [[`node = ${nodeLabel}`, `min = ${runningBest ?? '—'}`]]
+      if (goalType === 'target-node') return [[`node = ${nodeLabel}`, `goal = "${goalNodeLabel}"`]]
+      return [[`node = ${nodeLabel}`, `goal = ${goalValueInput}`]]
+    },
+    [goalNodeLabel, goalType, goalValueInput],
+  )
+
+  const applyStepIndex = (currentResult: BinaryTreeExecResult, index: number) => {
     if (index < 0) {
-      setCurrentNodeId(null)
+      setCurrentNodeId(tree.rootId)
       setVisitedNodeIds([])
-      setStatusText(`${ALGO_LABEL[algorithm]} ready. Press Play or step through manually.`)
+      setCodeHighlighted(new Set([0]))
+      setGoalNodeIds(initialGoalNodeIdsRef.current)
+      setStatusText(`${ALGO_LABEL[algorithm]} ready. Press Play or step through line by line.`)
       return
     }
 
     const boundedIndex = Math.min(index, currentResult.steps.length - 1)
-    const currentStep = currentResult.steps[boundedIndex]
-    const visitedIds = currentResult.steps.slice(0, boundedIndex + 1).map((step) => step.nodeId)
+    const step = currentResult.steps[boundedIndex]
 
-    setCurrentNodeId(currentStep.nodeId)
-    setVisitedNodeIds(visitedIds)
-    setStatusText(`Visiting ${currentStep.nodeLabel} (step ${currentStep.order}/${currentResult.steps.length})`)
+    setCurrentNodeId(step.nodeId)
+    setVisitedNodeIds(step.visitedNodeIds)
+    setCodeHighlighted(new Set([step.codeLine]))
+
+    if (step.matchedGoal && step.nodeId) {
+      setGoalNodeIds([step.nodeId])
+    } else {
+      setGoalNodeIds(initialGoalNodeIdsRef.current)
+    }
+
+    setStatusText(`Line ${step.codeLine + 1} · step ${step.order}/${currentResult.steps.length}`)
   }
 
   const playback = useStepPlayback({
-    stepCount: result?.steps.length ?? 0,
+    stepCount: execResult?.steps.length ?? 0,
     minDelay: PLAYBACK_MIN_DELAY_MS,
     maxDelay: PLAYBACK_MAX_DELAY_MS,
     resetSignal: playbackSession,
     onStepIndexChange: (index) => {
-      const currentResult = resultRef.current
+      const currentResult = execResultRef.current
       if (!currentResult) return
       applyStepIndex(currentResult, index)
     },
     onComplete: () => {
-      const currentResult = resultRef.current
+      const currentResult = execResultRef.current
       if (currentResult) finalizeRunRef.current(currentResult)
     },
   })
 
   useEffect(() => {
-    finalizeRunRef.current = (finishedResult: BfsResult) => {
+    finalizeRunRef.current = (finishedResult: BinaryTreeExecResult) => {
       playback.stopPlayback()
       setCurrentNodeId(null)
 
-      if (!finishedResult.foundNodeLabel) {
+      const lastLine = finishedResult.steps.at(-1)?.codeLine
+      if (lastLine !== undefined) setCodeHighlighted(new Set([lastLine]))
+
+      const bfsShape = binaryTreeExecToBfsResult(finishedResult)
+
+      if (!finishedResult.foundNodeLabel && (finishedResult.goalType === 'target-node' || finishedResult.goalType === 'target-value')) {
         setStatusText('Done. Goal not found in the tree.')
         return
       }
 
       if (finishedResult.foundNodeIds.length > 0) setGoalNodeIds(finishedResult.foundNodeIds)
-      setStatusText(buildBinaryTreeTraversalCompletionStatus(finishedResult, tree))
+      setStatusText(buildBinaryTreeTraversalCompletionStatus(bfsShape, tree))
     }
   }, [tree, playback])
 
@@ -152,7 +180,8 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
       setVisitedNodeIds([])
       setCurrentNodeId(null)
       setGoalNodeIds([])
-      setResult(null)
+      setCodeHighlighted(new Set())
+      setExecResult(null)
       setPlaybackSession((session) => session + 1)
       setStatusText(`Pick a goal, then run ${ALGO_LABEL[idleAlgorithm]}.`)
       setIsRunning(false)
@@ -195,6 +224,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     setVisitedNodeIds([])
     setCurrentNodeId(null)
     setGoalNodeIds([])
+    setCodeHighlighted(new Set())
 
     const preparation = prepareBinaryTreeTraversalRunInputs({
       tree,
@@ -212,33 +242,34 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     initialGoalNodeIdsRef.current = preparation.initialGoalNodeIds
     setGoalNodeIds(preparation.initialGoalNodeIds)
 
-    const traversalResult = runBinaryTreePreorderSearch(tree, preparation.goal)
+    const traversalExec = runBinaryTreePreorderExec(tree, preparation.goal)
 
-    if (traversalResult.steps.length === 0) {
+    if (traversalExec.steps.length === 0) {
       setStatusText(`${ALGO_LABEL[algorithm]} could not start with the current tree and inputs.`)
       return
     }
 
-    setResult(traversalResult)
+    setExecResult(traversalExec)
     setPlaybackSession((session) => session + 1)
     setIsRunning(true)
-    setStatusText(`${ALGO_LABEL[algorithm]} ready. Press Play or step through manually.`)
+    setCurrentNodeId(tree.rootId)
+    setCodeHighlighted(new Set([0]))
+    setStatusText(`${ALGO_LABEL[algorithm]} ready. Press Play or step through line by line.`)
   }
 
   const stepForward = () => {
-    if (!result) return
+    if (!execResult) return
     playback.stepForward()
   }
 
   const stepBackward = () => {
-    if (!result) return
+    if (!execResult) return
     playback.stepBackward()
     setIsRunning(true)
-    setGoalNodeIds(initialGoalNodeIdsRef.current)
   }
 
   const play = () => {
-    if (!result) return
+    if (!execResult) return
     const replayFromEnd = playback.isPlaybackComplete
     playback.togglePlay()
     if (replayFromEnd) {
@@ -279,6 +310,33 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     sidebarStatusText = `Warning: fill or nullify all empty nodes before running ${ALGO_LABEL[algorithm]}.`
   }
 
+  const traversalVarsRows: string[][] | null = useMemo(() => {
+    if (!isRunning || !IMPLEMENTED_ALGORITHMS.has(algorithm) || !execResult) return null
+
+    if (playback.stepIndex < 0) {
+      return buildVarsRows(rootLabel, goalType === 'max-value' || goalType === 'min-value' ? null : undefined)
+    }
+
+    const si = Math.min(playback.stepIndex, execResult.steps.length - 1)
+    const step = execResult.steps[si]
+    const isDone = playback.isPlaybackComplete
+    const nodeLabel = isDone && !step.matchedGoal ? '—' : (step.nodeLabel ?? '—')
+    const bestVal =
+      goalType === 'max-value' || goalType === 'min-value'
+        ? (isDone ? execResult.foundValue : (step.runningBest ?? null))
+        : undefined
+    return buildVarsRows(nodeLabel, bestVal)
+  }, [
+    algorithm,
+    buildVarsRows,
+    execResult,
+    goalType,
+    isRunning,
+    playback.isPlaybackComplete,
+    playback.stepIndex,
+    rootLabel,
+  ])
+
   return {
     algorithm,
     setAlgorithm,
@@ -295,14 +353,16 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     goalNodeIds,
 
     isRunning,
-    result,
 
     isPlaying: playback.isPlaying,
     playbackSpeed: playback.playbackSpeed,
-    canStepBackward: result !== null && playback.canStepBackward,
-    canStepForward: result !== null && playback.canStepForward,
-    canTogglePlay: result !== null && playback.canTogglePlay,
-    isPlaybackComplete: result !== null && playback.isPlaybackComplete,
+    canStepBackward: execResult !== null && playback.canStepBackward,
+    canStepForward: execResult !== null && playback.canStepForward,
+    canTogglePlay: execResult !== null && playback.canTogglePlay,
+    isPlaybackComplete: execResult !== null && playback.isPlaybackComplete,
+
+    traversalCodeHighlighted: isRunning && IMPLEMENTED_ALGORITHMS.has(algorithm) ? codeHighlighted : new Set(),
+    traversalVarsRows,
 
     resetVisualization,
     runTraversal,
