@@ -4,20 +4,8 @@ import type { GraphNode } from '../types'
 
 import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 
-import { formatCost, formatNodeValueDisplay, type NodeValueSizeTier } from '../utils/format'
-
-const SIZE_TIER_CLASS: Record<NodeValueSizeTier, string> = {
-  normal: '',
-  small: 'node-value--small',
-  tiny: 'node-value--tiny',
-}
-
-// Pick the right text + size class for a node's value.
-// 'empty' renders as a blank circle; numbers shrink (or get truncated to "...") to fit.
-const formatNodeValue = (value: number | 'empty') => {
-  const { text, sizeTier } = formatNodeValueDisplay(value)
-  return { text, sizeClass: SIZE_TIER_CLASS[sizeTier] }
-}
+import { formatCost, formatNodeValueDisplay, getNodeValueFontSizePx } from '../utils/format'
+import { NODE_SIZE } from '../utils/constants'
 
 type GraphNodeLayerProps = {
   nodes: GraphNode[]
@@ -109,10 +97,8 @@ export const GraphNodeLayer = ({
 }: GraphNodeLayerProps) => (
   <>
     {nodes.map((node) => {
-      const display = formatNodeValue(node.value)
-      const valueClass = display.sizeClass
-        ? `node-value ${display.sizeClass}`
-        : 'node-value'
+      const displayValue = formatNodeValueDisplay(node.value)
+      const valueFontSize = getNodeValueFontSizePx(NODE_SIZE, displayValue)
       const isSelected = selectedNodeIds.includes(node.id)
       const isConnectionSource = connectionSource === node.id
       const isVisited = traversalVisitedNodeIds.includes(node.id)
@@ -167,12 +153,8 @@ export const GraphNodeLayer = ({
             : formatCost(wpCost)
           : null
 
-      const wpCostLabelSizeClass =
-        wpCostLabel !== null && wpCostLabel.length > 5
-          ? 'node-value--tiny'
-          : wpCostLabel !== null && wpCostLabel.length > 3
-            ? 'node-value--small'
-            : ''
+      const wpCostFontSize =
+        wpCostLabel !== null ? getNodeValueFontSizePx(NODE_SIZE, wpCostLabel) : undefined
 
       return (
         <div
@@ -221,12 +203,10 @@ export const GraphNodeLayer = ({
                 autoFocus
               />
             ) : (
-              <span className={valueClass}>{display.text}</span>
+              <span className="node-value" style={{ fontSize: valueFontSize }}>{displayValue}</span>
             ))}
             {isWeightedMode && wpCostLabel !== null && (
-              <span className={`node-value${wpCostLabelSizeClass ? ` ${wpCostLabelSizeClass}` : ''}`}>
-                {wpCostLabel}
-              </span>
+              <span className="node-value" style={{ fontSize: wpCostFontSize }}>{wpCostLabel}</span>
             )}
           </div>
           <span className="node-label">{node.label}</span>

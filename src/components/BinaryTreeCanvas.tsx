@@ -5,8 +5,13 @@ import type { BinaryTree, BinaryTreeContextMenuState, BinaryTreeSide } from '../
 import { getNodeCount, getTreeHeight } from '../algorithms/binaryTreeShared'
 import { computeBinaryTreeLayout } from '../utils/binaryTreeLayout'
 import { TREE_NODE_SIZE } from '../utils/constants'
-import { sanitizeNumericInput, parseNumberInput, formatNodeValueDisplay } from '../utils/format'
-import type { NodeValueSizeTier } from '../utils/format'
+import {
+  sanitizeNumericInput,
+  parseNumberInput,
+  formatNodeValueDisplay,
+  getNodeInputFontSizePx,
+  getNodeValueFontSizePx,
+} from '../utils/format'
 import { BinaryTreeNodeContextMenu } from './BinaryTreeNodeContextMenu'
 import { ConfirmModal } from './Modals'
 
@@ -34,16 +39,6 @@ const PLUS_ICON = (
     <path d="M5 12h14" />
   </svg>
 )
-
-// Base (unscaled) px sizes per value-size tier — same numbers the graph canvas uses for its
-// fixed-size nodes, scaled here to track the tree's current zoom-out level.
-const VALUE_FONT_SIZE_BY_TIER: Record<NodeValueSizeTier, number> = {
-  normal: 14,
-  small: 12,
-  tiny: 11,
-}
-const VALUE_FONT_MIN_PX = 8
-const INPUT_FONT_SIZE_BASE = 13
 
 export const BinaryTreeCanvas = ({
   tree,
@@ -174,10 +169,16 @@ export const BinaryTreeCanvas = ({
     setClearConfirmOpen(true)
   }
 
-  const nodeSize = TREE_NODE_SIZE * layout.scale
+  // Keep edge/layout scaling exactly as computed by layout.scale, but make node visuals shrink
+  // much less aggressively so dense trees remain readable.
+  const nodeVisualScale = 0.28 + 0.72 * layout.scale
+  const nodeSize = TREE_NODE_SIZE * nodeVisualScale
   const nodeRadius = nodeSize / 2
-  const addSlotIconSize = Math.max(14, nodeSize * 0.4)
-  const inputFontSize = Math.max(VALUE_FONT_MIN_PX, INPUT_FONT_SIZE_BASE * layout.scale)
+
+  const addSlotSize = TREE_NODE_SIZE * layout.scale
+  // Keep the "+" icon proportional and always inside the add-slot circle on very dense trees.
+  const addSlotIconSize = Math.max(6, Math.min(14, addSlotSize * 0.55, addSlotSize - 2))
+  const inputFontSize = getNodeInputFontSizePx(nodeSize)
 
   // Trims each edge to stop right at the node's circle boundary instead of running through its
   // center — otherwise the line would show through a selected node's translucent fill and look
@@ -294,7 +295,7 @@ export const BinaryTreeCanvas = ({
               key={slot.id}
               type="button"
               className="binary-tree-add-slot"
-              style={{ left: slot.x, top: slot.y, width: nodeSize, height: nodeSize }}
+              style={{ left: slot.x, top: slot.y, width: addSlotSize, height: addSlotSize }}
               disabled={effectiveDeleteMode || isTraversalRunning}
               title={slot.parentId === null ? 'Add root node' : `Add ${slot.side} child`}
               aria-label={slot.parentId === null ? 'Add root node' : `Add ${slot.side} child`}
@@ -311,8 +312,8 @@ export const BinaryTreeCanvas = ({
             if (!pos) return null
             const isEditing = effectiveEditingNodeId === node.id
             const isSelected = effectiveSelectedNodeIds.includes(node.id)
-            const { text: displayValue, sizeTier } = formatNodeValueDisplay(node.value)
-            const fontSize = Math.max(VALUE_FONT_MIN_PX, VALUE_FONT_SIZE_BY_TIER[sizeTier] * layout.scale)
+            const displayValue = formatNodeValueDisplay(node.value)
+            const fontSize = getNodeValueFontSizePx(nodeSize, displayValue)
             const showHoverValue = typeof node.value === 'number'
 
             const isTraversalCurrent = traversalCurrentNodeId === node.id

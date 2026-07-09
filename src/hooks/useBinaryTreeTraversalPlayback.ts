@@ -6,6 +6,7 @@ import {
   buildBinaryTreeTraversalCompletionStatus,
   binaryTreeExecToBfsResult,
   prepareBinaryTreeTraversalRunInputs,
+  runBinaryTreeInorderExec,
   runBinaryTreePreorderExec,
 } from '../algorithms/binaryTreeTraversal'
 import type { BinaryTreeExecResult, BinaryTreeTraversalAlgorithm } from '../algorithms/binaryTreeTraversal'
@@ -23,9 +24,9 @@ const ALGO_LABEL: Record<BinaryTreeTraversalAlgorithm, string> = {
   'level-order': 'Level-order',
 }
 
-// Only preorder has a real implementation so far — the other three stay selectable in the
+// Preorder + inorder are implemented so far — the other two stay selectable in the
 // dropdown but Run reports them as not-yet-implemented instead of doing anything.
-const IMPLEMENTED_ALGORITHMS = new Set<BinaryTreeTraversalAlgorithm>(['preorder'])
+const IMPLEMENTED_ALGORITHMS = new Set<BinaryTreeTraversalAlgorithm>(['preorder', 'inorder'])
 
 type UseBinaryTreeTraversalPlaybackParams = {
   tree: BinaryTree
@@ -97,6 +98,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
   }, [execResult])
 
   const rootLabel = tree.rootId ? (tree.nodesById[tree.rootId]?.label ?? '—') : '—'
+  const rootLabelTagged = rootLabel === '—' ? rootLabel : `${rootLabel}(root)`
 
   const buildVarsRows = useCallback(
     (
@@ -173,7 +175,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
       }
 
       if (finishedResult.foundNodeIds.length > 0) setGoalNodeIds(finishedResult.foundNodeIds)
-      setStatusText(buildBinaryTreeTraversalCompletionStatus(bfsShape, tree))
+      setStatusText(buildBinaryTreeTraversalCompletionStatus(bfsShape))
     }
   }, [tree, playback])
 
@@ -249,7 +251,10 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     initialGoalNodeIdsRef.current = preparation.initialGoalNodeIds
     setGoalNodeIds(preparation.initialGoalNodeIds)
 
-    const traversalExec = runBinaryTreePreorderExec(tree, preparation.goal)
+    const traversalExec =
+      algorithm === 'inorder'
+        ? runBinaryTreeInorderExec(tree, preparation.goal)
+        : runBinaryTreePreorderExec(tree, preparation.goal)
 
     if (traversalExec.steps.length === 0) {
       setStatusText(`${ALGO_LABEL[algorithm]} could not start with the current tree and inputs.`)
@@ -322,10 +327,15 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
 
     if (playback.stepIndex < 0) {
       const subtreeResults =
-        goalType === 'target-node' || goalType === 'target-value'
+        (algorithm === 'preorder' || algorithm === 'inorder') &&
+        (goalType === 'target-node' || goalType === 'target-value')
           ? { leftResult: '—', rightResult: '—' }
           : undefined
-      return buildVarsRows(rootLabel, goalType === 'max-value' || goalType === 'min-value' ? null : undefined, subtreeResults)
+      return buildVarsRows(
+        rootLabelTagged,
+        goalType === 'max-value' || goalType === 'min-value' ? null : undefined,
+        subtreeResults,
+      )
     }
 
     const si = Math.min(playback.stepIndex, execResult.steps.length - 1)
@@ -349,7 +359,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     isRunning,
     playback.isPlaybackComplete,
     playback.stepIndex,
-    rootLabel,
+    rootLabelTagged,
   ])
 
   return {

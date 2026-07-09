@@ -61,55 +61,55 @@ const DFS_TARGET_VALUE_CODE = `function DFS(graph, start, targetVal):
 // max/min code is 12 lines (0–11): init split across 2 lines, if-check split across 2 lines
 const BFS_MAX_VALUE_CODE = `function BFS(graph, start):
     queue ← [start]; visited ← {start}
-    best ← -∞
+    max ← -∞
     while queue ≠ empty:
         node ← queue.dequeue()
-        if node.value > best:
-            best ← node.value
+        if node.value > max:
+            max ← node.value
         for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
-    return best`
+    return max`
 
 const DFS_MAX_VALUE_CODE = `function DFS(graph, start):
     stack ← [start]; visited ← {start}
-    best ← -∞
+    max ← -∞
     while stack ≠ empty:
         node ← stack.pop()
-        if node.value > best:
-            best ← node.value
+        if node.value > max:
+            max ← node.value
         for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)
-    return best`
+    return max`
 
 const BFS_MIN_VALUE_CODE = `function BFS(graph, start):
     queue ← [start]; visited ← {start}
-    best ← +∞
+    min ← +∞
     while queue ≠ empty:
         node ← queue.dequeue()
-        if node.value < best:
-            best ← node.value
+        if node.value < min:
+            min ← node.value
         for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 queue.enqueue(nb)
-    return best`
+    return min`
 
 const DFS_MIN_VALUE_CODE = `function DFS(graph, start):
     stack ← [start]; visited ← {start}
-    best ← +∞
+    min ← +∞
     while stack ≠ empty:
         node ← stack.pop()
-        if node.value < best:
-            best ← node.value
+        if node.value < min:
+            min ← node.value
         for each nb of node in graph:
             if nb ∉ visited:
                 visited.add(nb)
                 stack.push(nb)
-    return best`
+    return min`
 
 // ─── Logic pseudocode strings (12 lines each, 0–11) ─────────────────────────
 
@@ -171,12 +171,12 @@ at the same distance before going deeper.
 Init: add start to queue, mark visited.
 Each step:
   · Dequeue the front node.
-  · Compare its value to the running best.
-    If better → update best. No early stop.
+  · Compare its value to the running max.
+    If better → update max. No early stop.
   · Add each unvisited neighbor
     to the back of the queue.
 ──────────────────────────────────────────
-Queue empties → return the max-value node.`
+Queue empties → return max.`
 
 const DFS_MAX_VALUE_LOGIC = `DFS dives as deep as possible first,
 backtracking when a dead end is reached.
@@ -184,12 +184,12 @@ backtracking when a dead end is reached.
 Init: add start to stack, mark visited.
 Each step:
   · Pop the top node.
-  · Compare its value to the running best.
-    If better → update best. No early stop.
+  · Compare its value to the running max.
+    If better → update max. No early stop.
   · Add each unvisited neighbor
     on top of the stack.
 ──────────────────────────────────────────
-Stack empties → return the max-value node.`
+Stack empties → return max.`
 
 const BFS_MIN_VALUE_LOGIC = `BFS explores level by level — all nodes
 at the same distance before going deeper.
@@ -197,12 +197,12 @@ at the same distance before going deeper.
 Init: add start to queue, mark visited.
 Each step:
   · Dequeue the front node.
-  · Compare its value to the running best.
-    If better → update best. No early stop.
+  · Compare its value to the running min.
+    If better → update min. No early stop.
   · Add each unvisited neighbor
     to the back of the queue.
 ──────────────────────────────────────────
-Queue empties → return the min-value node.`
+Queue empties → return min.`
 
 const DFS_MIN_VALUE_LOGIC = `DFS dives as deep as possible first,
 backtracking when a dead end is reached.
@@ -210,12 +210,12 @@ backtracking when a dead end is reached.
 Init: add start to stack, mark visited.
 Each step:
   · Pop the top node.
-  · Compare its value to the running best.
-    If better → update best. No early stop.
+  · Compare its value to the running min.
+    If better → update min. No early stop.
   · Add each unvisited neighbor
     on top of the stack.
 ──────────────────────────────────────────
-Stack empties → return the min-value node.`
+Stack empties → return min.`
 
 // ─── Highlight maps ──────────────────────────────────────────────────────────
 
@@ -243,7 +243,7 @@ const LOGIC_HIGHLIGHTS_TARGET: Record<TraversalPhase, number[]> = {
   'done-empty':   [11],
 }
 
-// max-value / min-value: line 7 is "update best" — active on every step.
+// max-value / min-value: line 7 is "update max/min" — active on every step.
 const LOGIC_HIGHLIGHTS_EXTREME: Record<TraversalPhase, number[]> = {
   ready:          [3],
   'step-regular': [4, 5, 6, 7, 8, 9],

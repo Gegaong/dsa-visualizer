@@ -35,4 +35,5 @@ export const TREE_BOTTOM_PADDING = 40
 
 // Deepest level (root = depth 0) a real node may occupy. Nodes at this depth no longer show
 // add-slot indicators, capping how tall a subtree can grow.
-export const TREE_MAX_DEPTH = 18
+// depth 19 => max height 20 levels.
+export const TREE_MAX_DEPTH = 19

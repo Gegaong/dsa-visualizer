@@ -5,6 +5,8 @@ import type { BinaryTree } from '../types'
 import {
   buildBinaryTreeTraversalCompletionStatus,
   prepareBinaryTreeTraversalRunInputs,
+  runBinaryTreeInorderExec,
+  runBinaryTreeInorderSearch,
   runBinaryTreePreorderExec,
   runBinaryTreePreorderSearch,
 } from './binaryTreeTraversal'
@@ -83,14 +85,14 @@ describe('runBinaryTreePreorderSearch', () => {
     const result = runBinaryTreePreorderSearch(SAMPLE_TREE, { type: 'max-value' })
     expect(result.steps.map((step) => step.nodeLabel)).toEqual(['A', 'B', 'D', 'E', 'C', 'F'])
     expect(result.foundValue).toBe(6)
-    expect(result.foundNodeIds).toEqual(['F'])
+    expect(result.foundNodeIds).toEqual([])
     expect(result.steps.map((step) => step.runningBest)).toEqual([1, 2, 4, 5, 5, 6])
   })
 
   it('walks the entire tree for a min-value goal', () => {
     const result = runBinaryTreePreorderSearch(SAMPLE_TREE, { type: 'min-value' })
     expect(result.foundValue).toBe(1)
-    expect(result.foundNodeIds).toEqual(['A'])
+    expect(result.foundNodeIds).toEqual([])
   })
 
   it('collects every node that ties for the extreme value', () => {
@@ -100,7 +102,7 @@ describe('runBinaryTreePreorderSearch', () => {
       C: [null, null, 3],
     })
     const result = runBinaryTreePreorderSearch(tiedTree, { type: 'max-value' })
-    expect(new Set(result.foundNodeIds)).toEqual(new Set(['A', 'B']))
+    expect(result.foundNodeIds).toEqual([])
   })
 
   it('ignores empty-value nodes when searching for an extreme', () => {
@@ -110,13 +112,35 @@ describe('runBinaryTreePreorderSearch', () => {
     })
     const result = runBinaryTreePreorderSearch(tree, { type: 'max-value' })
     expect(result.foundValue).toBe(9)
-    expect(result.foundNodeIds).toEqual(['B'])
+    expect(result.foundNodeIds).toEqual([])
   })
 
   it('returns no steps for a max/min goal when no node has a numeric value', () => {
     const tree = makeTree({ A: [null, null, 'empty'] })
     const result = runBinaryTreePreorderSearch(tree, { type: 'max-value' })
     expect(result.steps).toEqual([])
+  })
+})
+
+describe('runBinaryTreeInorderSearch', () => {
+  it('visits every node in left, root, right order when nothing is found', () => {
+    const result = runBinaryTreeInorderSearch(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'Z' })
+    expect(result.steps.map((step) => step.nodeLabel)).toEqual(['D', 'B', 'E', 'A', 'C', 'F'])
+    expect(result.foundNodeId).toBeNull()
+  })
+
+  it('stops when target node is matched in inorder visit order', () => {
+    const result = runBinaryTreeInorderSearch(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'E' })
+    expect(result.steps.map((step) => step.nodeLabel)).toEqual(['D', 'B', 'E'])
+    expect(result.foundNodeLabel).toBe('E')
+  })
+
+  it('tracks running best values for inorder max search', () => {
+    const result = runBinaryTreeInorderSearch(SAMPLE_TREE, { type: 'max-value' })
+    expect(result.steps.map((step) => step.nodeLabel)).toEqual(['D', 'B', 'E', 'A', 'C', 'F'])
+    expect(result.steps.map((step) => step.runningBest)).toEqual([4, 4, 5, 5, 5, 6])
+    expect(result.foundValue).toBe(6)
+    expect(result.foundNodeIds).toEqual([])
   })
 })
 
@@ -148,6 +172,22 @@ describe('runBinaryTreePreorderExec', () => {
     const returnMatchAtB = exec.steps.find((step) => step.matchedGoal)
     expect(returnMatchAtB?.leftResult).toBe('—')
     expect(returnMatchAtB?.rightResult).toBe('—')
+  })
+})
+
+describe('runBinaryTreeInorderExec', () => {
+  it('highlights the match-return line when the goal is found', () => {
+    const exec = runBinaryTreeInorderExec(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'E' })
+    const matchStep = exec.steps.find((step) => step.matchedGoal)
+    expect(matchStep?.codeLine).toBe(7)
+    expect(matchStep?.nodeLabel).toBe('E')
+  })
+
+  it('snapshots leftResult before checking it', () => {
+    const exec = runBinaryTreeInorderExec(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'E' })
+    const checkLeftAtA = exec.steps.find((step) => step.codeLine === 4 && step.nodeLabel === 'A')
+    expect(checkLeftAtA?.leftResult).toBe('E')
+    expect(checkLeftAtA?.rightResult).toBe('—')
   })
 })
 
@@ -237,26 +277,26 @@ describe('prepareBinaryTreeTraversalRunInputs', () => {
 describe('buildBinaryTreeTraversalCompletionStatus', () => {
   it('reports when the goal was not found', () => {
     const result = runBinaryTreePreorderSearch(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'Z' })
-    expect(buildBinaryTreeTraversalCompletionStatus(result, SAMPLE_TREE)).toBe('Goal not found among the tree nodes.')
+    expect(buildBinaryTreeTraversalCompletionStatus(result)).toBe('Goal not found among the tree nodes.')
   })
 
   it('reports the matched node for a target search', () => {
     const result = runBinaryTreePreorderSearch(SAMPLE_TREE, { type: 'target-node', targetNodeLabel: 'B' })
-    expect(buildBinaryTreeTraversalCompletionStatus(result, SAMPLE_TREE)).toBe('Goal node B reached.')
+    expect(buildBinaryTreeTraversalCompletionStatus(result)).toBe('Goal node B reached.')
   })
 
   it('reports a single extreme-value winner by label', () => {
     const result = runBinaryTreePreorderSearch(SAMPLE_TREE, { type: 'max-value' })
-    expect(buildBinaryTreeTraversalCompletionStatus(result, SAMPLE_TREE)).toBe('Maximum value in the tree: 6 at node F.')
+    expect(buildBinaryTreeTraversalCompletionStatus(result)).toBe('Maximum value in the tree: 6.')
   })
 
-  it('lists every tied node up to four', () => {
+  it('reports only the extreme value (no winner-node list)', () => {
     const tiedTree = makeTree({
       A: ['B', 'C', 7],
       B: [null, null, 7],
       C: [null, null, 3],
     })
     const result = runBinaryTreePreorderSearch(tiedTree, { type: 'max-value' })
-    expect(buildBinaryTreeTraversalCompletionStatus(result, tiedTree)).toBe('Maximum value in the tree: 7, shared by A, B.')
+    expect(buildBinaryTreeTraversalCompletionStatus(result)).toBe('Maximum value in the tree: 7.')
   })
 })

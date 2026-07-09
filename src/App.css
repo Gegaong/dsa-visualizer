@@ -351,15 +351,11 @@
 .pseudocode-line-row--active {
 	background: rgba(58, 111, 90, 0.25);
 	border-radius: 3px;
-	margin: 0 -12px;
-	padding: 0 12px;
 }
 
 .pseudocode-line--active {
 	background: rgba(58, 111, 90, 0.25);
 	border-radius: 3px;
-	margin: 0 -12px;
-	padding: 0 12px;
 }
 
 .pseudocode-card-actions {
@@ -2068,19 +2064,9 @@
 }
 
 .node-value {
-	font-size: 14px;
 	min-height: 16px;
 	display: block;
 	user-select: none;
-}
-
-.node-value--small {
-	font-size: 12px;
-}
-
-.node-value--tiny {
-	font-size: 11px;
-	letter-spacing: 0.04em;
 }
 
 .node-input {

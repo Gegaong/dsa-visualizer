@@ -1,4 +1,5 @@
 import type { BinaryTree, GraphNode } from '../types'
+import { NODE_SIZE } from './constants'
 
 // Keep only digits and an optional leading '-'.
 export const sanitizeNumericInput = (value: string) =>
@@ -45,22 +46,47 @@ export const getRandomIntInclusive = (min: number, max: number) => {
   return Math.floor(Math.random() * (high - low + 1)) + low
 }
 
-export type NodeValueSizeTier = 'normal' | 'small' | 'tiny'
+const NODE_INPUT_FONT_SIZE_PX = 13
 
-// Picks how a numeric node value should render inside a fixed-size circular node: full digits
-// up to 3 chars, slightly smaller for 4-5, and truncated to "..." beyond that. Shared by every
-// canvas that draws value-bearing node circles (graph, binary tree) so they behave identically.
-export const formatNodeValueDisplay = (
-  value: number | 'empty',
-): { text: string; sizeTier: NodeValueSizeTier } => {
-  if (value === 'empty') return { text: '', sizeTier: 'normal' }
+// Reference font sizes (px) on a 48px node. Five digits keep the prior small-tier size; fewer
+// digits scale up so shorter values fill more of the circle interior.
+const NODE_VALUE_FONT_BY_CHAR_COUNT: Record<number, number> = {
+  1: 18,
+  2: 16,
+  3: 14,
+  4: 13,
+  5: 12,
+}
+const NODE_VALUE_ELLIPSIS_FONT_PX = 11
+
+// Scale node-value font to the rendered node diameter. Shorter displayed text uses a larger font
+// so single digits fill the circle more; five digits stay at the previous fit size.
+export const getNodeValueFontSizePx = (
+  nodeDiameterPx: number,
+  displayText: string,
+): number => {
+  if (!displayText) return nodeDiameterPx * (14 / NODE_SIZE)
+  if (displayText === '...') {
+    return nodeDiameterPx * (NODE_VALUE_ELLIPSIS_FONT_PX / NODE_SIZE)
+  }
+
+  const charCount = Math.min(5, displayText.length)
+  const fontPx = NODE_VALUE_FONT_BY_CHAR_COUNT[charCount] ?? NODE_VALUE_FONT_BY_CHAR_COUNT[5]
+  return nodeDiameterPx * (fontPx / NODE_SIZE)
+}
+
+export const getNodeInputFontSizePx = (nodeDiameterPx: number): number =>
+  nodeDiameterPx * (NODE_INPUT_FONT_SIZE_PX / NODE_SIZE)
+
+// Picks display text for a numeric node value: full digits up to 5 chars, then "...".
+// Font size is chosen separately via getNodeValueFontSizePx from the displayed character count.
+export const formatNodeValueDisplay = (value: number | 'empty'): string => {
+  if (value === 'empty') return ''
 
   const text = String(value)
+  if (text.length <= 5) return text
 
-  if (text.length <= 3) return { text, sizeTier: 'normal' }
-  if (text.length <= 5) return { text, sizeTier: 'small' }
-
-  return { text: '...', sizeTier: 'tiny' }
+  return '...'
 }
 
 // Convert array index (0, 1, 2, ...) to Alphabetical style column labels (A, B, C, ..., Z, AA, AB, ...)

@@ -55,35 +55,27 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
     rightResult ← preorder(node.right, target)
     return rightResult`,
     'max-value': `function preorderMax(node):
-    best ← -∞
-    bestNodes ← []
+    max ← -∞
     function preorder(node):
         if node = null:
             return
-        if node.value > best:
-            best ← node.value
-            bestNodes ← [node]
-        else if node.value = best:
-            bestNodes.append(node)
+        if node.value > max:
+            max ← node.value
         preorder(node.left)
         preorder(node.right)
     preorder(node)
-    return bestNodes`,
+    return max`,
     'min-value': `function preorderMin(node):
-    best ← +∞
-    bestNodes ← []
+    min ← +∞
     function preorder(node):
         if node = null:
             return
-        if node.value < best:
-            best ← node.value
-            bestNodes ← [node]
-        else if node.value = best:
-            bestNodes.append(node)
+        if node.value < min:
+            min ← node.value
         preorder(node.left)
         preorder(node.right)
     preorder(node)
-    return bestNodes`,
+    return min`,
   },
 
   inorder: {
@@ -108,35 +100,27 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
     rightResult ← inorder(node.right, target)
     return rightResult`,
     'max-value': `function inorderMax(node):
-    best ← -∞
-    bestNodes ← []
+    max ← -∞
     function inorder(node):
         if node = null:
             return
         inorder(node.left)
-        if node.value > best:
-            best ← node.value
-            bestNodes ← [node]
-        else if node.value = best:
-            bestNodes.append(node)
+        if node.value > max:
+            max ← node.value
         inorder(node.right)
     inorder(node)
-    return bestNodes`,
+    return max`,
     'min-value': `function inorderMin(node):
-    best ← +∞
-    bestNodes ← []
+    min ← +∞
     function inorder(node):
         if node = null:
             return
         inorder(node.left)
-        if node.value < best:
-            best ← node.value
-            bestNodes ← [node]
-        else if node.value = best:
-            bestNodes.append(node)
+        if node.value < min:
+            min ← node.value
         inorder(node.right)
     inorder(node)
-    return bestNodes`,
+    return min`,
   },
 
   postorder: {
@@ -165,35 +149,27 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
         return node
     return null`,
     'max-value': `function postorderMax(node):
-    best ← -∞
-    bestNodes ← []
+    max ← -∞
     function postorder(node):
         if node = null:
             return
         postorder(node.left)
         postorder(node.right)
-        if node.value > best:
-            best ← node.value
-            bestNodes ← [node]
-        else if node.value = best:
-            bestNodes.append(node)
+        if node.value > max:
+            max ← node.value
     postorder(node)
-    return bestNodes`,
+    return max`,
     'min-value': `function postorderMin(node):
-    best ← +∞
-    bestNodes ← []
+    min ← +∞
     function postorder(node):
         if node = null:
             return
         postorder(node.left)
         postorder(node.right)
-        if node.value < best:
-            best ← node.value
-            bestNodes ← [node]
-        else if node.value = best:
-            bestNodes.append(node)
+        if node.value < min:
+            min ← node.value
     postorder(node)
-    return bestNodes`,
+    return min`,
   },
 
   'level-order': {
@@ -224,41 +200,33 @@ const CODE_BY_ALGORITHM_AND_GOAL: Record<
             queue.enqueue(node.right)
     return null`,
     'max-value': `function levelOrderMax(node):
-    best ← -∞
-    bestNodes ← []
+    max ← -∞
     if node = null:
-        return bestNodes
+        return max
     queue ← [node]
     while queue ≠ empty:
         node ← queue.dequeue()
-        if node.value > best:
-            best ← node.value
-            bestNodes ← [node]
-        else if node.value = best:
-            bestNodes.append(node)
+        if node.value > max:
+            max ← node.value
         if node.left ≠ null:
             queue.enqueue(node.left)
         if node.right ≠ null:
             queue.enqueue(node.right)
-    return bestNodes`,
+    return max`,
     'min-value': `function levelOrderMin(node):
-    best ← +∞
-    bestNodes ← []
+    min ← +∞
     if node = null:
-        return bestNodes
+        return min
     queue ← [node]
     while queue ≠ empty:
         node ← queue.dequeue()
-        if node.value < best:
-            best ← node.value
-            bestNodes ← [node]
-        else if node.value = best:
-            bestNodes.append(node)
+        if node.value < min:
+            min ← node.value
         if node.left ≠ null:
             queue.enqueue(node.left)
         if node.right ≠ null:
             queue.enqueue(node.right)
-    return bestNodes`,
+    return min`,
   },
 }
 
@@ -292,23 +260,21 @@ running max while walking.
 ──────────────────────────────────────────
 Each step:
   · Visit the current node.
-  · Compare node.value with the running best.
-    - Better → update best + reset winners.
-    - Equal → add this node as a tie.
+  · Compare node.value with the running max.
+    - Better → update max.
   · Recurse left, then right.
 ──────────────────────────────────────────
-Walk ends → return best (with ties).`,
+Walk ends → return max.`,
     'min-value': `Preorder keeps a
 running min while walking.
 ──────────────────────────────────────────
 Each step:
   · Visit the current node.
-  · Compare node.value with the running best.
-    - Better (smaller) → update best + reset winners.
-    - Equal → add this node as a tie.
+  · Compare node.value with the running min.
+    - Better (smaller) → update min.
   · Recurse left, then right.
 ──────────────────────────────────────────
-Walk ends → return best (with ties).`,
+Walk ends → return min.`,
   },
 
   inorder: {
@@ -335,23 +301,21 @@ when each node is visited.
 ──────────────────────────────────────────
 Each step:
   · Recurse left.
-  · Visit current node; compare to running best.
-    - Better → update best + reset winners.
-    - Equal → add this node as a tie.
+  · Visit current node; compare to running max.
+    - Better → update max.
   · Recurse right.
 ──────────────────────────────────────────
-Walk ends → return best (with ties).`,
+Walk ends → return max.`,
     'min-value': `Inorder updates min
 when each node is visited.
 ──────────────────────────────────────────
 Each step:
   · Recurse left.
-  · Visit current node; compare to running best.
-    - Better (smaller) → update best + reset winners.
-    - Equal → add this node as a tie.
+  · Visit current node; compare to running min.
+    - Better (smaller) → update min.
   · Recurse right.
 ──────────────────────────────────────────
-Walk ends → return best (with ties).`,
+Walk ends → return min.`,
   },
 
   postorder: {
@@ -378,21 +342,19 @@ after both subtrees.
 ──────────────────────────────────────────
 Each step:
   · Recurse left, then right.
-  · After children: compare current node.value to best.
-    - Better → update best + reset winners.
-    - Equal → add this node as a tie.
+  · After children: compare current node.value to max.
+    - Better → update max.
 ──────────────────────────────────────────
-Walk ends → return best (with ties).`,
+Walk ends → return max.`,
     'min-value': `Postorder updates min
 after both subtrees.
 ──────────────────────────────────────────
 Each step:
   · Recurse left, then right.
-  · After children: compare current node.value to best.
-    - Better (smaller) → update best + reset winners.
-    - Equal → add this node as a tie.
+  · After children: compare current node.value to min.
+    - Better (smaller) → update min.
 ──────────────────────────────────────────
-Walk ends → return best (with ties).`,
+Walk ends → return min.`,
   },
 
   'level-order': {
@@ -419,23 +381,21 @@ nodes with a running max.
 ──────────────────────────────────────────
 Each step:
   · Dequeue the current node.
-  · Compare node.value with the running best.
-    - Better → update best + reset winners.
-    - Equal → add this node as a tie.
+  · Compare node.value with the running max.
+    - Better → update max.
   · Enqueue left/right children if present.
 ──────────────────────────────────────────
-Queue empties → return best (with ties).`,
+Queue empties → return max.`,
     'min-value': `Level-order walks all
 nodes with a running min.
 ──────────────────────────────────────────
 Each step:
   · Dequeue the current node.
-  · Compare node.value with the running best.
-    - Better (smaller) → update best + reset winners.
-    - Equal → add this node as a tie.
+  · Compare node.value with the running min.
+    - Better (smaller) → update min.
   · Enqueue left/right children if present.
 ──────────────────────────────────────────
-Queue empties → return best (with ties).`,
+Queue empties → return min.`,
   },
 }
 
@@ -475,7 +435,7 @@ export type BinaryTreeTraversalPageProps = {
 // Sidebar page: tree-traversal setup, visually mirroring the graph canvas's TraversalPage.
 // Uses a dropdown instead of a BFS/DFS pill toggle (4 traversal orders instead of 2), and the
 // Inputs section drops the "Start node" field since a tree traversal always starts at the root.
-// Only preorder is actually wired up to a real algorithm so far — the rest just report as
+// Preorder + inorder are wired up to real algorithms so far — the rest just report as
 // not-yet-implemented when Run is pressed (see useBinaryTreeTraversalPlayback).
 export const BinaryTreeTraversalPage = ({
   algorithm,
@@ -508,7 +468,8 @@ export const BinaryTreeTraversalPage = ({
   onPseudocodeFlip,
 }: BinaryTreeTraversalPageProps) => {
   const algoLabel = SHORT_LABEL_BY_ALGORITHM[algorithm]
-  const codeHighlighted = algorithm === 'preorder' ? traversalCodeHighlighted : NO_HIGHLIGHTS
+  const codeHighlighted =
+    algorithm === 'preorder' || algorithm === 'inorder' ? traversalCodeHighlighted : NO_HIGHLIGHTS
 
   return (
     <div className="sidebar-page-body">
@@ -605,7 +566,7 @@ export const BinaryTreeTraversalPage = ({
         logicText={LOGIC_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
         codeHighlighted={codeHighlighted}
         logicHighlighted={NO_HIGHLIGHTS}
-        varsRows={algorithm === 'preorder' ? traversalVarsRows : null}
+        varsRows={algorithm === 'preorder' || algorithm === 'inorder' ? traversalVarsRows : null}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
         canDetach={!isTraversalPlaying}
