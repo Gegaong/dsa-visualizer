@@ -435,8 +435,6 @@ export type BinaryTreeTraversalPageProps = {
 // Sidebar page: tree-traversal setup, visually mirroring the graph canvas's TraversalPage.
 // Uses a dropdown instead of a BFS/DFS pill toggle (4 traversal orders instead of 2), and the
 // Inputs section drops the "Start node" field since a tree traversal always starts at the root.
-// Preorder + inorder are wired up to real algorithms so far — the rest just report as
-// not-yet-implemented when Run is pressed (see useBinaryTreeTraversalPlayback).
 export const BinaryTreeTraversalPage = ({
   algorithm,
   onAlgorithmChange,
@@ -468,8 +466,6 @@ export const BinaryTreeTraversalPage = ({
   onPseudocodeFlip,
 }: BinaryTreeTraversalPageProps) => {
   const algoLabel = SHORT_LABEL_BY_ALGORITHM[algorithm]
-  const codeHighlighted =
-    algorithm === 'preorder' || algorithm === 'inorder' ? traversalCodeHighlighted : NO_HIGHLIGHTS
 
   return (
     <div className="sidebar-page-body">
@@ -564,9 +560,9 @@ export const BinaryTreeTraversalPage = ({
       <PseudocodePanel
         codeText={CODE_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
         logicText={LOGIC_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
-        codeHighlighted={codeHighlighted}
+        codeHighlighted={traversalCodeHighlighted}
         logicHighlighted={NO_HIGHLIGHTS}
-        varsRows={algorithm === 'preorder' || algorithm === 'inorder' ? traversalVarsRows : null}
+        varsRows={traversalVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
         canDetach={!isTraversalPlaying}

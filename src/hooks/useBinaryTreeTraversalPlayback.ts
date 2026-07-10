@@ -7,6 +7,8 @@ import {
   binaryTreeExecToBfsResult,
   prepareBinaryTreeTraversalRunInputs,
   runBinaryTreeInorderExec,
+  runBinaryTreeLevelOrderExec,
+  runBinaryTreePostorderExec,
   runBinaryTreePreorderExec,
 } from '../algorithms/binaryTreeTraversal'
 import type { BinaryTreeExecResult, BinaryTreeTraversalAlgorithm } from '../algorithms/binaryTreeTraversal'
@@ -24,9 +26,12 @@ const ALGO_LABEL: Record<BinaryTreeTraversalAlgorithm, string> = {
   'level-order': 'Level-order',
 }
 
-// Preorder + inorder are implemented so far — the other two stay selectable in the
-// dropdown but Run reports them as not-yet-implemented instead of doing anything.
-const IMPLEMENTED_ALGORITHMS = new Set<BinaryTreeTraversalAlgorithm>(['preorder', 'inorder'])
+const EXEC_BY_ALGORITHM: Record<BinaryTreeTraversalAlgorithm, typeof runBinaryTreePreorderExec> = {
+  preorder: runBinaryTreePreorderExec,
+  inorder: runBinaryTreeInorderExec,
+  postorder: runBinaryTreePostorderExec,
+  'level-order': runBinaryTreeLevelOrderExec,
+}
 
 type UseBinaryTreeTraversalPlaybackParams = {
   tree: BinaryTree
@@ -70,9 +75,7 @@ export type BinaryTreeTraversalHandle = {
   canRunTraversal: boolean
 }
 
-// Binary tree counterpart to useTraversalPlayback: a tree only ever runs one traversal at a
-// time (no competing algorithms sharing the canvas), so this drops the goal-type/step logic in
-// place but skips all of the "other algorithm is running" cross-session bookkeeping.
+// Binary-tree counterpart to useTraversalPlayback (one algorithm session; no cross-algo canvas clearing).
 export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalPlaybackParams): BinaryTreeTraversalHandle {
   const [algorithm, setAlgorithmState] = useState<BinaryTreeTraversalAlgorithm>('preorder')
   const [goalType, setGoalTypeState] = useState<GoalType>('target-node')
@@ -104,15 +107,32 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     (
       nodeLabel: string,
       runningBest: number | null | undefined,
-      subtreeResults?: { leftResult: string; rightResult: string },
+      extras?: {
+        leftResult?: string
+        rightResult?: string
+        queueLabels?: string[]
+      },
     ): string[][] => {
-      if (goalType === 'max-value') return [[`node = ${nodeLabel}`, `max = ${runningBest ?? '—'}`]]
-      if (goalType === 'min-value') return [[`node = ${nodeLabel}`, `min = ${runningBest ?? '—'}`]]
+      const queueRow =
+        extras?.queueLabels !== undefined
+          ? [[`queue = [${extras.queueLabels.join(', ')}]`]]
+          : []
+
+      if (goalType === 'max-value') {
+        return [[`node = ${nodeLabel}`, `max = ${runningBest ?? '—'}`], ...queueRow]
+      }
+      if (goalType === 'min-value') {
+        return [[`node = ${nodeLabel}`, `min = ${runningBest ?? '—'}`], ...queueRow]
+      }
+
       const goalCell =
         goalType === 'target-node' ? `goal = "${goalNodeLabel}"` : `goal = ${goalValueInput}`
       const row1 = [`node = ${nodeLabel}`, goalCell]
-      if (!subtreeResults) return [row1]
-      return [row1, [`leftResult = ${subtreeResults.leftResult}`, `rightResult = ${subtreeResults.rightResult}`]]
+      if (queueRow.length > 0) return [row1, ...queueRow]
+      if (extras?.leftResult !== undefined && extras?.rightResult !== undefined) {
+        return [row1, [`leftResult = ${extras.leftResult}`, `rightResult = ${extras.rightResult}`]]
+      }
+      return [row1]
     },
     [goalNodeLabel, goalType, goalValueInput],
   )
@@ -224,11 +244,6 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
   const runTraversal = () => {
     if (playback.isPlaying) return
 
-    if (!IMPLEMENTED_ALGORITHMS.has(algorithm)) {
-      setStatusText(`${ALGO_LABEL[algorithm]} hasn't been implemented yet.`)
-      return
-    }
-
     stopPlaybackRef.current()
     setVisitedNodeIds([])
     setCurrentNodeId(null)
@@ -251,10 +266,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     initialGoalNodeIdsRef.current = preparation.initialGoalNodeIds
     setGoalNodeIds(preparation.initialGoalNodeIds)
 
-    const traversalExec =
-      algorithm === 'inorder'
-        ? runBinaryTreeInorderExec(tree, preparation.goal)
-        : runBinaryTreePreorderExec(tree, preparation.goal)
+    const traversalExec = EXEC_BY_ALGORITHM[algorithm](tree, preparation.goal)
 
     if (traversalExec.steps.length === 0) {
       setStatusText(`${ALGO_LABEL[algorithm]} could not start with the current tree and inputs.`)
@@ -302,7 +314,6 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
 
   const canRunTraversal =
-    IMPLEMENTED_ALGORITHMS.has(algorithm) &&
     nodes.length > 0 &&
     (goalType === 'target-node' || !hasEmptyNodes) &&
     (goalType !== 'target-node' || goalNodeLabel.trim() !== '') &&
@@ -312,9 +323,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
   const goalValueMissing = goalType === 'target-value' && parseNumberInput(goalValueInput) === null
 
   let sidebarStatusText = statusText
-  if (!IMPLEMENTED_ALGORITHMS.has(algorithm)) {
-    sidebarStatusText = `${ALGO_LABEL[algorithm]} hasn't been implemented yet.`
-  } else if (goalNodeMissing) {
+  if (goalNodeMissing) {
     sidebarStatusText = 'Warning: Goal node is a required field.'
   } else if (goalValueMissing) {
     sidebarStatusText = 'Warning: Goal value is a required field.'
@@ -323,18 +332,25 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
   }
 
   const traversalVarsRows: string[][] | null = useMemo(() => {
-    if (!isRunning || !IMPLEMENTED_ALGORITHMS.has(algorithm) || !execResult) return null
+    if (!isRunning || !execResult) return null
 
     if (playback.stepIndex < 0) {
-      const subtreeResults =
-        (algorithm === 'preorder' || algorithm === 'inorder') &&
+      if (algorithm === 'level-order') {
+        return buildVarsRows(
+          rootLabelTagged,
+          goalType === 'max-value' || goalType === 'min-value' ? null : undefined,
+          { queueLabels: [] },
+        )
+      }
+      const extras =
+        algorithm !== 'level-order' &&
         (goalType === 'target-node' || goalType === 'target-value')
           ? { leftResult: '—', rightResult: '—' }
           : undefined
       return buildVarsRows(
         rootLabelTagged,
         goalType === 'max-value' || goalType === 'min-value' ? null : undefined,
-        subtreeResults,
+        extras,
       )
     }
 
@@ -346,11 +362,13 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
       goalType === 'max-value' || goalType === 'min-value'
         ? (isDone ? execResult.foundValue : (step.runningBest ?? null))
         : undefined
-    const subtreeResults =
-      step.leftResult !== undefined && step.rightResult !== undefined
-        ? { leftResult: step.leftResult, rightResult: step.rightResult }
-        : undefined
-    return buildVarsRows(nodeLabel, bestVal, subtreeResults)
+    const extras =
+      step.queueLabels !== undefined
+        ? { queueLabels: isDone ? [] : step.queueLabels }
+        : step.leftResult !== undefined && step.rightResult !== undefined
+          ? { leftResult: step.leftResult, rightResult: step.rightResult }
+          : undefined
+    return buildVarsRows(nodeLabel, bestVal, extras)
   }, [
     algorithm,
     buildVarsRows,
@@ -386,7 +404,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     canTogglePlay: execResult !== null && playback.canTogglePlay,
     isPlaybackComplete: execResult !== null && playback.isPlaybackComplete,
 
-    traversalCodeHighlighted: isRunning && IMPLEMENTED_ALGORITHMS.has(algorithm) ? codeHighlighted : new Set(),
+    traversalCodeHighlighted: isRunning ? codeHighlighted : new Set(),
     traversalVarsRows,
 
     resetVisualization,
