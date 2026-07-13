@@ -244,6 +244,7 @@ Each step:
   · Visit the current node.
   · If it matches the goal → stop now.
   · Otherwise: recurse left, then right.
+    - Non-null subtree result → return it.
 ──────────────────────────────────────────
 No nodes left → goal is unreachable.`,
     'target-value': `Preorder visits node
@@ -253,6 +254,7 @@ Each step:
   · Visit the current node.
   · If its value matches → stop now.
   · Otherwise: recurse left, then right.
+    - Non-null subtree result → return it.
 ──────────────────────────────────────────
 No nodes left → target value not found.`,
     'max-value': `Preorder keeps a
@@ -283,6 +285,7 @@ then node, then right.
 ──────────────────────────────────────────
 Each step:
   · Recurse into the left child.
+    - Non-null leftResult → return it.
   · If current node matches → stop now.
   · Otherwise: recurse into the right child.
 ──────────────────────────────────────────
@@ -292,6 +295,7 @@ then node, then right.
 ──────────────────────────────────────────
 Each step:
   · Recurse into the left child.
+    - Non-null leftResult → return it.
   · If current.value matches → stop now.
   · Otherwise: recurse into the right child.
 ──────────────────────────────────────────
@@ -324,7 +328,9 @@ children before node.
 ──────────────────────────────────────────
 Each step:
   · Recurse left subtree.
+    - Non-null leftResult → return it.
   · Then recurse right subtree.
+    - Non-null rightResult → return it.
   · If current node matches → stop now.
 ──────────────────────────────────────────
 No nodes left → goal is unreachable.`,
@@ -333,7 +339,9 @@ children before node.
 ──────────────────────────────────────────
 Each step:
   · Recurse left subtree.
+    - Non-null leftResult → return it.
   · Then recurse right subtree.
+    - Non-null rightResult → return it.
   · If current.value matches → stop now.
 ──────────────────────────────────────────
 No nodes left → target value not found.`,

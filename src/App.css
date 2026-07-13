@@ -1154,6 +1154,7 @@
 }
 
 .sidebar.is-traversal-setup,
+.sidebar.is-bst-setup,
 .sidebar.is-grid-search {
 	height: 680px;
 	overflow: hidden;

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { BinaryTreeBstPage } from './BinaryTreeBstPage'
 import { BinaryTreeCanvasSetupPage } from './BinaryTreeCanvasSetupPage'
 import type { BinaryTreeCanvasSetupPageProps } from './BinaryTreeCanvasSetupPage'
 import { BinaryTreeTraversalPage } from './BinaryTreeTraversalPage'
 import type { BinaryTreeTraversalPageProps } from './BinaryTreeTraversalPage'
 
-export type BinaryTreeSidebarPage = 'canvas' | 'traversal'
+export type BinaryTreeSidebarPage = 'canvas' | 'traversal' | 'bst'
 
 type BinaryTreeSidebarProps = {
   canvasSetup: BinaryTreeCanvasSetupPageProps
@@ -16,10 +17,11 @@ type BinaryTreeSidebarProps = {
 const PAGE_CLASS: Record<BinaryTreeSidebarPage, string> = {
   canvas: 'is-canvas-setup',
   traversal: 'is-traversal-setup',
+  bst: 'is-bst-setup',
 }
 
-// Two-tab shell mirroring the graph canvas's Sidebar: a page-switch strip up top, with both
-// page panels kept mounted (display:none when inactive) so scroll position survives tab switches.
+// Tab shell mirroring the graph canvas's Sidebar: page-switch strip up top, panels kept mounted
+// (display:none when inactive) so scroll position survives tab switches.
 export const BinaryTreeSidebar = ({ canvasSetup, traversal, onSidebarSectionChange }: BinaryTreeSidebarProps) => {
   const [activePage, setActivePage] = useState<BinaryTreeSidebarPage>('canvas')
   const prevPageRef = useRef<BinaryTreeSidebarPage>(activePage)
@@ -49,6 +51,13 @@ export const BinaryTreeSidebar = ({ canvasSetup, traversal, onSidebarSectionChan
         >
           Traversal setup
         </button>
+        <button
+          className={`sidebar-page-tab ${activePage === 'bst' ? 'is-active' : ''}`}
+          type="button"
+          onClick={() => setActivePage('bst')}
+        >
+          BST setup
+        </button>
       </div>
 
       <div className="sidebar-page-root" style={{ display: activePage === 'canvas' ? undefined : 'none' }}>
@@ -56,6 +65,9 @@ export const BinaryTreeSidebar = ({ canvasSetup, traversal, onSidebarSectionChan
       </div>
       <div className="sidebar-page-root" style={{ display: activePage === 'traversal' ? undefined : 'none' }}>
         <BinaryTreeTraversalPage {...traversal} />
+      </div>
+      <div className="sidebar-page-root" style={{ display: activePage === 'bst' ? undefined : 'none' }}>
+        <BinaryTreeBstPage />
       </div>
     </aside>
   )

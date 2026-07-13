@@ -6,7 +6,8 @@ import { parseNumberInput } from '../utils/format'
 
 export type BinaryTreeTraversalAlgorithm = 'preorder' | 'inorder' | 'postorder' | 'level-order'
 
-// Line indices into BinaryTreeTraversalPage CODE_BY — keep in sync when editing pseudocode.
+// Line indices into BinaryTreeTraversalPage CODE_BY_ALGORITHM_AND_GOAL — keep in sync when editing
+// pseudocode. Keys that are never pushed (e.g. level-order RETURN_EARLY) still document the panel line.
 const PREORDER_TARGET_CODE_LINES = {
   ENTER: 0,
   NULL_CHECK: 1,

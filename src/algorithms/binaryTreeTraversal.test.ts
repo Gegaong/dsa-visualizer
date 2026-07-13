@@ -441,7 +441,7 @@ describe('buildBinaryTreeTraversalCompletionStatus', () => {
     expect(buildBinaryTreeTraversalCompletionStatus(result)).toBe('Goal node B reached.')
   })
 
-  it('reports a single extreme-value winner by label', () => {
+  it('reports the extreme value without naming a winner node', () => {
     const result = runBinaryTreePreorderSearch(SAMPLE_TREE, { type: 'max-value' })
     expect(buildBinaryTreeTraversalCompletionStatus(result)).toBe('Maximum value in the tree: 6.')
   })
