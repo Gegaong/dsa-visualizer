@@ -478,6 +478,13 @@
 	min-height: 560px;
 }
 
+.binary-tree-convert-btn {
+	position: absolute;
+	top: 12px;
+	left: 12px;
+	z-index: 3;
+}
+
 .binary-tree-edges-svg {
 	position: absolute;
 	inset: 0;

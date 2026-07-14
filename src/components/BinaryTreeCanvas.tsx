@@ -2,7 +2,11 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 
 import type { BinaryTree, BinaryTreeContextMenuState, BinaryTreeSide } from '../types'
-import { getNodeCount, getTreeHeight } from '../algorithms/binaryTreeShared'
+import {
+  getNodeCount,
+  getTreeHeight,
+  treeHasAllNumericValues,
+} from '../algorithms/binaryTreeShared'
 import { computeBinaryTreeLayout } from '../utils/binaryTreeLayout'
 import { TREE_NODE_SIZE } from '../utils/constants'
 import {
@@ -21,6 +25,7 @@ type BinaryTreeCanvasProps = {
   onCommitNodeValue: (nodeId: string, value: number | 'empty') => void
   onDeleteNodes: (nodeIds: string[]) => void
   onClearTree: () => void
+  onConvertToBst: () => void
   isTraversalRunning: boolean
   traversalVisitedNodeIds: string[]
   traversalCurrentNodeId: string | null
@@ -46,6 +51,7 @@ export const BinaryTreeCanvas = ({
   onCommitNodeValue,
   onDeleteNodes,
   onClearTree,
+  onConvertToBst,
   isTraversalRunning,
   traversalVisitedNodeIds,
   traversalCurrentNodeId,
@@ -57,6 +63,7 @@ export const BinaryTreeCanvas = ({
   const [deleteMode, setDeleteMode] = useState(false)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
+  const [convertConfirmOpen, setConvertConfirmOpen] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [draftValue, setDraftValue] = useState('')
   const [contextMenu, setContextMenu] = useState<BinaryTreeContextMenuState | null>(null)
@@ -87,6 +94,7 @@ export const BinaryTreeCanvas = ({
 
   const nodeCount = getNodeCount(tree)
   const treeHeight = getTreeHeight(tree)
+  const canConvertToBst = treeHasAllNumericValues(tree) && !isTraversalRunning
 
   const commitEditing = (nodeId: string, rawValue: string) => {
     onCommitNodeValue(nodeId, parseDraftValue(rawValue))
@@ -216,6 +224,14 @@ export const BinaryTreeCanvas = ({
         onConfirm={() => { onClearTree(); setClearConfirmOpen(false) }}
         onCancel={() => setClearConfirmOpen(false)}
       />
+      <ConfirmModal
+        open={convertConfirmOpen}
+        title="Convert to BST"
+        body="Node values will be rearranged so the tree becomes a binary search tree. Structure and labels stay the same."
+        confirmLabel="Convert"
+        onConfirm={() => { onConvertToBst(); setConvertConfirmOpen(false) }}
+        onCancel={() => setConvertConfirmOpen(false)}
+      />
       <BinaryTreeNodeContextMenu
         contextMenu={effectiveContextMenu}
         tree={tree}
@@ -269,6 +285,19 @@ export const BinaryTreeCanvas = ({
           className="binary-tree-canvas-area"
           onContextMenu={handleCanvasContextMenu}
         >
+          <button
+            className="btn binary-tree-convert-btn"
+            type="button"
+            disabled={!canConvertToBst}
+            title={
+              canConvertToBst
+                ? 'Convert this binary tree into a BST'
+                : 'Fill every node value before converting to a BST'
+            }
+            onClick={() => setConvertConfirmOpen(true)}
+          >
+            Convert to BST
+          </button>
           <svg className="binary-tree-edges-svg">
             {Object.values(tree.nodesById).map((node) => {
               const from = layout.nodePositions.get(node.id)

@@ -7,6 +7,8 @@ import {
   findChildSide,
   getNodeCount,
   getTreeHeight,
+  treeHasAllNumericValues,
+  convertBinaryTreeToBst,
 } from './binaryTreeShared'
 
 // Builds a tree from a terse spec: id -> [leftId | null, rightId | null]. rootId defaults to 'A'.
@@ -142,5 +144,54 @@ describe('getTreeHeight', () => {
       E: [null, null],
     })
     expect(getTreeHeight(tree)).toBe(4)
+  })
+})
+
+describe('treeHasAllNumericValues', () => {
+  it('is false for an empty tree', () => {
+    expect(treeHasAllNumericValues(EMPTY_TREE)).toBe(false)
+  })
+
+  it('is false when any node is empty', () => {
+    const tree = makeTree({ A: ['B', null], B: [null, null] })
+    tree.nodesById.A = { ...tree.nodesById.A, value: 1 }
+    expect(treeHasAllNumericValues(tree)).toBe(false)
+  })
+
+  it('is true when every node has a number', () => {
+    const tree = makeTree({ A: ['B', null], B: [null, null] })
+    tree.nodesById.A = { ...tree.nodesById.A, value: 1 }
+    tree.nodesById.B = { ...tree.nodesById.B, value: 2 }
+    expect(treeHasAllNumericValues(tree)).toBe(true)
+  })
+})
+
+describe('convertBinaryTreeToBst', () => {
+  it('returns the same tree when values are missing', () => {
+    const tree = makeTree({ A: [null, null] })
+    expect(convertBinaryTreeToBst(tree)).toBe(tree)
+  })
+
+  it('keeps structure and labels, sorts values into inorder order', () => {
+    //     A(3)
+    //    / \
+    //  B(1) C(2)   inorder B,A,C → values 1,3,2 → sorted 1,2,3
+    const tree = makeTree({
+      A: ['B', 'C'],
+      B: [null, null],
+      C: [null, null],
+    })
+    tree.nodesById.A = { ...tree.nodesById.A, value: 3 }
+    tree.nodesById.B = { ...tree.nodesById.B, value: 1 }
+    tree.nodesById.C = { ...tree.nodesById.C, value: 2 }
+
+    const result = convertBinaryTreeToBst(tree)
+    expect(result.rootId).toBe('A')
+    expect(result.nodesById.A.leftId).toBe('B')
+    expect(result.nodesById.A.rightId).toBe('C')
+    expect(result.nodesById.A.label).toBe('A')
+    expect(result.nodesById.B.value).toBe(1)
+    expect(result.nodesById.A.value).toBe(2)
+    expect(result.nodesById.C.value).toBe(3)
   })
 })

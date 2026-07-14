@@ -49,3 +49,39 @@ export function getTreeHeight(tree: BinaryTree): number {
   }
   return walk(tree.rootId)
 }
+
+// True when the tree has at least one node and every node has a numeric value.
+export function treeHasAllNumericValues(tree: BinaryTree): boolean {
+  const nodes = Object.values(tree.nodesById)
+  return nodes.length > 0 && nodes.every((node) => typeof node.value === 'number')
+}
+
+// Collects node ids in inorder (left, node, right).
+function collectInorderIds(tree: BinaryTree, nodeId: string | null, out: string[]): void {
+  if (!nodeId) return
+  const node = tree.nodesById[nodeId]
+  if (!node) return
+  collectInorderIds(tree, node.leftId, out)
+  out.push(nodeId)
+  collectInorderIds(tree, node.rightId, out)
+}
+
+// Shape-preserving BT → BST: keep structure/labels, reassign values so inorder is sorted.
+// No-ops (returns the same tree) when empty or any node value is empty.
+export function convertBinaryTreeToBst(tree: BinaryTree): BinaryTree {
+  if (!treeHasAllNumericValues(tree) || !tree.rootId) return tree
+
+  const inorderIds: string[] = []
+  collectInorderIds(tree, tree.rootId, inorderIds)
+
+  const sortedValues = inorderIds
+    .map((id) => tree.nodesById[id].value as number)
+    .sort((a, b) => a - b)
+
+  const nodesById = { ...tree.nodesById }
+  inorderIds.forEach((id, index) => {
+    nodesById[id] = { ...nodesById[id], value: sortedValues[index] }
+  })
+
+  return { rootId: tree.rootId, nodesById }
+}

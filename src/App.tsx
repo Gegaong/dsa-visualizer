@@ -76,7 +76,7 @@ import { useForLoopBFSPlayback } from './hooks/useForLoopBFSPlayback'
 import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
 import { useNQueensPlayback } from './hooks/useNQueensPlayback'
 import { useBinaryTreeTraversalPlayback } from './hooks/useBinaryTreeTraversalPlayback'
-import { collectSubtreeIds, findParentId, findChildSide } from './algorithms/binaryTreeShared'
+import { collectSubtreeIds, findParentId, findChildSide, convertBinaryTreeToBst } from './algorithms/binaryTreeShared'
 
 const CANVAS_ORDER: CanvasType[] = ['graph', 'binary-tree', 'weighted-graph', 'grid', 'nqueens']
 
@@ -557,6 +557,10 @@ function App() {
 
   const handleBinaryTreeClear = () => {
     setBinaryTree({ rootId: null, nodesById: {} })
+  }
+
+  const handleBinaryTreeConvertToBst = () => {
+    setBinaryTree((prev) => convertBinaryTreeToBst(prev))
   }
 
   // Sidebar: updates the binary tree fill-range minimum (digits only).
@@ -1337,6 +1341,7 @@ function App() {
             onCommitNodeValue={handleBinaryTreeCommitValue}
             onDeleteNodes={handleBinaryTreeDeleteSelected}
             onClearTree={handleBinaryTreeClear}
+            onConvertToBst={handleBinaryTreeConvertToBst}
             isTraversalRunning={binaryTreeTraversal.isRunning}
             traversalVisitedNodeIds={binaryTreeTraversal.visitedNodeIds}
             traversalCurrentNodeId={binaryTreeTraversal.currentNodeId}

@@ -1,14 +1,12 @@
 import { useState } from 'react'
 
 export type BinaryTreeBstAlgorithm =
-  | 'convert'
   | 'validate'
   | 'search'
   | 'insert'
   | 'delete'
 
 const ALGORITHM_OPTIONS: { value: BinaryTreeBstAlgorithm; label: string }[] = [
-  { value: 'convert', label: 'Convert BT → BST' },
   { value: 'validate', label: 'Validate BST' },
   { value: 'search', label: 'Search' },
   { value: 'insert', label: 'Insert' },
@@ -17,7 +15,7 @@ const ALGORITHM_OPTIONS: { value: BinaryTreeBstAlgorithm; label: string }[] = [
 
 // Sidebar page: BST operations UI shell. Algorithms are listed here first; playback wiring comes later.
 export const BinaryTreeBstPage = () => {
-  const [algorithm, setAlgorithm] = useState<BinaryTreeBstAlgorithm>('convert')
+  const [algorithm, setAlgorithm] = useState<BinaryTreeBstAlgorithm>('validate')
 
   return (
     <div className="sidebar-page-body">
