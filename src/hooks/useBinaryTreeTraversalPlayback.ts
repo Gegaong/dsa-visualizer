@@ -13,9 +13,13 @@ import {
 } from '../algorithms/binaryTreeTraversal'
 import type { BinaryTreeExecResult, BinaryTreeTraversalAlgorithm } from '../algorithms/binaryTreeTraversal'
 
-import { PLAYBACK_MIN_DELAY_MS, PLAYBACK_MAX_DELAY_MS } from '../utils/constants'
+import {
+  PLAYBACK_MIN_DELAY_MS,
+  PLAYBACK_MAX_DELAY_MS,
+  BINARY_TREE_PLAYBACK_DEFAULT_DELAY_MS,
+} from '../utils/constants'
 
-import { parseNumberInput, sanitizeNumericInput } from '../utils/format'
+import { parseNumberInput, sanitizeNumericInput, sanitizeNodeLabelInput } from '../utils/format'
 
 import { useStepPlayback } from './useStepPlayback'
 
@@ -167,6 +171,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
     stepCount: execResult?.steps.length ?? 0,
     minDelay: PLAYBACK_MIN_DELAY_MS,
     maxDelay: PLAYBACK_MAX_DELAY_MS,
+    defaultDelay: BINARY_TREE_PLAYBACK_DEFAULT_DELAY_MS,
     resetSignal: playbackSession,
     onStepIndexChange: (index) => {
       const currentResult = execResultRef.current
@@ -204,7 +209,13 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
   }, [playback])
 
   const resetVisualization = useCallback(
-    (idleAlgorithm: BinaryTreeTraversalAlgorithm = algorithm) => {
+    (idleAlgorithm?: BinaryTreeTraversalAlgorithm) => {
+      // Ignore non-string args (defensive if this is ever wired directly to onClick).
+      const algo =
+        typeof idleAlgorithm === 'string' && idleAlgorithm in ALGO_LABEL
+          ? idleAlgorithm
+          : algorithm
+
       stopPlaybackRef.current()
       setVisitedNodeIds([])
       setCurrentNodeId(null)
@@ -212,7 +223,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
       setCodeHighlighted(new Set())
       setExecResult(null)
       setPlaybackSession((session) => session + 1)
-      setStatusText(`Pick a goal, then run ${ALGO_LABEL[idleAlgorithm]}.`)
+      setStatusText(`Pick a goal, then run ${ALGO_LABEL[algo]}.`)
       setIsRunning(false)
     },
     [algorithm],
@@ -233,7 +244,7 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
 
   const handleGoalNodeLabelChange = (value: string) => {
     resetVisualization()
-    setGoalNodeLabel(value.toUpperCase())
+    setGoalNodeLabel(sanitizeNodeLabelInput(value))
   }
 
   const handleGoalValueInputChange = (value: string) => {

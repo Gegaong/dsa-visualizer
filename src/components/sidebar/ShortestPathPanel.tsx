@@ -8,7 +8,7 @@ import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
 import { PseudocodePanel } from './PseudocodePanel'
 
-import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+import { confirmNodeLabelFieldOnEnter, NODE_LABEL_FIELD_ATTRS } from './sidebarFieldHelpers'
 
 // ─── Code pseudocode strings ─────────────────────────────────────────────────
 
@@ -233,7 +233,7 @@ export const ShortestPathPanel = ({
                 Start node <span className="required-indicator" aria-hidden="true">*</span>
               </span>
               <input
-                type="text"
+                {...NODE_LABEL_FIELD_ATTRS}
                 value={shortestPathStartNodeLabel}
                 onChange={(event) => onShortestPathStartNodeLabelChange(event.target.value)}
                 onKeyDown={confirmNodeLabelFieldOnEnter}
@@ -245,7 +245,7 @@ export const ShortestPathPanel = ({
                 Goal node <span className="required-indicator" aria-hidden="true">*</span>
               </span>
               <input
-                type="text"
+                {...NODE_LABEL_FIELD_ATTRS}
                 value={shortestPathGoalNodeLabel}
                 onChange={(event) => onShortestPathGoalNodeLabelChange(event.target.value)}
                 onKeyDown={confirmNodeLabelFieldOnEnter}

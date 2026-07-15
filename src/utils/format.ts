@@ -5,6 +5,10 @@ import { NODE_SIZE } from './constants'
 export const sanitizeNumericInput = (value: string) =>
   value.replace(/[^0-9-]/g, '').replace(/(?!^)-/g, '')
 
+// Keep only A–Z letters (canvas node labels are spreadsheet-style: A, B, …, Z, AA, …).
+export const sanitizeNodeLabelInput = (value: string) =>
+  value.toUpperCase().replace(/[^A-Z]/g, '')
+
 // Keep only digits and at most one decimal point (no sign — edge weights are positive).
 export const sanitizeDecimalInput = (value: string): string => {
   const clean = value.replace(/[^0-9.]/g, '')

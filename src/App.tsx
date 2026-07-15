@@ -76,6 +76,7 @@ import { useForLoopBFSPlayback } from './hooks/useForLoopBFSPlayback'
 import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
 import { useNQueensPlayback } from './hooks/useNQueensPlayback'
 import { useBinaryTreeTraversalPlayback } from './hooks/useBinaryTreeTraversalPlayback'
+import { useBinaryTreeBstPlayback } from './hooks/useBinaryTreeBstPlayback'
 import { collectSubtreeIds, findParentId, findChildSide, convertBinaryTreeToBst } from './algorithms/binaryTreeShared'
 
 const CANVAS_ORDER: CanvasType[] = ['graph', 'binary-tree', 'weighted-graph', 'grid', 'nqueens']
@@ -192,6 +193,7 @@ function App() {
   })
 
   const binaryTreeTraversal = useBinaryTreeTraversalPlayback({ tree: binaryTree })
+  const binaryTreeBst = useBinaryTreeBstPlayback({ tree: binaryTree })
 
   const traversalVisualSetters = {
     setTraversalVisitedNodeIds: traversal.setTraversalVisitedNodeIds,
@@ -342,6 +344,7 @@ function App() {
     gridSearch.stop()
     nQueens.stop()
     binaryTreeTraversal.resetVisualization()
+    binaryTreeBst.resetVisualization()
 
     // Save current graph canvas state (grid has no node/edge state to save).
     if (canvasType === 'graph') {
@@ -1269,8 +1272,11 @@ function App() {
       if (from === 'traversal' && to !== 'traversal') {
         binaryTreeTraversal.resetVisualization()
       }
+      if (from === 'bst' && to !== 'bst') {
+        binaryTreeBst.resetVisualization()
+      }
     },
-    [binaryTreeTraversal],
+    [binaryTreeTraversal, binaryTreeBst],
   )
 
   const hasEmptyNodes = nodes.some((node) => node.value === 'empty')
@@ -1342,11 +1348,20 @@ function App() {
             onDeleteNodes={handleBinaryTreeDeleteSelected}
             onClearTree={handleBinaryTreeClear}
             onConvertToBst={handleBinaryTreeConvertToBst}
-            isTraversalRunning={binaryTreeTraversal.isRunning}
-            traversalVisitedNodeIds={binaryTreeTraversal.visitedNodeIds}
-            traversalCurrentNodeId={binaryTreeTraversal.currentNodeId}
-            traversalStartNodeId={binaryTreeTraversal.startNodeId}
-            traversalGoalNodeIds={binaryTreeTraversal.goalNodeIds}
+            isTraversalRunning={binaryTreeTraversal.isRunning || binaryTreeBst.isRunning}
+            traversalVisitedNodeIds={
+              binaryTreeBst.isRunning ? binaryTreeBst.visitedNodeIds : binaryTreeTraversal.visitedNodeIds
+            }
+            traversalCurrentNodeId={
+              binaryTreeBst.isRunning ? binaryTreeBst.currentNodeId : binaryTreeTraversal.currentNodeId
+            }
+            traversalStartNodeId={
+              binaryTreeBst.isRunning ? binaryTreeBst.startNodeId : binaryTreeTraversal.startNodeId
+            }
+            traversalGoalNodeIds={binaryTreeBst.isRunning ? [] : binaryTreeTraversal.goalNodeIds}
+            traversalViolationNodeIds={
+              binaryTreeBst.isRunning ? binaryTreeBst.violationNodeIds : []
+            }
           />
         )}
         {canvasType !== 'grid' && canvasType !== 'nqueens' && canvasType !== 'binary-tree' && <GraphCanvas
@@ -1515,7 +1530,7 @@ function App() {
               onGoalValueInputChange: binaryTreeTraversal.handleGoalValueInputChange,
               isTraversalRunning: binaryTreeTraversal.isRunning,
               onRunTraversal: binaryTreeTraversal.runTraversal,
-              onStopTraversal: binaryTreeTraversal.resetVisualization,
+              onStopTraversal: () => binaryTreeTraversal.resetVisualization(),
               canRunTraversal: binaryTreeTraversal.canRunTraversal,
               traversalStatusText: binaryTreeTraversal.sidebarStatusText,
               isTraversalPlaying: binaryTreeTraversal.isPlaying,
@@ -1531,6 +1546,30 @@ function App() {
               isTraversalPlaybackComplete: binaryTreeTraversal.isPlaybackComplete,
               traversalCodeHighlighted: binaryTreeTraversal.traversalCodeHighlighted,
               traversalVarsRows: binaryTreeTraversal.traversalVarsRows,
+              pseudocodeShowLogic,
+              onPseudocodeFlip: () => setPseudocodeShowLogic((v) => !v),
+            }}
+            bst={{
+              algorithm: binaryTreeBst.algorithm,
+              onAlgorithmChange: binaryTreeBst.setAlgorithm,
+              isBstRunning: binaryTreeBst.isRunning,
+              onRunAlgorithm: binaryTreeBst.runAlgorithm,
+              onStopAlgorithm: () => binaryTreeBst.resetVisualization(),
+              canRunAlgorithm: binaryTreeBst.canRunAlgorithm,
+              bstStatusText: binaryTreeBst.sidebarStatusText,
+              isBstPlaying: binaryTreeBst.isPlaying,
+              bstPlaybackSpeed: binaryTreeBst.playbackSpeed,
+              onBstPlaybackSpeedChange: binaryTreeBst.onPlaybackSpeedChange,
+              onPlayBst: binaryTreeBst.play,
+              onPauseBst: binaryTreeBst.pause,
+              onNextBstStep: binaryTreeBst.stepForward,
+              onPreviousBstStep: binaryTreeBst.stepBackward,
+              canStepForward: binaryTreeBst.canStepForward,
+              canStepBackward: binaryTreeBst.canStepBackward,
+              canTogglePlay: binaryTreeBst.canTogglePlay,
+              isBstPlaybackComplete: binaryTreeBst.isPlaybackComplete,
+              bstCodeHighlighted: binaryTreeBst.bstCodeHighlighted,
+              bstVarsRows: binaryTreeBst.bstVarsRows,
               pseudocodeShowLogic,
               onPseudocodeFlip: () => setPseudocodeShowLogic((v) => !v),
             }}
@@ -1611,7 +1650,7 @@ function App() {
             goalValueInput: traversal.goalValueInput,
             onGoalValueInputChange: traversal.handleGoalValueInputChange,
             onRunTraversal: handleRunTraversalFromSidebar,
-            onStopTraversal: traversal.resetTraversalVisualization,
+            onStopTraversal: () => traversal.resetTraversalVisualization(),
             canRunTraversal: traversal.canRunTraversal,
             traversalStatusText: traversal.sidebarTraversalStatusText,
             isTraversalPlaying: traversal.isPlaying,

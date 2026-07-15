@@ -19,11 +19,13 @@ import type {
 import {
   PLAYBACK_MIN_DELAY_MS,
   PLAYBACK_MAX_DELAY_MS,
+  PLAYBACK_DEFAULT_DELAY_MS,
 } from '../utils/constants'
 
 import {
   parseNumberInput,
   sanitizeNumericInput,
+  sanitizeNodeLabelInput,
 } from '../utils/format'
 
 import { runDirectedGoalTraversal } from '../algorithms/directedGoalTraversal'
@@ -177,6 +179,7 @@ export function useTraversalPlayback({
     stepCount: traversalResult?.steps.length ?? 0,
     minDelay: PLAYBACK_MIN_DELAY_MS,
     maxDelay: PLAYBACK_MAX_DELAY_MS,
+    defaultDelay: PLAYBACK_DEFAULT_DELAY_MS,
     resetSignal: traversalPlaybackSession,
     onStepIndexChange: (index) => {
       const r = traversalResultRef.current
@@ -213,7 +216,11 @@ export function useTraversalPlayback({
   }, [traversalPlayback])
 
   const resetTraversalVisualization = useCallback(
-    (idleAlgorithm: TraversalStrategy = algorithmTab) => {
+    (idleAlgorithm?: TraversalStrategy) => {
+      // Ignore non-string args (defensive if this is ever wired directly to onClick).
+      const algo =
+        idleAlgorithm === 'bfs' || idleAlgorithm === 'dfs' ? idleAlgorithm : algorithmTab
+
       traversalPlaybackStopRef.current()
       setTraversalVisitedNodeIds([])
       setTraversalVisitedEdgeIds([])
@@ -224,7 +231,7 @@ export function useTraversalPlayback({
       setTraversalFrontierNodeIds([])
       setTraversalResult(null)
       setTraversalPlaybackSession((s) => s + 1)
-      const algoName = bfsDfsLabel(idleAlgorithm)
+      const algoName = bfsDfsLabel(algo)
       setTraversalStatusText(`Enter start and goal, then run ${algoName}.`)
       setIsTraversalRunning(false)
     },
@@ -281,12 +288,12 @@ export function useTraversalPlayback({
 
   const handleStartNodeLabelChange = (value: string) => {
     resetTraversalVisualization()
-    setStartNodeLabel(value.toUpperCase())
+    setStartNodeLabel(sanitizeNodeLabelInput(value))
   }
 
   const handleGoalNodeLabelChange = (value: string) => {
     resetTraversalVisualization()
-    setGoalNodeLabel(value.toUpperCase())
+    setGoalNodeLabel(sanitizeNodeLabelInput(value))
   }
 
   const handleGoalValueInputChange = (value: string) => {

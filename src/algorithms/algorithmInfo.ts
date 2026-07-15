@@ -29,6 +29,7 @@ export type AlgorithmInfoKey =
   | 'bt-inorder'
   | 'bt-postorder'
   | 'bt-levelorder'
+  | 'bt-validate'
 
 export type AlgorithmInfo = {
   name: string
@@ -345,6 +346,19 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     ],
     cons: [
       'Needs a queue — more memory than the recursive traversals on wide trees',
+    ],
+  },
+  'bt-validate': {
+    name: 'Validate BST',
+    time: 'O(n)',
+    space: 'O(h)',
+    summary: 'Checks whether every node sits inside a tightening [min, max] window inherited from its ancestors — left values must be ≤ the parent, right values ≥ the parent. Equal values are allowed.',
+    pros: [
+      'One depth-first walk confirms the full search-tree property',
+      'Can fail fast as soon as a violating node is found',
+    ],
+    cons: [
+      'Requires every node to hold a comparable numeric value',
     ],
   },
 }

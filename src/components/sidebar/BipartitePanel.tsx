@@ -8,7 +8,7 @@ import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
 import { PseudocodePanel } from './PseudocodePanel'
 
-import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+import { confirmNodeLabelFieldOnEnter, NODE_LABEL_FIELD_ATTRS } from './sidebarFieldHelpers'
 
 // ─── Code pseudocode strings (20 lines each, 0–19) ──────────────────────────
 
@@ -226,7 +226,7 @@ export const BipartitePanel = ({
                 Start node <span className="optional-indicator">(optional)</span>
               </span>
               <input
-                type="text"
+                {...NODE_LABEL_FIELD_ATTRS}
                 value={bipartiteStartNodeLabel}
                 onChange={(e) => onBipartiteStartNodeLabelChange(e.target.value)}
                 onKeyDown={confirmNodeLabelFieldOnEnter}

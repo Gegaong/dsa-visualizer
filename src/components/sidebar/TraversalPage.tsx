@@ -10,7 +10,7 @@ import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
 import { PseudocodePanel } from './PseudocodePanel'
 
-import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+import { confirmNodeLabelFieldOnEnter, NODE_LABEL_FIELD_ATTRS, NODE_VALUE_FIELD_ATTRS } from './sidebarFieldHelpers'
 
 // ─── Code pseudocode strings (10 lines each, 0–9) ───────────────────────────
 
@@ -357,7 +357,7 @@ export const TraversalPage = ({
             Start node <span className="required-indicator" aria-hidden="true">*</span>
           </span>
           <input
-            type="text"
+            {...NODE_LABEL_FIELD_ATTRS}
             value={startNodeLabel}
             onChange={(event) => onStartNodeLabelChange(event.target.value)}
             onKeyDown={confirmNodeLabelFieldOnEnter}
@@ -383,7 +383,7 @@ export const TraversalPage = ({
               Goal node <span className="required-indicator" aria-hidden="true">*</span>
             </span>
             <input
-              type="text"
+              {...NODE_LABEL_FIELD_ATTRS}
               value={goalNodeLabel}
               onChange={(event) => onGoalNodeLabelChange(event.target.value)}
               onKeyDown={confirmNodeLabelFieldOnEnter}
@@ -397,16 +397,12 @@ export const TraversalPage = ({
               Goal value <span className="required-indicator" aria-hidden="true">*</span>
             </span>
             <input
-              type="text"
-              inputMode="numeric"
+              {...NODE_VALUE_FIELD_ATTRS}
               value={goalValueInput}
               onChange={(event) => onGoalValueInputChange(event.target.value)}
               disabled={blockGraphEdits}
             />
           </label>
-        )}
-        {(goalType === 'max-value' || goalType === 'min-value') && (
-          <p className="hint">No extra input needed for this goal.</p>
         )}
       </div>
 

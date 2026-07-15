@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { BinaryTreeBstPage } from './BinaryTreeBstPage'
+import type { BinaryTreeBstPageProps } from './BinaryTreeBstPage'
 import { BinaryTreeCanvasSetupPage } from './BinaryTreeCanvasSetupPage'
 import type { BinaryTreeCanvasSetupPageProps } from './BinaryTreeCanvasSetupPage'
 import { BinaryTreeTraversalPage } from './BinaryTreeTraversalPage'
@@ -11,6 +12,7 @@ export type BinaryTreeSidebarPage = 'canvas' | 'traversal' | 'bst'
 type BinaryTreeSidebarProps = {
   canvasSetup: BinaryTreeCanvasSetupPageProps
   traversal: BinaryTreeTraversalPageProps
+  bst: BinaryTreeBstPageProps
   onSidebarSectionChange?: (nav: { from: BinaryTreeSidebarPage; to: BinaryTreeSidebarPage }) => void
 }
 
@@ -22,7 +24,7 @@ const PAGE_CLASS: Record<BinaryTreeSidebarPage, string> = {
 
 // Tab shell mirroring the graph canvas's Sidebar: page-switch strip up top, panels kept mounted
 // (display:none when inactive) so scroll position survives tab switches.
-export const BinaryTreeSidebar = ({ canvasSetup, traversal, onSidebarSectionChange }: BinaryTreeSidebarProps) => {
+export const BinaryTreeSidebar = ({ canvasSetup, traversal, bst, onSidebarSectionChange }: BinaryTreeSidebarProps) => {
   const [activePage, setActivePage] = useState<BinaryTreeSidebarPage>('canvas')
   const prevPageRef = useRef<BinaryTreeSidebarPage>(activePage)
 
@@ -67,7 +69,7 @@ export const BinaryTreeSidebar = ({ canvasSetup, traversal, onSidebarSectionChan
         <BinaryTreeTraversalPage {...traversal} />
       </div>
       <div className="sidebar-page-root" style={{ display: activePage === 'bst' ? undefined : 'none' }}>
-        <BinaryTreeBstPage />
+        <BinaryTreeBstPage {...bst} />
       </div>
     </aside>
   )

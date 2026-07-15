@@ -16,6 +16,7 @@ import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 import {
   PLAYBACK_MIN_DELAY_MS,
   PLAYBACK_MAX_DELAY_MS,
+  PLAYBACK_DEFAULT_DELAY_MS,
 } from '../utils/constants'
 
 import { useStepPlayback } from './useStepPlayback'
@@ -128,6 +129,7 @@ export function useAlgorithmPlayback<TResult extends { steps: BfsStep[] }>({
     stepCount: result?.steps.length ?? 0,
     minDelay: PLAYBACK_MIN_DELAY_MS,
     maxDelay: PLAYBACK_MAX_DELAY_MS,
+    defaultDelay: PLAYBACK_DEFAULT_DELAY_MS,
     resetSignal: playbackSession,
     onStepIndexChange: (index) => {
       const r = resultRef.current

@@ -7,6 +7,11 @@ import type { InnerAlgo } from '../algorithms/gridTypes'
 import { buildGridIslandColorMap } from '../utils/gridIslandColors'
 import type { IslandHSL } from '../utils/gridIslandColors'
 import type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
+import {
+  GRID_PLAYBACK_MIN_DELAY_MS,
+  GRID_PLAYBACK_MAX_DELAY_MS,
+  GRID_PLAYBACK_DEFAULT_DELAY_MS,
+} from '../utils/constants'
 export type { IslandHSL } from '../utils/gridIslandColors'
 export type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
 export type { InnerAlgo } from '../algorithms/gridTypes'
@@ -16,11 +21,6 @@ export type GridSearchMode =
   | 'for-bfs' | 'for-dfs'
   | 'bfs-bfs' | 'bfs-dfs'
   | 'dfs-bfs' | 'dfs-dfs'
-
-const GRID_MIN_DELAY = 1
-const GRID_MAX_DELAY = 300
-const GRID_INITIAL_SPEED = 89
-
 type Params = {
   islands: Set<string>
   rows: number
@@ -91,9 +91,9 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
 
   const pb = useStepPlayback({
     stepCount,
-    minDelay: GRID_MIN_DELAY,
-    maxDelay: GRID_MAX_DELAY,
-    initialSpeed: GRID_INITIAL_SPEED,
+    minDelay: GRID_PLAYBACK_MIN_DELAY_MS,
+    maxDelay: GRID_PLAYBACK_MAX_DELAY_MS,
+    defaultDelay: GRID_PLAYBACK_DEFAULT_DELAY_MS,
     resetSignal,
     onStepIndexChange: (newIndex) => {
       const result = resultRef.current

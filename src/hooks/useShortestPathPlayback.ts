@@ -19,6 +19,8 @@ import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 
 import { runShortestPath } from '../algorithms/shortestPath'
 
+import { sanitizeNodeLabelInput } from '../utils/format'
+
 import {
   buildShortestPathCompletionStatus,
   formatShortestPathNodeLabels,
@@ -245,12 +247,12 @@ export function useShortestPathPlayback({
 
   // Updates the start node label from the sidebar input.
   const handleStartNodeLabelChange = useCallback((value: string) => {
-    setStartNodeLabel(value.toUpperCase())
+    setStartNodeLabel(sanitizeNodeLabelInput(value))
   }, [])
 
   // Updates the goal node label from the sidebar input.
   const handleGoalNodeLabelChange = useCallback((value: string) => {
-    setGoalNodeLabel(value.toUpperCase())
+    setGoalNodeLabel(sanitizeNodeLabelInput(value))
   }, [])
 
   const startMissing = startNodeLabel.trim() === ''

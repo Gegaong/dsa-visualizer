@@ -8,7 +8,7 @@ import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
 import { PseudocodePanel } from './PseudocodePanel'
 
-import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+import { confirmNodeLabelFieldOnEnter, NODE_LABEL_FIELD_ATTRS } from './sidebarFieldHelpers'
 
 // ─── Code pseudocode strings (17 lines each, 0–16) ──────────────────────────
 // Two-function structure: outer loop finds component roots; inner BFS/DFS traverses each.
@@ -223,7 +223,7 @@ export const ConnectedComponentsPanel = ({
                 Start node <span className="optional-indicator">(optional)</span>
               </span>
               <input
-                type="text"
+                {...NODE_LABEL_FIELD_ATTRS}
                 value={ccStartNodeLabel}
                 onChange={(e) => onCCStartNodeLabelChange(e.target.value)}
                 onKeyDown={confirmNodeLabelFieldOnEnter}

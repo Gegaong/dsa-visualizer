@@ -21,6 +21,8 @@ import { runCycleDetection } from '../algorithms/cycleDetection'
 
 import { buildNeighborsMap } from '../algorithms/graphAdjacency'
 
+import { sanitizeNodeLabelInput } from '../utils/format'
+
 import {
   buildCycleDetectionCompletionStatus,
   formatCycleNodeLabels,
@@ -357,7 +359,7 @@ export function useCycleDetectionPlayback({
     clearCycleDetectionAlgorithmStateOnly: pb.clearStateOnly,
     runCycleDetectionFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
-    handleCycleDetectionStartNodeLabelChange: (value: string) => setStartNodeLabel(value.toUpperCase()),
+    handleCycleDetectionStartNodeLabelChange: (value: string) => setStartNodeLabel(sanitizeNodeLabelInput(value)),
     stepCycleDetectionForward: pb.stepForward,
     stepCycleDetectionBackward: pb.stepBackward,
     playCycleDetection: pb.play,

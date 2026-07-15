@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
+import { getPlaybackDelayMs, PLAYBACK_SLIDER_CENTER } from '../utils/playbackSpeed'
+
 export type UseStepPlaybackOptions = {
   // Number of steps (0 disables playback controls).
   stepCount: number
   minDelay: number
   maxDelay: number
-  initialSpeed?: number
+  /** Delay (ms) at the slider midpoint. Slider always starts centered. */
+  defaultDelay: number
   // Bump when starting a new run so the hook resets to step -1 (e.g. new traversal result).
   resetSignal?: number
   // Called whenever the step index changes (including -1 for “ready”).
@@ -17,18 +20,13 @@ export type UseStepPlaybackOptions = {
 
 const noop = () => {}
 
-function getPlaybackDelay(speedValue: number, minDelay: number, maxDelay: number) {
-  const speedRatio = speedValue / 100
-  return Math.round(maxDelay - speedRatio * (maxDelay - minDelay))
-}
-
 // Shared step playback: timer, speed slider mapping, previous / play / next.
 // Used by traversal (App) and algorithm mocks (Sidebar).
 export function useStepPlayback({
   stepCount,
   minDelay,
   maxDelay,
-  initialSpeed = 81,
+  defaultDelay,
   resetSignal = 0,
   onStepIndexChange = noop,
   onComplete = noop,
@@ -39,7 +37,7 @@ export function useStepPlayback({
   // "stepIndex is at the last step" — is the single source of truth for playback completion,
   // so stepping to the final step shows that step, and one more Next lands on the conclusion.
   const [isComplete, setIsComplete] = useState(false)
-  const [playbackSpeed, setPlaybackSpeed] = useState(initialSpeed)
+  const [playbackSpeed, setPlaybackSpeed] = useState(PLAYBACK_SLIDER_CENTER)
   const timerRef = useRef<number | null>(null)
 
   const onStepIndexChangeRef = useRef(onStepIndexChange)
@@ -100,11 +98,16 @@ export function useStepPlayback({
     [],
   )
 
+  const delayFor = useCallback(
+    (speedValue: number) => getPlaybackDelayMs(speedValue, minDelay, maxDelay, defaultDelay),
+    [minDelay, maxDelay, defaultDelay],
+  )
+
   const startTimer = useCallback(
     (speedOverride?: number) => {
       clearTimerOnly()
       const speed = speedOverride ?? playbackSpeed
-      const delayMs = getPlaybackDelay(speed, minDelay, maxDelay)
+      const delayMs = delayFor(speed)
       timerRef.current = window.setInterval(() => {
         setStepIndex((prev) => {
           const total = stepCountRef.current
@@ -122,7 +125,7 @@ export function useStepPlayback({
         })
       }, delayMs)
     },
-    [clearTimerOnly, maxDelay, minDelay, playbackSpeed],
+    [clearTimerOnly, delayFor, playbackSpeed],
   )
 
   const stepForward = useCallback(() => {
@@ -202,6 +205,5 @@ export function useStepPlayback({
     canStepForward,
     canTogglePlay,
     isPlaybackComplete,
-    getPlaybackDelay: (v: number) => getPlaybackDelay(v, minDelay, maxDelay),
   }
 }

@@ -24,7 +24,7 @@ import {
   getDirectedEdgeInfo,
 } from '../algorithms/weightedPathfinding'
 
-import { formatCost } from '../utils/format'
+import { formatCost, sanitizeNodeLabelInput } from '../utils/format'
 
 import { runDijkstra, runAStar, runGreedy } from '../algorithms/priorityPathfinding'
 
@@ -38,6 +38,7 @@ import {
 import {
   PLAYBACK_MIN_DELAY_MS,
   PLAYBACK_MAX_DELAY_MS,
+  PLAYBACK_DEFAULT_DELAY_MS,
 } from '../utils/constants'
 
 import { useStepPlayback } from './useStepPlayback'
@@ -364,6 +365,7 @@ export function useWeightedPathfindingPlayback({
     stepCount: activeStepCount,
     minDelay: PLAYBACK_MIN_DELAY_MS,
     maxDelay: PLAYBACK_MAX_DELAY_MS,
+    defaultDelay: PLAYBACK_DEFAULT_DELAY_MS,
     resetSignal: playbackSession,
     onStepIndexChange: (index) => {
       const r = resultRef.current
@@ -472,11 +474,11 @@ export function useWeightedPathfindingPlayback({
   )
 
   const handleStartNodeLabelChange = useCallback((value: string) => {
-    setStartNodeLabel(value.toUpperCase())
+    setStartNodeLabel(sanitizeNodeLabelInput(value))
   }, [])
 
   const handleGoalNodeLabelChange = useCallback((value: string) => {
-    setGoalNodeLabel(value.toUpperCase())
+    setGoalNodeLabel(sanitizeNodeLabelInput(value))
   }, [])
 
   const stepWPForward = useCallback(() => {

@@ -9,9 +9,28 @@ export const DEFAULT_CANVAS_WIDTH = 720
 export const DEFAULT_CANVAS_HEIGHT = 560
 export const DRAG_THRESHOLD = 3
 
-// Shared playback slider → timer delay range (ms). Used by traversal + algorithm UI.
+// Shared playback timer bounds (ms). Slider maps through getPlaybackDelayMs so the
+// default delay always sits at the midpoint (50), even when it isn't halfway between min/max.
 export const PLAYBACK_MIN_DELAY_MS = 1
 export const PLAYBACK_MAX_DELAY_MS = 7000
+// Preserves the old linear mapping at slider=81: round(7000 - 0.81*(7000-1)).
+export const PLAYBACK_DEFAULT_DELAY_MS = 1331
+
+// Binary-tree line-by-line exec has many more steps than graph visit playback, so the
+// default cadence is faster while keeping the same outer min/max range.
+export const BINARY_TREE_PLAYBACK_DEFAULT_DELAY_MS = 250
+
+// Grid search uses a tighter range (dense cell-by-cell updates).
+export const GRID_PLAYBACK_MIN_DELAY_MS = PLAYBACK_MIN_DELAY_MS
+export const GRID_PLAYBACK_MAX_DELAY_MS = 300
+// Preserves old linear mapping at slider=89: round(300 - 0.89*(300-1)).
+export const GRID_PLAYBACK_DEFAULT_DELAY_MS = 34
+
+// N-Queens backtracking also keeps its prior default cadence.
+export const NQUEENS_PLAYBACK_MIN_DELAY_MS = PLAYBACK_MIN_DELAY_MS
+export const NQUEENS_PLAYBACK_MAX_DELAY_MS = 3525
+// Preserves old linear mapping at slider=89: round(3525 - 0.89*(3525-1)).
+export const NQUEENS_PLAYBACK_DEFAULT_DELAY_MS = 389
 
 // Canvas zoom bounds and step size.
 export const CANVAS_ZOOM_MIN = 0.5

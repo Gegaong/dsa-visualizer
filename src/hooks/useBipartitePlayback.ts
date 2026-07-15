@@ -8,6 +8,8 @@ import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 
 import { runBipartiteCheck } from '../algorithms/bipartiteCheck'
 
+import { sanitizeNodeLabelInput } from '../utils/format'
+
 import {
   buildBipartiteCompletionStatus,
   formatBipartiteGroupLabels,
@@ -306,7 +308,7 @@ export function useBipartitePlayback({
     clearBipartiteAlgorithmStateOnly: pb.clearStateOnly,
     runBipartiteFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
-    handleBipartiteStartNodeLabelChange: (value: string) => setStartNodeLabel(value.toUpperCase()),
+    handleBipartiteStartNodeLabelChange: (value: string) => setStartNodeLabel(sanitizeNodeLabelInput(value)),
     stepBipartiteForward: pb.stepForward,
     stepBipartiteBackward: pb.stepBackward,
     playBipartite: pb.play,

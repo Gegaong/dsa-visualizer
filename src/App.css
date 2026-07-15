@@ -566,6 +566,15 @@
 	animation: traversal-goal-pop 420ms ease-out;
 }
 
+.binary-tree-node-wrap.is-traversal-violation .binary-tree-node {
+	background: rgba(212, 52, 52, 0.2);
+	border-color: #d43434;
+	border-width: 2px;
+	box-shadow: 0 0 0 4px rgba(212, 52, 52, 0.24), 0 12px 22px rgba(46, 32, 23, 0.2);
+	transform: scale(1.1);
+	animation: traversal-goal-pop 420ms ease-out;
+}
+
 .binary-tree-node-wrap.is-traversal-current .binary-tree-node {
 	background: rgba(58, 111, 90, 0.24);
 	border-color: #3a6f5a;
@@ -1187,6 +1196,7 @@
 }
 
 .sidebar.is-traversal-setup .sidebar-page-body,
+.sidebar.is-bst-setup .sidebar-page-body,
 .sidebar.is-grid-search .sidebar-page-body {
 	overflow-y: auto;
 	overflow-x: hidden;
@@ -1196,7 +1206,8 @@
 	scrollbar-width: thin;
 }
 
-.sidebar.is-traversal-setup .sidebar-page-body > * {
+.sidebar.is-traversal-setup .sidebar-page-body > *,
+.sidebar.is-bst-setup .sidebar-page-body > * {
 	flex-shrink: 0;
 }
 
@@ -1222,6 +1233,7 @@
 .sidebar-page-body--pathfinder::-webkit-scrollbar,
 .sidebar-page-body--grid::-webkit-scrollbar,
 .sidebar.is-traversal-setup .sidebar-page-body::-webkit-scrollbar,
+.sidebar.is-bst-setup .sidebar-page-body::-webkit-scrollbar,
 .sidebar.is-grid-search .sidebar-page-body::-webkit-scrollbar {
 	width: 8px;
 }
@@ -1231,6 +1243,7 @@
 .sidebar-page-body--pathfinder::-webkit-scrollbar-thumb,
 .sidebar-page-body--grid::-webkit-scrollbar-thumb,
 .sidebar.is-traversal-setup .sidebar-page-body::-webkit-scrollbar-thumb,
+.sidebar.is-bst-setup .sidebar-page-body::-webkit-scrollbar-thumb,
 .sidebar.is-grid-search .sidebar-page-body::-webkit-scrollbar-thumb {
 	background: rgba(46, 34, 23, 0.28);
 	border-radius: 999px;
@@ -1243,6 +1256,7 @@
 .sidebar-page-body--pathfinder::-webkit-scrollbar-thumb:hover,
 .sidebar-page-body--grid::-webkit-scrollbar-thumb:hover,
 .sidebar.is-traversal-setup .sidebar-page-body::-webkit-scrollbar-thumb:hover,
+.sidebar.is-bst-setup .sidebar-page-body::-webkit-scrollbar-thumb:hover,
 .sidebar.is-grid-search .sidebar-page-body::-webkit-scrollbar-thumb:hover {
 	background: rgba(46, 34, 23, 0.42);
 	border: 2px solid transparent;

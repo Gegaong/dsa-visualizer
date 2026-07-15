@@ -31,6 +31,8 @@ type BinaryTreeCanvasProps = {
   traversalCurrentNodeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
+  /** BST validation failure — red highlight instead of blue goal. */
+  traversalViolationNodeIds?: string[]
 }
 
 const parseDraftValue = (raw: string): number | 'empty' => {
@@ -57,6 +59,7 @@ export const BinaryTreeCanvas = ({
   traversalCurrentNodeId,
   traversalStartNodeId,
   traversalGoalNodeIds,
+  traversalViolationNodeIds = [],
 }: BinaryTreeCanvasProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -345,14 +348,22 @@ export const BinaryTreeCanvas = ({
             const fontSize = getNodeValueFontSizePx(nodeSize, displayValue)
             const showHoverValue = typeof node.value === 'number'
 
-            const isTraversalCurrent = traversalCurrentNodeId === node.id
-            const isTraversalGoal = traversalGoalNodeIds.includes(node.id)
-            const isTraversalVisited = !isTraversalCurrent && !isTraversalGoal && traversalVisitedNodeIds.includes(node.id)
-            const isTraversalStart = !isTraversalGoal && traversalStartNodeId === node.id
+            const isTraversalViolation = traversalViolationNodeIds.includes(node.id)
+            const isTraversalCurrent =
+              !isTraversalViolation && traversalCurrentNodeId === node.id
+            const isTraversalGoal = !isTraversalViolation && traversalGoalNodeIds.includes(node.id)
+            const isTraversalVisited =
+              !isTraversalCurrent &&
+              !isTraversalGoal &&
+              !isTraversalViolation &&
+              traversalVisitedNodeIds.includes(node.id)
+            const isTraversalStart =
+              !isTraversalGoal && !isTraversalViolation && traversalStartNodeId === node.id
             const traversalWrapClass =
               `${isTraversalVisited ? ' is-traversal-visited' : ''}` +
               `${isTraversalStart ? ' is-traversal-start' : ''}` +
               `${isTraversalGoal ? ' is-traversal-goal' : ''}` +
+              `${isTraversalViolation ? ' is-traversal-violation' : ''}` +
               `${isTraversalCurrent ? ' is-traversal-current' : ''}`
 
             return (

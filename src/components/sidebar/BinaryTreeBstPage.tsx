@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import type { AlgorithmInfoKey } from '../../algorithms/algorithmInfo'
+import type { BinaryTreeBstAlgorithm } from '../../algorithms/binaryTreeBst'
 
-export type BinaryTreeBstAlgorithm =
-  | 'validate'
-  | 'search'
-  | 'insert'
-  | 'delete'
+import { AlgorithmInfoCard } from './AlgorithmInfoCard'
+import { PlaybackControls } from './PlaybackControls'
+import { PseudocodePanel } from './PseudocodePanel'
 
 const ALGORITHM_OPTIONS: { value: BinaryTreeBstAlgorithm; label: string }[] = [
   { value: 'validate', label: 'Validate BST' },
@@ -13,9 +12,98 @@ const ALGORITHM_OPTIONS: { value: BinaryTreeBstAlgorithm; label: string }[] = [
   { value: 'delete', label: 'Delete' },
 ]
 
-// Sidebar page: BST operations UI shell. Algorithms are listed here first; playback wiring comes later.
-export const BinaryTreeBstPage = () => {
-  const [algorithm, setAlgorithm] = useState<BinaryTreeBstAlgorithm>('validate')
+const INFO_KEY_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, AlgorithmInfoKey | null> = {
+  validate: 'bt-validate',
+  search: null,
+  insert: null,
+  delete: null,
+}
+
+const VALIDATE_CODE = `function isValidBST(node, min, max):
+    if node = null:
+        return true
+    if node.value < min or node.value > max:
+        return false
+    leftOk ← isValidBST(node.left, min, node.value)
+    if leftOk = false:
+        return false
+    rightOk ← isValidBST(node.right, node.value, max)
+    return rightOk`
+
+const VALIDATE_LOGIC = `Each call carries a [min, max] window that the node's value must sit inside (inclusive — duplicates are allowed).
+A null child always returns true.
+A node outside its window fails immediately.
+Otherwise validate the left child with max = node.value, then the right with min = node.value.
+Start the check at the root with min = -∞ and max = +∞.`
+
+const CODE_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
+  validate: VALIDATE_CODE,
+  search: '// Coming soon',
+  insert: '// Coming soon',
+  delete: '// Coming soon',
+}
+
+const LOGIC_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
+  validate: VALIDATE_LOGIC,
+  search: 'Search is coming soon.',
+  insert: 'Insert is coming soon.',
+  delete: 'Delete is coming soon.',
+}
+
+const NO_HIGHLIGHTS = new Set<number>()
+
+export type BinaryTreeBstPageProps = {
+  algorithm: BinaryTreeBstAlgorithm
+  onAlgorithmChange: (algorithm: BinaryTreeBstAlgorithm) => void
+  isBstRunning: boolean
+  onRunAlgorithm: () => void
+  onStopAlgorithm: () => void
+  canRunAlgorithm: boolean
+  bstStatusText: string
+  isBstPlaying: boolean
+  bstPlaybackSpeed: number
+  onBstPlaybackSpeedChange: (value: number) => void
+  onPlayBst: () => void
+  onPauseBst: () => void
+  onNextBstStep: () => void
+  onPreviousBstStep: () => void
+  canStepForward: boolean
+  canStepBackward: boolean
+  canTogglePlay: boolean
+  isBstPlaybackComplete: boolean
+  bstCodeHighlighted: Set<number>
+  bstVarsRows: string[][] | null
+  pseudocodeShowLogic: boolean
+  onPseudocodeFlip: () => void
+}
+
+export const BinaryTreeBstPage = ({
+  algorithm,
+  onAlgorithmChange,
+  isBstRunning,
+  onRunAlgorithm,
+  onStopAlgorithm,
+  canRunAlgorithm,
+  bstStatusText,
+  isBstPlaying,
+  bstPlaybackSpeed,
+  onBstPlaybackSpeedChange,
+  onPlayBst,
+  onPauseBst,
+  onNextBstStep,
+  onPreviousBstStep,
+  canStepForward,
+  canStepBackward,
+  canTogglePlay,
+  isBstPlaybackComplete,
+  bstCodeHighlighted,
+  bstVarsRows,
+  pseudocodeShowLogic,
+  onPseudocodeFlip,
+}: BinaryTreeBstPageProps) => {
+  const algoLabel =
+    ALGORITHM_OPTIONS.find((option) => option.value === algorithm)?.label ?? algorithm
+  const infoKey = INFO_KEY_BY_ALGORITHM[algorithm]
 
   return (
     <div className="sidebar-page-body">
@@ -25,7 +113,8 @@ export const BinaryTreeBstPage = () => {
           <span>Select algorithm</span>
           <select
             value={algorithm}
-            onChange={(event) => setAlgorithm(event.target.value as BinaryTreeBstAlgorithm)}
+            onChange={(event) => onAlgorithmChange(event.target.value as BinaryTreeBstAlgorithm)}
+            disabled={isBstRunning}
           >
             {ALGORITHM_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
@@ -33,6 +122,41 @@ export const BinaryTreeBstPage = () => {
           </select>
         </label>
       </div>
+
+      {infoKey && <AlgorithmInfoCard infoKey={infoKey} />}
+
+      <div className="sidebar-section sidebar-section--traversal-playback">
+        <h3>Playback</h3>
+        <PlaybackControls
+          runLabel={`Run ${algoLabel}`}
+          stopLabel={`Stop ${algoLabel}`}
+          isRunActive={isBstRunning}
+          onRunToggle={isBstRunning ? onStopAlgorithm : onRunAlgorithm}
+          runDisabled={!isBstRunning && !canRunAlgorithm}
+          onPrevious={onPreviousBstStep}
+          onNext={onNextBstStep}
+          onPlayPauseToggle={isBstPlaying ? onPauseBst : onPlayBst}
+          isPlaying={isBstPlaying}
+          isPlaybackComplete={isBstPlaybackComplete}
+          canStepBackward={canStepBackward}
+          canStepForward={canStepForward}
+          canTogglePlay={canTogglePlay}
+          speed={bstPlaybackSpeed}
+          onSpeedChange={onBstPlaybackSpeedChange}
+        />
+        <p className="hint">{bstStatusText}</p>
+      </div>
+
+      <PseudocodePanel
+        codeText={CODE_BY_ALGORITHM[algorithm]}
+        logicText={LOGIC_BY_ALGORITHM[algorithm]}
+        codeHighlighted={algorithm === 'validate' ? bstCodeHighlighted : NO_HIGHLIGHTS}
+        logicHighlighted={NO_HIGHLIGHTS}
+        varsRows={algorithm === 'validate' ? bstVarsRows : null}
+        showLogic={pseudocodeShowLogic}
+        onFlip={onPseudocodeFlip}
+        canDetach={!isBstPlaying}
+      />
     </div>
   )
 }

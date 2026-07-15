@@ -8,7 +8,7 @@ import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
 import { PseudocodePanel } from './PseudocodePanel'
 
-import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+import { confirmNodeLabelFieldOnEnter, NODE_LABEL_FIELD_ATTRS } from './sidebarFieldHelpers'
 
 // ─── Code pseudocode strings ──────────────────────────────────────────────────
 
@@ -242,7 +242,7 @@ export const CycleDetectionPanel = ({
                   Start node <span className="optional-indicator">(optional)</span>
                 </span>
                 <input
-                  type="text"
+                  {...NODE_LABEL_FIELD_ATTRS}
                   value={cycleDetectionStartNodeLabel}
                   onChange={(e) => onCycleDetectionStartNodeLabelChange(e.target.value)}
                   onKeyDown={confirmNodeLabelFieldOnEnter}

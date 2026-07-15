@@ -12,7 +12,7 @@ import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 
 import { PseudocodePanel } from './PseudocodePanel'
 
-import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+import { confirmNodeLabelFieldOnEnter, NODE_LABEL_FIELD_ATTRS } from './sidebarFieldHelpers'
 
 const WP_INFO_KEY: Record<WeightedAlgorithm, AlgorithmInfoKey> = {
   bfs: 'wp-bfs',
@@ -447,7 +447,7 @@ export const WeightedPathfindingPanel = ({
                 Start node <span className="required-indicator" aria-hidden="true">*</span>
               </span>
               <input
-                type="text"
+                {...NODE_LABEL_FIELD_ATTRS}
                 value={wpStartNodeLabel}
                 onChange={(event) => onWPStartNodeLabelChange(event.target.value)}
                 onKeyDown={confirmNodeLabelFieldOnEnter}
@@ -459,7 +459,7 @@ export const WeightedPathfindingPanel = ({
                 Goal node <span className="required-indicator" aria-hidden="true">*</span>
               </span>
               <input
-                type="text"
+                {...NODE_LABEL_FIELD_ATTRS}
                 value={wpGoalNodeLabel}
                 onChange={(event) => onWPGoalNodeLabelChange(event.target.value)}
                 onKeyDown={confirmNodeLabelFieldOnEnter}

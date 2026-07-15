@@ -5,7 +5,7 @@ import type { GoalType } from '../../types'
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 import { PlaybackControls } from './PlaybackControls'
 import { PseudocodePanel } from './PseudocodePanel'
-import { confirmNodeLabelFieldOnEnter } from './sidebarFieldHelpers'
+import { confirmNodeLabelFieldOnEnter, NODE_LABEL_FIELD_ATTRS, NODE_VALUE_FIELD_ATTRS } from './sidebarFieldHelpers'
 
 const ALGORITHM_OPTIONS: { value: BinaryTreeTraversalAlgorithm; label: string }[] = [
   { value: 'preorder', label: 'Preorder' },
@@ -516,7 +516,7 @@ export const BinaryTreeTraversalPage = ({
               Goal node <span className="required-indicator" aria-hidden="true">*</span>
             </span>
             <input
-              type="text"
+              {...NODE_LABEL_FIELD_ATTRS}
               value={goalNodeLabel}
               onChange={(event) => onGoalNodeLabelChange(event.target.value)}
               onKeyDown={confirmNodeLabelFieldOnEnter}
@@ -530,16 +530,12 @@ export const BinaryTreeTraversalPage = ({
               Goal value <span className="required-indicator" aria-hidden="true">*</span>
             </span>
             <input
-              type="text"
-              inputMode="numeric"
+              {...NODE_VALUE_FIELD_ATTRS}
               value={goalValueInput}
               onChange={(event) => onGoalValueInputChange(event.target.value)}
               disabled={isTraversalRunning}
             />
           </label>
-        )}
-        {(goalType === 'max-value' || goalType === 'min-value') && (
-          <p className="hint">No extra input needed for this goal.</p>
         )}
       </div>
 

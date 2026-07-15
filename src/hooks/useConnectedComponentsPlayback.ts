@@ -23,6 +23,8 @@ import { buildWeakCCOutlineHSLByNodeId } from '../utils/weakCCOutlineHues'
 
 import { runConnectedComponents } from '../algorithms/connectedComponents'
 
+import { sanitizeNodeLabelInput } from '../utils/format'
+
 import {
   buildConnectedComponentsCompletionStatus,
   formatWeakCCGroupsDisplay,
@@ -294,7 +296,7 @@ export function useConnectedComponentsPlayback({
     clearConnectedComponentsAlgorithmStateOnly: pb.clearStateOnly,
     runConnectedComponentsFromSidebar,
     handleAlgorithmModeChangeFromSidebar: pb.handleAlgorithmModeChange,
-    handleCCStartNodeLabelChange: (value: string) => setStartNodeLabel(value.toUpperCase()),
+    handleCCStartNodeLabelChange: (value: string) => setStartNodeLabel(sanitizeNodeLabelInput(value)),
     stepConnectedComponentsForward: pb.stepForward,
     stepConnectedComponentsBackward: pb.stepBackward,
     playConnectedComponents: pb.play,

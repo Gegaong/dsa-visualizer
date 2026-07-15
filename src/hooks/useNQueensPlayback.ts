@@ -2,10 +2,11 @@ import { useCallback, useRef, useState } from 'react'
 import { useStepPlayback } from './useStepPlayback'
 import { solveNQueens } from '../algorithms/nqueens'
 import type { NQueensStep } from '../algorithms/nqueens'
-
-const NQUEENS_MIN_DELAY = 1
-const NQUEENS_MAX_DELAY = 3525
-const NQUEENS_INITIAL_SPEED = 89
+import {
+  NQUEENS_PLAYBACK_MIN_DELAY_MS,
+  NQUEENS_PLAYBACK_MAX_DELAY_MS,
+  NQUEENS_PLAYBACK_DEFAULT_DELAY_MS,
+} from '../utils/constants'
 
 export type NQueensPlaybackHandle = {
   isRunning: boolean
@@ -43,9 +44,9 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
 
   const pb = useStepPlayback({
     stepCount,
-    minDelay: NQUEENS_MIN_DELAY,
-    maxDelay: NQUEENS_MAX_DELAY,
-    initialSpeed: NQUEENS_INITIAL_SPEED,
+    minDelay: NQUEENS_PLAYBACK_MIN_DELAY_MS,
+    maxDelay: NQUEENS_PLAYBACK_MAX_DELAY_MS,
+    defaultDelay: NQUEENS_PLAYBACK_DEFAULT_DELAY_MS,
     resetSignal,
     onStepIndexChange: (newIndex) => {
       if (newIndex < 0 || !resultRef.current) {
