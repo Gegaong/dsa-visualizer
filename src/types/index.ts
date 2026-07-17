@@ -45,6 +45,14 @@ export type GraphPreset = {
   edges: Array<[number, number, GraphEdge['direction']?, number?]>
 }
 
+// Binary-tree canvas preset: nodes listed in insertion order; root is index 0.
+// left/right are indices into the same array (or null for an empty child slot).
+export type BinaryTreePreset = {
+  id: string
+  name: string
+  nodes: Array<{ value: number; left: number | null; right: number | null }>
+}
+
 export type DragState = {
   nodeId: string
   offsetX: number

@@ -7,6 +7,7 @@ import {
   getTreeHeight,
   treeHasAllNumericValues,
 } from '../algorithms/binaryTreeShared'
+import { runValidateBstExec, canRunValidateBst } from '../algorithms/binaryTreeBst'
 import { computeBinaryTreeLayout } from '../utils/binaryTreeLayout'
 import { TREE_NODE_SIZE } from '../utils/constants'
 import {
@@ -97,7 +98,15 @@ export const BinaryTreeCanvas = ({
 
   const nodeCount = getNodeCount(tree)
   const treeHeight = getTreeHeight(tree)
-  const canConvertToBst = treeHasAllNumericValues(tree) && !isTraversalRunning
+
+  // Disable button if: not all numeric, traversal running, no root, or already a valid BST.
+  const canConvertToBst = useMemo(() => {
+    if (!treeHasAllNumericValues(tree) || isTraversalRunning) return false
+    if (!canRunValidateBst(tree)) return false
+    // Check if already a valid BST.
+    const validation = runValidateBstExec(tree)
+    return !validation.isValid
+  }, [tree, isTraversalRunning])
 
   const commitEditing = (nodeId: string, rawValue: string) => {
     onCommitNodeValue(nodeId, parseDraftValue(rawValue))
@@ -295,7 +304,11 @@ export const BinaryTreeCanvas = ({
             title={
               canConvertToBst
                 ? 'Convert this binary tree into a BST'
-                : 'Fill every node value before converting to a BST'
+                : !treeHasAllNumericValues(tree)
+                  ? 'Fill every node value before converting to a BST'
+                  : !canRunValidateBst(tree)
+                    ? 'Add at least one node before converting to a BST'
+                    : 'This tree is already a valid BST'
             }
             onClick={() => setConvertConfirmOpen(true)}
           >

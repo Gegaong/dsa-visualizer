@@ -11,6 +11,7 @@ import type {
   ContextMenuState,
   GraphEdge,
   GraphPreset,
+  BinaryTreePreset,
   CanvasType,
   EdgeContextMenuState,
   BinaryTree,
@@ -62,6 +63,7 @@ import {
 } from './utils/graphRules'
 import { clampToRange, getVisibleCanvasRegion, isOverlapping } from './utils/geometry'
 import { buildPresetGraph } from './utils/presets'
+import { buildBinaryTreePreset } from './utils/binaryTreePresets'
 
 import type { TraversalStrategy, WeightedAlgorithm } from './algorithms/algorithmTypes'
 
@@ -96,6 +98,8 @@ function App() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showPresetConfirm, setShowPresetConfirm] = useState(false)
   const [pendingPreset, setPendingPreset] = useState<GraphPreset | null>(null)
+  const [showBinaryTreePresetConfirm, setShowBinaryTreePresetConfirm] = useState(false)
+  const [pendingBinaryTreePreset, setPendingBinaryTreePreset] = useState<BinaryTreePreset | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [isDeleteMode, setIsDeleteMode] = useState(false)
   const [isDeleteEdgeMode, setIsDeleteEdgeMode] = useState(false)
@@ -560,6 +564,42 @@ function App() {
 
   const handleBinaryTreeClear = () => {
     setBinaryTree({ rootId: null, nodesById: {} })
+    nextBinaryTreeId.current = 1
+  }
+
+  // Replaces the binary tree with a preset and resets id counter + algorithm overlays.
+  const applyBinaryTreePreset = (preset: BinaryTreePreset) => {
+    const { tree, nextId } = buildBinaryTreePreset(preset)
+    setBinaryTree(tree)
+    nextBinaryTreeId.current = nextId
+    binaryTreeTraversal.resetVisualization()
+    binaryTreeBst.resetVisualization()
+  }
+
+  // Sidebar: loads a tree preset immediately if empty; otherwise asks to replace.
+  const handleBinaryTreePresetClick = (preset: BinaryTreePreset) => {
+    if (binaryTreeTraversal.isRunning || binaryTreeBst.isRunning) return
+    if (Object.keys(binaryTree.nodesById).length === 0) {
+      applyBinaryTreePreset(preset)
+      return
+    }
+    setPendingBinaryTreePreset(preset)
+    setShowBinaryTreePresetConfirm(true)
+  }
+
+  const confirmBinaryTreePresetReplace = () => {
+    if (!pendingBinaryTreePreset) {
+      setShowBinaryTreePresetConfirm(false)
+      return
+    }
+    applyBinaryTreePreset(pendingBinaryTreePreset)
+    setPendingBinaryTreePreset(null)
+    setShowBinaryTreePresetConfirm(false)
+  }
+
+  const cancelBinaryTreePresetReplace = () => {
+    setPendingBinaryTreePreset(null)
+    setShowBinaryTreePresetConfirm(false)
   }
 
   const handleBinaryTreeConvertToBst = () => {
@@ -1518,6 +1558,8 @@ function App() {
               canFillEmpty: binaryTreeCanFillEmpty,
               onEmptyAllValues: handleBinaryTreeEmptyAllClick,
               canEmptyAll: binaryTreeCanEmptyAll,
+              onPresetClick: handleBinaryTreePresetClick,
+              presetsDisabled: binaryTreeTraversal.isRunning || binaryTreeBst.isRunning,
             }}
             traversal={{
               algorithm: binaryTreeTraversal.algorithm,
@@ -1791,6 +1833,17 @@ function App() {
           confirmLabel="Replace"
           onConfirm={confirmPresetReplace}
           onCancel={cancelPresetReplace}
+        />
+      )}
+
+      {pendingBinaryTreePreset && (
+        <ConfirmModal
+          open={showBinaryTreePresetConfirm}
+          title="Replace canvas with preset?"
+          body={`This will clear the current tree and load "${pendingBinaryTreePreset.name}".`}
+          confirmLabel="Replace"
+          onConfirm={confirmBinaryTreePresetReplace}
+          onCancel={cancelBinaryTreePresetReplace}
         />
       )}
 

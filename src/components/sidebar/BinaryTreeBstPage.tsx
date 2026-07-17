@@ -30,11 +30,19 @@ const VALIDATE_CODE = `function isValidBST(node, min, max):
     rightOk ← isValidBST(node.right, node.value, max)
     return rightOk`
 
-const VALIDATE_LOGIC = `Each call carries a [min, max] window that the node's value must sit inside (inclusive — duplicates are allowed).
-A null child always returns true.
-A node outside its window fails immediately.
-Otherwise validate the left child with max = node.value, then the right with min = node.value.
-Start the check at the root with min = -∞ and max = +∞.`
+const VALIDATE_LOGIC = `Check if every node stays
+within its valid range.
+──────────────────────────────────────────
+Each recursive call passes bounds [min, max]:
+  · Root starts with [-∞, +∞].
+  · Empty subtree is always valid.
+  · If node exceeds bounds → invalid.
+  · Left child gets max = node.value.
+  · Right child gets min = node.value.
+  · Left subtree must be valid to continue.
+  · Final result comes from right subtree.
+──────────────────────────────────────────
+All nodes within bounds → tree is valid.`
 
 const CODE_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   validate: VALIDATE_CODE,
