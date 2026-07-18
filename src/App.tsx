@@ -1398,7 +1398,9 @@ function App() {
             traversalStartNodeId={
               binaryTreeBst.isRunning ? binaryTreeBst.startNodeId : binaryTreeTraversal.startNodeId
             }
-            traversalGoalNodeIds={binaryTreeBst.isRunning ? [] : binaryTreeTraversal.goalNodeIds}
+            traversalGoalNodeIds={
+              binaryTreeBst.isRunning ? binaryTreeBst.goalNodeIds : binaryTreeTraversal.goalNodeIds
+            }
             traversalViolationNodeIds={
               binaryTreeBst.isRunning ? binaryTreeBst.violationNodeIds : []
             }
@@ -1594,6 +1596,8 @@ function App() {
             bst={{
               algorithm: binaryTreeBst.algorithm,
               onAlgorithmChange: binaryTreeBst.setAlgorithm,
+              targetValueInput: binaryTreeBst.targetValueInput,
+              onTargetValueInputChange: binaryTreeBst.handleTargetValueInputChange,
               isBstRunning: binaryTreeBst.isRunning,
               onRunAlgorithm: binaryTreeBst.runAlgorithm,
               onStopAlgorithm: () => binaryTreeBst.resetVisualization(),

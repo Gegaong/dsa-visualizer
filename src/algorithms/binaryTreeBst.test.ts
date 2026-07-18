@@ -4,10 +4,13 @@ import type { BinaryTree } from '../types'
 
 import {
   buildValidateBstCompletionStatus,
+  buildSearchBstCompletionStatus,
   canRunValidateBst,
   formatBstBound,
   runValidateBstExec,
+  runSearchBstExec,
   VALIDATE_BST_CODE_LINES,
+  SEARCH_BST_CODE_LINES,
 } from './binaryTreeBst'
 
 function makeTree(
@@ -161,5 +164,68 @@ describe('buildValidateBstCompletionStatus', () => {
       'Done. This tree is a valid BST.',
     )
     expect(buildValidateBstCompletionStatus(runValidateBstExec(INVALID_RIGHT))).toContain('node C')
+  })
+})
+
+describe('runSearchBstExec', () => {
+  it('finds a present target and only walks the BST path', () => {
+    const result = runSearchBstExec(VALID_BST, 3)
+    expect(result.found).toBe(true)
+    expect(result.foundNodeLabel).toBe('E')
+    expect(result.steps.at(-1)?.visitedNodeIds).toEqual(['A', 'B', 'E'])
+    expect(result.steps.at(-1)?.matched).toBe(true)
+    expect(result.steps.at(-1)?.codeLine).toBe(SEARCH_BST_CODE_LINES.RETURN_NODE)
+  })
+
+  it('goes right when the target is larger than the current node', () => {
+    const result = runSearchBstExec(VALID_BST, 7)
+    expect(result.found).toBe(true)
+    expect(result.foundNodeLabel).toBe('F')
+    expect(result.steps.at(-1)?.visitedNodeIds).toEqual(['A', 'C', 'F'])
+  })
+
+  it('returns not found when the walk hits null', () => {
+    const result = runSearchBstExec(VALID_BST, 5)
+    expect(result.found).toBe(false)
+    expect(result.foundNodeId).toBeNull()
+    expect(result.steps.at(-1)?.codeLine).toBe(SEARCH_BST_CODE_LINES.RETURN_NULL)
+    // Path toward 5: A(4) → right C(6) → left null
+    expect(result.steps.at(-1)?.visitedNodeIds).toEqual(['A', 'C'])
+  })
+
+  it('finds the root when the target matches it', () => {
+    const result = runSearchBstExec(VALID_BST, 4)
+    expect(result.found).toBe(true)
+    expect(result.foundNodeLabel).toBe('A')
+    expect(result.steps.at(-1)?.visitedNodeIds).toEqual(['A'])
+  })
+
+  it('handles an empty tree as not found', () => {
+    const result = runSearchBstExec({ rootId: null, nodesById: {} }, 1)
+    expect(result.found).toBe(false)
+    expect(result.steps.map((step) => step.codeLine)).toEqual([
+      SEARCH_BST_CODE_LINES.ENTER,
+      SEARCH_BST_CODE_LINES.NULL_CHECK,
+      SEARCH_BST_CODE_LINES.RETURN_NULL,
+    ])
+  })
+
+  it('emits compare then recurse-left when descending left', () => {
+    const result = runSearchBstExec(VALID_BST, 1)
+    const atRoot = result.steps.filter((step) => step.nodeLabel === 'A')
+    expect(atRoot.some((step) => step.codeLine === SEARCH_BST_CODE_LINES.COMPARE)).toBe(true)
+    expect(atRoot.some((step) => step.codeLine === SEARCH_BST_CODE_LINES.RECURSE_LEFT)).toBe(true)
+    expect(atRoot.some((step) => step.codeLine === SEARCH_BST_CODE_LINES.RECURSE_RIGHT)).toBe(false)
+  })
+})
+
+describe('buildSearchBstCompletionStatus', () => {
+  it('describes found and missing outcomes', () => {
+    expect(buildSearchBstCompletionStatus(runSearchBstExec(VALID_BST, 3))).toBe(
+      'Done. Found target 3 at node E.',
+    )
+    expect(buildSearchBstCompletionStatus(runSearchBstExec(VALID_BST, 5))).toBe(
+      'Done. Target 5 is not in the tree.',
+    )
   })
 })

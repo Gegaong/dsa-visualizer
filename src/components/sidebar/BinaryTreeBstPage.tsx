@@ -4,6 +4,7 @@ import type { BinaryTreeBstAlgorithm } from '../../algorithms/binaryTreeBst'
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
 import { PlaybackControls } from './PlaybackControls'
 import { PseudocodePanel } from './PseudocodePanel'
+import { NODE_VALUE_FIELD_ATTRS } from './sidebarFieldHelpers'
 
 const ALGORITHM_OPTIONS: { value: BinaryTreeBstAlgorithm; label: string }[] = [
   { value: 'validate', label: 'Validate BST' },
@@ -14,7 +15,7 @@ const ALGORITHM_OPTIONS: { value: BinaryTreeBstAlgorithm; label: string }[] = [
 
 const INFO_KEY_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, AlgorithmInfoKey | null> = {
   validate: 'bt-validate',
-  search: null,
+  search: 'bt-search',
   insert: null,
   delete: null,
 }
@@ -22,7 +23,7 @@ const INFO_KEY_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, AlgorithmInfoKey | n
 const VALIDATE_CODE = `function isValidBST(node, min, max):
     if node = null:
         return true
-    if node.value < min or node.value > max:
+    if node.value ∉ [min, max]:
         return false
     leftOk ← isValidBST(node.left, min, node.value)
     if leftOk = false:
@@ -44,25 +45,49 @@ Each recursive call passes bounds [min, max]:
 ──────────────────────────────────────────
 All nodes within bounds → tree is valid.`
 
+const SEARCH_CODE = `function searchBST(node, target):
+    if node = null:
+        return null
+    if node.value = target:
+        return node
+    if target < node.value:
+        return searchBST(node.left, target)
+    return searchBST(node.right, target)`
+
+const SEARCH_LOGIC = `Search the tree for a target
+value using BST order.
+──────────────────────────────────────────
+Walk from the root toward the target:
+  · Empty node → target is not in the tree.
+  · Matching value → return that node.
+  · Target smaller → only search the left.
+  · Target larger → only search the right.
+──────────────────────────────────────────
+Found node returned, or null if missing.`
+
 const CODE_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   validate: VALIDATE_CODE,
-  search: '// Coming soon',
+  search: SEARCH_CODE,
   insert: '// Coming soon',
   delete: '// Coming soon',
 }
 
 const LOGIC_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   validate: VALIDATE_LOGIC,
-  search: 'Search is coming soon.',
+  search: SEARCH_LOGIC,
   insert: 'Insert is coming soon.',
   delete: 'Delete is coming soon.',
 }
+
+const HIGHLIGHT_READY: ReadonlySet<BinaryTreeBstAlgorithm> = new Set(['validate', 'search'])
 
 const NO_HIGHLIGHTS = new Set<number>()
 
 export type BinaryTreeBstPageProps = {
   algorithm: BinaryTreeBstAlgorithm
   onAlgorithmChange: (algorithm: BinaryTreeBstAlgorithm) => void
+  targetValueInput: string
+  onTargetValueInputChange: (value: string) => void
   isBstRunning: boolean
   onRunAlgorithm: () => void
   onStopAlgorithm: () => void
@@ -88,6 +113,8 @@ export type BinaryTreeBstPageProps = {
 export const BinaryTreeBstPage = ({
   algorithm,
   onAlgorithmChange,
+  targetValueInput,
+  onTargetValueInputChange,
   isBstRunning,
   onRunAlgorithm,
   onStopAlgorithm,
@@ -112,6 +139,7 @@ export const BinaryTreeBstPage = ({
   const algoLabel =
     ALGORITHM_OPTIONS.find((option) => option.value === algorithm)?.label ?? algorithm
   const infoKey = INFO_KEY_BY_ALGORITHM[algorithm]
+  const showHighlights = HIGHLIGHT_READY.has(algorithm)
 
   return (
     <div className="sidebar-page-body">
@@ -132,6 +160,23 @@ export const BinaryTreeBstPage = ({
       </div>
 
       {infoKey && <AlgorithmInfoCard infoKey={infoKey} />}
+
+      {algorithm === 'search' && (
+        <div className="sidebar-section algorithm-inputs-section">
+          <h3>Inputs</h3>
+          <label className="field">
+            <span>
+              Target value <span className="required-indicator" aria-hidden="true">*</span>
+            </span>
+            <input
+              {...NODE_VALUE_FIELD_ATTRS}
+              value={targetValueInput}
+              onChange={(event) => onTargetValueInputChange(event.target.value)}
+              disabled={isBstRunning}
+            />
+          </label>
+        </div>
+      )}
 
       <div className="sidebar-section sidebar-section--traversal-playback">
         <h3>Playback</h3>
@@ -158,9 +203,9 @@ export const BinaryTreeBstPage = ({
       <PseudocodePanel
         codeText={CODE_BY_ALGORITHM[algorithm]}
         logicText={LOGIC_BY_ALGORITHM[algorithm]}
-        codeHighlighted={algorithm === 'validate' ? bstCodeHighlighted : NO_HIGHLIGHTS}
+        codeHighlighted={showHighlights ? bstCodeHighlighted : NO_HIGHLIGHTS}
         logicHighlighted={NO_HIGHLIGHTS}
-        varsRows={algorithm === 'validate' ? bstVarsRows : null}
+        varsRows={showHighlights ? bstVarsRows : null}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
         canDetach={!isBstPlaying}

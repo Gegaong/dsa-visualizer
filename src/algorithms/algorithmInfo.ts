@@ -30,6 +30,7 @@ export type AlgorithmInfoKey =
   | 'bt-postorder'
   | 'bt-levelorder'
   | 'bt-validate'
+  | 'bt-search'
 
 export type AlgorithmInfo = {
   name: string
@@ -359,6 +360,20 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     ],
     cons: [
       'Requires every node to hold a comparable numeric value',
+    ],
+  },
+  'bt-search': {
+    name: 'BST Search',
+    time: 'O(h)',
+    space: 'O(h)',
+    summary: 'Looks up a target value by walking from the root: go left when the target is smaller, right when it is larger, and stop when the value matches or a null child is reached.',
+    pros: [
+      'Only follows one root-to-leaf path — much faster than a full traversal on tall trees',
+      'Natural fit for sorted dictionaries and ordered maps',
+    ],
+    cons: [
+      'Correctness depends on the tree actually being a BST',
+      'Degenerates to O(n) on a skewed tree',
     ],
   },
 }
