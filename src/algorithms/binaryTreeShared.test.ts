@@ -8,8 +8,10 @@ import {
   getNodeCount,
   getTreeHeight,
   treeHasAllNumericValues,
+  treeHasDuplicateNumericValues,
   convertBinaryTreeToBst,
 } from './binaryTreeShared'
+import { runValidateBstExec } from './binaryTreeBst'
 
 // Builds a tree from a terse spec: id -> [leftId | null, rightId | null]. rootId defaults to 'A'.
 function makeTree(spec: Record<string, [string | null, string | null]>, rootId: string | null = 'A'): BinaryTree {
@@ -166,10 +168,48 @@ describe('treeHasAllNumericValues', () => {
   })
 })
 
+describe('treeHasDuplicateNumericValues', () => {
+  it('is false when all numeric values are unique', () => {
+    const tree = makeTree({ A: ['B', null], B: [null, null] })
+    tree.nodesById.A = { ...tree.nodesById.A, value: 1 }
+    tree.nodesById.B = { ...tree.nodesById.B, value: 2 }
+    expect(treeHasDuplicateNumericValues(tree)).toBe(false)
+  })
+
+  it('is true when two nodes share the same number', () => {
+    const tree = makeTree({ A: ['B', null], B: [null, null] })
+    tree.nodesById.A = { ...tree.nodesById.A, value: 2 }
+    tree.nodesById.B = { ...tree.nodesById.B, value: 2 }
+    expect(treeHasDuplicateNumericValues(tree)).toBe(true)
+  })
+})
+
 describe('convertBinaryTreeToBst', () => {
   it('returns the same tree when values are missing', () => {
     const tree = makeTree({ A: [null, null] })
     expect(convertBinaryTreeToBst(tree)).toBe(tree)
+  })
+
+  it('drops duplicate values and rebuilds a valid strict BST', () => {
+    //     A(2)
+    //    / \
+    //  B(2) C(5)   unique → [2, 5]
+    const tree = makeTree({
+      A: ['B', 'C'],
+      B: [null, null],
+      C: [null, null],
+    })
+    tree.nodesById.A = { ...tree.nodesById.A, value: 2 }
+    tree.nodesById.B = { ...tree.nodesById.B, value: 2 }
+    tree.nodesById.C = { ...tree.nodesById.C, value: 5 }
+
+    const result = convertBinaryTreeToBst(tree)
+    const values = Object.values(result.nodesById).map((node) => node.value)
+    expect(values).toEqual(expect.arrayContaining([2, 5]))
+    expect(values).toHaveLength(2)
+    expect(new Set(values).size).toBe(2)
+    expect(getNodeCount(result)).toBe(2)
+    expect(runValidateBstExec(result).isValid).toBe(true)
   })
 
   it('keeps structure and labels, sorts values into inorder order', () => {

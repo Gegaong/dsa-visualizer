@@ -5,6 +5,7 @@ import type { BinaryTree, BinaryTreeContextMenuState, BinaryTreeSide } from '../
 import {
   getNodeCount,
   getTreeHeight,
+  treeHasDuplicateNumericValues,
 } from '../algorithms/binaryTreeShared'
 import { runValidateBstExec, canRunValidateBst } from '../algorithms/binaryTreeBst'
 import { computeBinaryTreeLayout } from '../utils/binaryTreeLayout'
@@ -31,7 +32,7 @@ type BinaryTreeCanvasProps = {
   traversalCurrentNodeId: string | null
   traversalStartNodeId: string | null
   traversalGoalNodeIds: string[]
-  /** BST validation failure — red highlight instead of blue goal. */
+  // BST validation failure — red highlight instead of blue goal.
   traversalViolationNodeIds?: string[]
 }
 
@@ -98,7 +99,8 @@ export const BinaryTreeCanvas = ({
   const nodeCount = getNodeCount(tree)
   const treeHeight = getTreeHeight(tree)
 
-  // Disable button if: not all numeric, traversal running, no root, or already a valid BST.
+  // Disable if: not all numeric, traversal running, or already a valid strict BST.
+  // Duplicates are allowed — convert drops them and rebuilds.
   const canConvertToBst = useMemo(() => {
     if (!canRunValidateBst(tree) || isTraversalRunning) return false
     return !runValidateBstExec(tree).isValid
@@ -235,7 +237,7 @@ export const BinaryTreeCanvas = ({
       <ConfirmModal
         open={convertConfirmOpen}
         title="Convert to BST"
-        body="Node values will be rearranged so the tree becomes a binary search tree. Structure and labels stay the same."
+        body="Node values will be rearranged into a strict binary search tree (unique values, left < node < right). Duplicate values are removed. When every value is already unique, structure and labels stay the same; otherwise the tree is rebuilt from the unique values."
         confirmLabel="Convert"
         onConfirm={() => { onConvertToBst(); setConvertConfirmOpen(false) }}
         onCancel={() => setConvertConfirmOpen(false)}
@@ -299,7 +301,9 @@ export const BinaryTreeCanvas = ({
             disabled={!canConvertToBst}
             title={
               canConvertToBst
-                ? 'Convert this binary tree into a BST'
+                ? treeHasDuplicateNumericValues(tree)
+                  ? 'Convert to BST — duplicate values will be removed'
+                  : 'Convert this binary tree into a BST'
                 : nodeCount === 0
                   ? 'Add at least one node before converting to a BST'
                   : !canRunValidateBst(tree)

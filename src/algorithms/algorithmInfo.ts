@@ -354,7 +354,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Validate BST',
     time: 'O(n)',
     space: 'O(h)',
-    summary: 'Checks whether every node sits inside a tightening [min, max] window inherited from its ancestors — left values must be ≤ the parent, right values ≥ the parent. Equal values are allowed.',
+    summary: 'Checks whether every node sits strictly inside a tightening (min, max) window inherited from its ancestors — left values must be < the parent, right values > the parent. Equal values are not allowed.',
     pros: [
       'One depth-first walk confirms the full search-tree property',
       'Can fail fast as soon as a violating node is found',
@@ -367,7 +367,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'BST Search',
     time: 'O(h)',
     space: 'O(h)',
-    summary: 'Looks up a target value by walking from the root: go left when the target is smaller, right when it is larger, and stop when the value matches or a null child is reached.',
+    summary: 'Looks up a target value by walking from the root: go left when the target is smaller, right when it is larger, and stop when the value matches or a null child is reached. In a strict BST there is at most one match.',
     pros: [
       'Only follows one root-to-leaf path — much faster than a full traversal on tall trees',
       'Natural fit for sorted dictionaries and ordered maps',
@@ -381,14 +381,14 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'BST Insert',
     time: 'O(h)',
     space: 'O(h)',
-    summary: 'Places a new value by walking from the root with tightening [min, max] bounds — left when smaller (max becomes the node), right when greater or equal (min becomes the node) — then links a new leaf in that slot.',
+    summary: 'Places a new value by walking from the root with tightening (min, max) bounds — left when smaller, right when larger — and refuses to insert if the value already exists.',
     pros: [
-      'Keeps the search-tree order: nothing bigger on the left, nothing smaller on the right',
+      'Keeps strict search-tree order: left < node < right',
       'Same bound-passing idea as Validate BST, on a single root-to-leaf walk',
     ],
     cons: [
       'Does not rebalance — repeated inserts can skew the tree toward O(n)',
-      'Duplicate values always go right, so equals are not unique keys',
+      'Duplicate values are rejected instead of stored',
     ],
   },
 }

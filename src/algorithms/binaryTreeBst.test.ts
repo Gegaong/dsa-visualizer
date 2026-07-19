@@ -55,11 +55,11 @@ const INVALID_RIGHT = makeTree({
   C: [null, null, 1],
 })
 
-// Invalid if equality were required to fail — with inclusive bounds this is a valid BST.
+// Duplicate left child — invalid under strict (min, max) bounds.
 //        A(2)
 //       /
 //     B(2)
-const DUP_LEFT_OK = makeTree({
+const DUP_LEFT = makeTree({
   A: ['B', null, 2],
   B: [null, null, 2],
 })
@@ -98,18 +98,19 @@ describe('runValidateBstExec', () => {
     expect(violationStep?.maxBound).toBe(Number.POSITIVE_INFINITY)
   })
 
-  it('allows equal values on a left child (inclusive BST bounds)', () => {
-    const result = runValidateBstExec(DUP_LEFT_OK)
-    expect(result.isValid).toBe(true)
-    expect(result.violationNodeId).toBeNull()
+  it('rejects equal values on a left child (strict BST bounds)', () => {
+    const result = runValidateBstExec(DUP_LEFT)
+    expect(result.isValid).toBe(false)
+    expect(result.violationNodeLabel).toBe('B')
   })
 
-  it('allows equal values on a right child', () => {
+  it('rejects equal values on a right child', () => {
     const result = runValidateBstExec(makeTree({
       A: [null, 'B', 2],
       B: [null, null, 2],
     }))
-    expect(result.isValid).toBe(true)
+    expect(result.isValid).toBe(false)
+    expect(result.violationNodeLabel).toBe('B')
   })
 
   it('does not mark a violating node as visited', () => {
@@ -247,6 +248,7 @@ describe('canRunInsertBst', () => {
 describe('runInsertBstExec', () => {
   it('inserts as root on an empty tree', () => {
     const result = runInsertBstExec({ rootId: null, nodesById: {} }, 4)
+    expect(result.didInsert).toBe(true)
     expect(result.parentNodeId).toBeNull()
     expect(result.side).toBeNull()
     expect(result.steps.at(-1)?.codeLine).toBe(INSERT_BST_CODE_LINES.CREATE_NODE)
@@ -260,17 +262,29 @@ describe('runInsertBstExec', () => {
     expect(result.steps.at(-1)?.visitedNodeIds).toEqual(['A', 'B', 'D'])
   })
 
-  it('sends equal or larger values down the right branch from a node', () => {
+  it('rejects an existing value without inserting (strict BST)', () => {
     const equal = runInsertBstExec(VALID_BST, 4)
-    const atRoot = equal.steps.filter((step) => step.nodeLabel === 'A')
-    expect(atRoot.some((step) => step.codeLine === INSERT_BST_CODE_LINES.ASSIGN_RIGHT)).toBe(true)
-    // 4 goes A→right→C, then C→left→null
-    expect(equal.parentNodeId).toBe('C')
-    expect(equal.side).toBe('left')
+    expect(equal.didInsert).toBe(false)
+    expect(equal.insertStepIndex).toBe(-1)
+    expect(equal.rejectStepIndex).toBeGreaterThanOrEqual(0)
+    expect(equal.existingNodeLabel).toBe('A')
+    expect(equal.steps.at(-1)?.codeLine).toBe(INSERT_BST_CODE_LINES.RETURN_EXISTING)
+    expect(equal.steps.at(-1)?.visitedNodeIds).toEqual(['A'])
 
     const larger = runInsertBstExec(VALID_BST, 8)
+    expect(larger.didInsert).toBe(true)
     expect(larger.parentNodeId).toBe('F')
     expect(larger.side).toBe('right')
+  })
+
+  it('sends only strictly larger values down the right branch from a node', () => {
+    const larger = runInsertBstExec(VALID_BST, 5)
+    expect(larger.didInsert).toBe(true)
+    expect(larger.parentNodeId).toBe('C')
+    expect(larger.side).toBe('left')
+    const atRoot = larger.steps.filter((step) => step.nodeLabel === 'A')
+    expect(atRoot.some((step) => step.codeLine === INSERT_BST_CODE_LINES.ASSIGN_RIGHT)).toBe(true)
+    expect(atRoot.some((step) => step.codeLine === INSERT_BST_CODE_LINES.EQUAL_CHECK)).toBe(true)
   })
 
   it('tightens max when descending left and min when descending right', () => {
@@ -339,6 +353,13 @@ describe('buildInsertBstCompletionStatus', () => {
     const childResult = runInsertBstExec(VALID_BST, 0)
     expect(buildInsertBstCompletionStatus(childResult, 'G')).toBe(
       'Done. Inserted 0 as node G.',
+    )
+  })
+
+  it('describes a rejected duplicate', () => {
+    const rejected = runInsertBstExec(VALID_BST, 4)
+    expect(buildInsertBstCompletionStatus(rejected, null)).toBe(
+      'Done. Value 4 already exists at node A — not inserted.',
     )
   })
 })

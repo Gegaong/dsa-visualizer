@@ -23,7 +23,7 @@ const INFO_KEY_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, AlgorithmInfoKey | n
 const VALIDATE_CODE = `function isValidBST(node, min, max):
     if node = null:
         return true
-    if node.value ∉ [min, max]:
+    if node.value ∉ (min, max):
         return false
     leftOk ← isValidBST(node.left, min, node.value)
     if leftOk = false:
@@ -32,18 +32,18 @@ const VALIDATE_CODE = `function isValidBST(node, min, max):
     return rightOk`
 
 const VALIDATE_LOGIC = `Check if every node stays
-within its valid range.
+strictly inside its range.
 ──────────────────────────────────────────
-Each recursive call passes bounds [min, max]:
-  · Root starts with [-∞, +∞].
+Each recursive call passes open bounds (min, max):
+  · Root starts with (-∞, +∞).
   · Empty subtree is always valid.
-  · If node exceeds bounds → invalid.
+  · Equals or outside bounds → invalid.
   · Left child gets max = node.value.
   · Right child gets min = node.value.
   · Left subtree must be valid to continue.
   · Final result comes from right subtree.
 ──────────────────────────────────────────
-All nodes within bounds → tree is valid.`
+All nodes strictly in range → tree is a BST.`
 
 const SEARCH_CODE = `function searchBST(node, target):
     if node = null:
@@ -55,7 +55,7 @@ const SEARCH_CODE = `function searchBST(node, target):
     return searchBST(node.right, target)`
 
 const SEARCH_LOGIC = `Search the tree for a target
-value using BST order.
+value using strict BST order.
 ──────────────────────────────────────────
 Walk from the root toward the target:
   · Empty node → target is not in the tree.
@@ -63,30 +63,33 @@ Walk from the root toward the target:
   · Target smaller → only search the left.
   · Target larger → only search the right.
 ──────────────────────────────────────────
-Found node returned, or null if missing.`
+At most one match — values are unique.`
 
 const INSERT_CODE = `function insertBST(node, value,
     min, max):
     if node = null:
         return new Node(value)
+    if value = node.value:
+        return node
     if value < node.value:
         node.left ← insertBST(node.left, value, min, node.value)
     else:
         node.right ← insertBST(node.right, value, node.value, max)
     return node`
 
-const INSERT_LOGIC = `Insert a value while keeping BST order:
-no bigger value on the left,
-no smaller value on the right.
+const INSERT_LOGIC = `Insert a value into a strict BST:
+left < node < right, no duplicates.
 ──────────────────────────────────────────
-Each call carries allowed bounds [min, max]:
-  · Root starts with [-∞, +∞].
+Each call carries open bounds (min, max):
+  · Root starts with (-∞, +∞).
   · Empty slot → create the new node there.
+  · Value already present → leave tree unchanged.
   · Value < node → left, with max = node.value.
-  · Value ≥ node → right, with min = node.value.
+  · Value > node → right, with min = node.value.
   · After linking the child, return node.
 ──────────────────────────────────────────
-The new leaf sits inside every ancestor's range.`
+The new leaf sits strictly inside every
+ancestor's range.`
 
 const CODE_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   validate: VALIDATE_CODE,

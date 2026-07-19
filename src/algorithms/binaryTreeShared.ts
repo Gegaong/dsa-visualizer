@@ -1,5 +1,7 @@
 import type { BinaryTree, BinaryTreeSide } from '../types'
 
+import { relabelBinaryTree } from '../utils/format'
+
 // Depth-first walk collecting a node and every node in its subtree (used to cascade-delete).
 export function collectSubtreeIds(tree: BinaryTree, nodeId: string): string[] {
   const result: string[] = []
@@ -56,6 +58,17 @@ export function treeHasAllNumericValues(tree: BinaryTree): boolean {
   return nodes.length > 0 && nodes.every((node) => typeof node.value === 'number')
 }
 
+// True when two or more nodes share the same numeric value (forbidden in a strict BST).
+export function treeHasDuplicateNumericValues(tree: BinaryTree): boolean {
+  const seen = new Set<number>()
+  for (const node of Object.values(tree.nodesById)) {
+    if (typeof node.value !== 'number') continue
+    if (seen.has(node.value)) return true
+    seen.add(node.value)
+  }
+  return false
+}
+
 // Collects node ids in inorder (left, node, right).
 function collectInorderIds(tree: BinaryTree, nodeId: string | null, out: string[]): void {
   if (!nodeId) return
@@ -66,21 +79,50 @@ function collectInorderIds(tree: BinaryTree, nodeId: string | null, out: string[
   collectInorderIds(tree, node.rightId, out)
 }
 
-// Shape-preserving BT → BST: keep structure/labels, reassign values so inorder is sorted.
-// No-ops (returns the same tree) when empty or any node value is empty.
+// Builds a balanced strict BST from sorted unique values (root = mid).
+function buildBalancedBstFromSortedValues(sortedUnique: number[]): BinaryTree {
+  const nodesById: BinaryTree['nodesById'] = {}
+  let nextIndex = 1
+
+  const build = (lo: number, hi: number): string | null => {
+    if (lo > hi) return null
+    const mid = Math.floor((lo + hi) / 2)
+    const id = `bt-${nextIndex++}`
+    const leftId = build(lo, mid - 1)
+    const rightId = build(mid + 1, hi)
+    nodesById[id] = {
+      id,
+      label: '',
+      value: sortedUnique[mid],
+      leftId,
+      rightId,
+    }
+    return id
+  }
+
+  const rootId = build(0, sortedUnique.length - 1)
+  return relabelBinaryTree({ rootId, nodesById })
+}
+
+// BT → strict BST. Unique values: keep structure/labels, reassign so inorder is sorted.
+// Duplicate values: drop extras, rebuild a balanced BST from the remaining unique numbers.
 export function convertBinaryTreeToBst(tree: BinaryTree): BinaryTree {
   if (!treeHasAllNumericValues(tree) || !tree.rootId) return tree
 
   const inorderIds: string[] = []
   collectInorderIds(tree, tree.rootId, inorderIds)
 
-  const sortedValues = inorderIds
-    .map((id) => tree.nodesById[id].value as number)
-    .sort((a, b) => a - b)
+  const values = inorderIds.map((id) => tree.nodesById[id].value as number)
+  const sortedUnique = [...new Set(values)].sort((a, b) => a - b)
+
+  // Duplicates → fewer unique keys than nodes: rebuild from the unique set.
+  if (sortedUnique.length < inorderIds.length) {
+    return buildBalancedBstFromSortedValues(sortedUnique)
+  }
 
   const nodesById = { ...tree.nodesById }
   inorderIds.forEach((id, index) => {
-    nodesById[id] = { ...nodesById[id], value: sortedValues[index] }
+    nodesById[id] = { ...nodesById[id], value: sortedUnique[index] }
   })
 
   return { rootId: tree.rootId, nodesById }

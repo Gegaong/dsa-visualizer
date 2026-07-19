@@ -47,13 +47,13 @@ type ApplyInsertResult = { id: string; label: string }
 
 type UseBinaryTreeBstPlaybackParams = {
   tree: BinaryTree
-  /** Called when playback reaches CREATE_NODE — must add the leaf and return its id/label. */
+  // Called when playback reaches CREATE_NODE — must add the leaf and return its id/label.
   onApplyInsert?: (
     parentNodeId: string | null,
     side: BinaryTreeSide | null,
     value: number,
   ) => ApplyInsertResult
-  /** Called when stepping back before CREATE_NODE — removes the leaf added by onApplyInsert. */
+  // Called when stepping back before CREATE_NODE — removes the leaf added by onApplyInsert.
   onUndoInsert?: (nodeId: string) => void
 }
 
@@ -67,9 +67,9 @@ export type BinaryTreeBstHandle = {
   visitedNodeIds: string[]
   currentNodeId: string | null
   startNodeId: string | null
-  /** Node that broke the BST range check — rendered red on the canvas. */
+  // Node that broke the BST range check — rendered red on the canvas.
   violationNodeIds: string[]
-  /** Matched search / newly inserted node — rendered as a blue goal on the canvas. */
+  // Matched search / newly inserted / existing duplicate on reject — blue goal on canvas.
   goalNodeIds: string[]
 
   isRunning: boolean
@@ -186,7 +186,8 @@ export function useBinaryTreeBstPlayback({
   }
 
   const syncInsertPresence = (result: BinaryTreeInsertBstResult, boundedIndex: number) => {
-    const shouldHaveNode = boundedIndex >= result.insertStepIndex && result.insertStepIndex >= 0
+    if (!result.didInsert) return
+    const shouldHaveNode = boundedIndex >= result.insertStepIndex
     if (shouldHaveNode && !insertedNodeIdRef.current) {
       const applied = onApplyInsertRef.current?.(result.parentNodeId, result.side, result.value)
       if (applied) {
@@ -226,6 +227,7 @@ export function useBinaryTreeBstPlayback({
     const insertedId = insertedNodeIdRef.current
     const onInsertCreate =
       currentResult.kind === 'insert' &&
+      currentResult.didInsert &&
       boundedIndex >= currentResult.insertStepIndex &&
       insertedId
 
@@ -251,8 +253,20 @@ export function useBinaryTreeBstPlayback({
           ? [currentResult.foundNodeId]
           : [],
       )
-    } else if (currentResult.kind === 'insert' && insertedId && boundedIndex >= currentResult.insertStepIndex) {
+    } else if (
+      currentResult.kind === 'insert' &&
+      currentResult.didInsert &&
+      insertedId &&
+      boundedIndex >= currentResult.insertStepIndex
+    ) {
       setGoalNodeIds([insertedId])
+    } else if (
+      currentResult.kind === 'insert' &&
+      !currentResult.didInsert &&
+      currentResult.existingNodeId &&
+      boundedIndex >= currentResult.rejectStepIndex
+    ) {
+      setGoalNodeIds([currentResult.existingNodeId])
     } else {
       setGoalNodeIds([])
     }
@@ -309,9 +323,15 @@ export function useBinaryTreeBstPlayback({
         return
       }
 
-      // Insert: keep the walk path; blue goal stays on the new node.
-      const insertedId = insertedNodeIdRef.current
-      setGoalNodeIds(insertedId ? [insertedId] : [])
+      // Insert: keep the walk path; blue goal on the new node, or on the existing duplicate.
+      if (finishedResult.didInsert) {
+        const insertedId = insertedNodeIdRef.current
+        setGoalNodeIds(insertedId ? [insertedId] : [])
+      } else {
+        setGoalNodeIds(
+          finishedResult.existingNodeId ? [finishedResult.existingNodeId] : [],
+        )
+      }
       setViolationNodeIds([])
       setStatusText(buildInsertBstCompletionStatus(finishedResult, insertedLabelRef.current))
     }
@@ -434,7 +454,7 @@ export function useBinaryTreeBstPlayback({
   const play = () => {
     if (!execResult) return
     const replayFromEnd = playback.isPlaybackComplete
-    if (replayFromEnd && execResult.kind === 'insert') {
+    if (replayFromEnd && execResult.kind === 'insert' && execResult.didInsert) {
       // Replay needs a clean tree so CREATE_NODE can add the leaf again.
       undoInsertIfNeeded()
     }
@@ -517,7 +537,7 @@ export function useBinaryTreeBstPlayback({
       }
       const si = Math.min(playback.stepIndex, execResult.steps.length - 1)
       const step = execResult.steps[si]
-      const onCreate = si >= execResult.insertStepIndex
+      const onCreate = execResult.didInsert && si >= execResult.insertStepIndex
       const nodeLabel = onCreate ? (insertedLabel ?? 'new') : (step.nodeLabel ?? '—')
       return buildInsertVarsRows(
         nodeLabel,

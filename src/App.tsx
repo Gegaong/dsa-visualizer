@@ -625,7 +625,16 @@ function App() {
   }
 
   const handleBinaryTreeConvertToBst = () => {
-    setBinaryTree((prev) => convertBinaryTreeToBst(prev))
+    setBinaryTree((prev) => {
+      const next = convertBinaryTreeToBst(prev)
+      let max = 0
+      for (const id of Object.keys(next.nodesById)) {
+        const match = /^bt-(\d+)$/.exec(id)
+        if (match) max = Math.max(max, Number(match[1]))
+      }
+      nextBinaryTreeId.current = max + 1
+      return next
+    })
   }
 
   // Sidebar: updates the binary tree fill-range minimum (digits only).
