@@ -48,6 +48,24 @@ export const INSERT_BST_CODE_LINES = {
   RETURN: 10,
 } as const
 
+// Line indices into BinaryTreeBstPage DELETE_CODE — keep in sync when editing pseudocode.
+export const DELETE_BST_CODE_LINES = {
+  ENTER: 0,
+  NULL_RETURN: 1,
+  CMP_LEFT: 2,
+  ASSIGN_LEFT: 3,
+  CMP_RIGHT: 4,
+  ASSIGN_RIGHT: 5,
+  NO_LEFT: 6,
+  NO_RIGHT: 7,
+  ELSE: 8,
+  SUCC_INIT: 9,
+  SUCC_WALK: 10,
+  COPY_VALUE: 11,
+  DELETE_SUCC: 12,
+  RETURN: 13,
+} as const
+
 // Insert signature spans two lines; ENTER highlights both.
 export function insertBstHighlightLines(codeLine: number): Set<number> {
   if (codeLine === INSERT_BST_CODE_LINES.ENTER) {
@@ -74,6 +92,12 @@ export type BinaryTreeBstExecStep = {
   matched?: boolean
   // True on the insert step that creates the new node.
   inserted?: boolean
+  // True on the delete step that copies the successor value into the target node.
+  copied?: boolean
+  // True on the delete step that splices a node out of the tree.
+  removed?: boolean
+  // Successor label during the two-child delete path.
+  succLabel?: string | null
 }
 
 export type BinaryTreeValidateBstResult = {
@@ -110,10 +134,32 @@ export type BinaryTreeInsertBstResult = {
   existingNodeLabel: string | null
 }
 
+export type BinaryTreeDeleteMutation =
+  | { stepIndex: number; kind: 'setValue'; nodeId: string; value: number }
+  | { stepIndex: number; kind: 'spliceOut'; nodeId: string; replacementId: string | null }
+
+export type BinaryTreeDeleteMutationInput =
+  | { kind: 'setValue'; nodeId: string; value: number }
+  | { kind: 'spliceOut'; nodeId: string; replacementId: string | null }
+
+export type BinaryTreeDeleteBstResult = {
+  kind: 'delete'
+  steps: BinaryTreeBstExecStep[]
+  key: number
+  found: boolean
+  // Node that held the key when found (same id may later hold the successor's value).
+  targetNodeId: string | null
+  targetNodeLabel: string | null
+  mutations: BinaryTreeDeleteMutation[]
+  baseTree: BinaryTree
+  finalTree: BinaryTree
+}
+
 export type BinaryTreeBstExecResult =
   | BinaryTreeValidateBstResult
   | BinaryTreeSearchBstResult
   | BinaryTreeInsertBstResult
+  | BinaryTreeDeleteBstResult
 
 export type ApplyBstInsertSpec = {
   parentNodeId: string | null
@@ -514,3 +560,228 @@ export function canRunInsertBst(tree: BinaryTree): boolean {
   if (nodes.length === 0) return true
   return treeHasAllNumericValues(tree)
 }
+
+// Delete needs a numeric tree (empty tree is allowed — the walk returns null immediately).
+export function canRunDeleteBst(tree: BinaryTree): boolean {
+  const nodes = Object.values(tree.nodesById)
+  if (nodes.length === 0) return true
+  return treeHasAllNumericValues(tree)
+}
+
+export function cloneBinaryTree(tree: BinaryTree): BinaryTree {
+  const nodesById: BinaryTree['nodesById'] = {}
+  for (const [id, node] of Object.entries(tree.nodesById)) {
+    nodesById[id] = { ...node }
+  }
+  return { rootId: tree.rootId, nodesById }
+}
+
+export function applyBstDeleteMutation(
+  tree: BinaryTree,
+  mutation: BinaryTreeDeleteMutation | BinaryTreeDeleteMutationInput,
+): BinaryTree {
+  if (mutation.kind === 'setValue') {
+    const node = tree.nodesById[mutation.nodeId]
+    if (!node) return tree
+    return {
+      rootId: tree.rootId,
+      nodesById: {
+        ...tree.nodesById,
+        [mutation.nodeId]: { ...node, value: mutation.value },
+      },
+    }
+  }
+
+  const { nodeId, replacementId } = mutation
+  if (!tree.nodesById[nodeId]) return tree
+
+  const nodesById = { ...tree.nodesById }
+  const parentId = findParentId(tree, nodeId)
+  if (parentId && nodesById[parentId]) {
+    const side = findChildSide(tree, parentId, nodeId)
+    if (side === 'left') {
+      nodesById[parentId] = { ...nodesById[parentId], leftId: replacementId }
+    } else if (side === 'right') {
+      nodesById[parentId] = { ...nodesById[parentId], rightId: replacementId }
+    }
+  }
+
+  delete nodesById[nodeId]
+  const rootId = tree.rootId === nodeId ? replacementId : tree.rootId
+  return relabelBinaryTree({ rootId, nodesById })
+}
+
+// Rebuilds the tree as it should look after all mutations with stepIndex ≤ upToStepIndex.
+export function treeAfterDeleteMutations(
+  baseTree: BinaryTree,
+  mutations: BinaryTreeDeleteMutation[],
+  upToStepIndex: number,
+): BinaryTree {
+  let tree = cloneBinaryTree(baseTree)
+  for (const mutation of mutations) {
+    if (mutation.stepIndex > upToStepIndex) break
+    tree = applyBstDeleteMutation(tree, mutation)
+  }
+  return tree
+}
+
+export function buildDeleteBstCompletionStatus(result: BinaryTreeDeleteBstResult): string {
+  if (!result.found) {
+    return `Done. Key ${result.key} is not in the tree.`
+  }
+  const label = result.targetNodeLabel ?? '?'
+  return `Done. Deleted key ${result.key} (was node ${label}).`
+}
+
+// Line-by-line strict BST delete (inorder successor for the two-child case).
+// Mutations are recorded per step so playback can show value-copy then splice-out.
+export function runDeleteBstExec(tree: BinaryTree, key: number): BinaryTreeDeleteBstResult {
+  const L = DELETE_BST_CODE_LINES
+  const baseTree = cloneBinaryTree(tree)
+  let working = cloneBinaryTree(tree)
+  const steps: BinaryTreeBstExecStep[] = []
+  const mutations: BinaryTreeDeleteMutation[] = []
+  const visitedOrder: string[] = []
+  let found = false
+  let targetNodeId: string | null = null
+  let targetNodeLabel: string | null = null
+
+  const push = (
+    codeLine: number,
+    nodeId: string | null,
+    parentNodeId: string | null,
+    searchKey: number,
+    opts?: {
+      markVisited?: boolean
+      matched?: boolean
+      copied?: boolean
+      removed?: boolean
+      succLabel?: string | null
+    },
+  ) => {
+    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
+      visitedOrder.push(nodeId)
+    }
+    steps.push({
+      order: steps.length + 1,
+      codeLine,
+      nodeId,
+      nodeLabel: nodeId ? (working.nodesById[nodeId]?.label ?? null) : null,
+      parentNodeId,
+      visitedNodeIds: [...visitedOrder],
+      target: searchKey,
+      matched: opts?.matched,
+      copied: opts?.copied,
+      removed: opts?.removed,
+      succLabel: opts?.succLabel,
+    })
+  }
+
+  const recordMutation = (mutation: BinaryTreeDeleteMutationInput) => {
+    mutations.push({ ...mutation, stepIndex: steps.length - 1 })
+    working = applyBstDeleteMutation(working, mutation)
+  }
+
+  // Returns the replacement subtree root id (possibly null).
+  function deleteBST(
+    nodeId: string | null,
+    parentNodeId: string | null,
+    searchKey: number,
+  ): string | null {
+    push(L.ENTER, nodeId, parentNodeId, searchKey)
+    push(L.NULL_RETURN, nodeId, parentNodeId, searchKey)
+
+    if (!nodeId) return null
+
+    const node = working.nodesById[nodeId]
+    if (!node || typeof node.value !== 'number') return null
+
+    push(L.CMP_LEFT, nodeId, parentNodeId, searchKey, { markVisited: true })
+    if (searchKey < node.value) {
+      push(L.ASSIGN_LEFT, nodeId, parentNodeId, searchKey)
+      deleteBST(node.leftId, nodeId, searchKey)
+      push(L.RETURN, nodeId, parentNodeId, searchKey)
+      return nodeId
+    }
+
+    push(L.CMP_RIGHT, nodeId, parentNodeId, searchKey)
+    if (searchKey > node.value) {
+      push(L.ASSIGN_RIGHT, nodeId, parentNodeId, searchKey)
+      deleteBST(node.rightId, nodeId, searchKey)
+      push(L.RETURN, nodeId, parentNodeId, searchKey)
+      return nodeId
+    }
+
+    // searchKey === node.value
+    if (!found) {
+      found = true
+      targetNodeId = nodeId
+      targetNodeLabel = node.label
+    }
+
+    const leftId = node.leftId
+    const rightId = node.rightId
+
+    if (!leftId) {
+      push(L.NO_LEFT, nodeId, parentNodeId, searchKey, { matched: true, removed: true })
+      recordMutation({ kind: 'spliceOut', nodeId, replacementId: rightId })
+      return rightId
+    }
+
+    push(L.NO_LEFT, nodeId, parentNodeId, searchKey, { matched: true })
+    if (!rightId) {
+      push(L.NO_RIGHT, nodeId, parentNodeId, searchKey, { matched: true, removed: true })
+      recordMutation({ kind: 'spliceOut', nodeId, replacementId: leftId })
+      return leftId
+    }
+
+    push(L.NO_RIGHT, nodeId, parentNodeId, searchKey, { matched: true })
+    push(L.ELSE, nodeId, parentNodeId, searchKey, { matched: true })
+    push(L.SUCC_INIT, rightId, nodeId, searchKey, {
+      succLabel: working.nodesById[rightId]?.label ?? null,
+    })
+
+    let succId = rightId
+    while (true) {
+      const succ = working.nodesById[succId]
+      push(L.SUCC_WALK, succId, nodeId, searchKey, {
+        markVisited: true,
+        succLabel: succ?.label ?? null,
+      })
+      if (!succ?.leftId) break
+      succId = succ.leftId
+    }
+
+    const succNode = working.nodesById[succId]
+    const succValue = typeof succNode?.value === 'number' ? succNode.value : searchKey
+    push(L.COPY_VALUE, nodeId, parentNodeId, searchKey, {
+      copied: true,
+      matched: true,
+      succLabel: succNode?.label ?? null,
+    })
+    recordMutation({ kind: 'setValue', nodeId, value: succValue })
+
+    const currentRightId = working.nodesById[nodeId]?.rightId ?? rightId
+    push(L.DELETE_SUCC, nodeId, parentNodeId, searchKey, {
+      succLabel: succNode?.label ?? null,
+    })
+    deleteBST(currentRightId, nodeId, succValue)
+    push(L.RETURN, nodeId, parentNodeId, searchKey)
+    return nodeId
+  }
+
+  deleteBST(working.rootId, null, key)
+
+  return {
+    kind: 'delete',
+    steps,
+    key,
+    found,
+    targetNodeId,
+    targetNodeLabel,
+    mutations,
+    baseTree,
+    finalTree: cloneBinaryTree(working),
+  }
+}
+

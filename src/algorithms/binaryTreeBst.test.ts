@@ -6,17 +6,22 @@ import {
   buildValidateBstCompletionStatus,
   buildSearchBstCompletionStatus,
   buildInsertBstCompletionStatus,
+  buildDeleteBstCompletionStatus,
   canRunValidateBst,
   canRunInsertBst,
+  canRunDeleteBst,
   formatBstBound,
   runValidateBstExec,
   runSearchBstExec,
   runInsertBstExec,
+  runDeleteBstExec,
   applyBstInsert,
   removeBstInsertedNode,
+  treeAfterDeleteMutations,
   VALIDATE_BST_CODE_LINES,
   SEARCH_BST_CODE_LINES,
   INSERT_BST_CODE_LINES,
+  DELETE_BST_CODE_LINES,
 } from './binaryTreeBst'
 
 function makeTree(
@@ -360,6 +365,108 @@ describe('buildInsertBstCompletionStatus', () => {
     const rejected = runInsertBstExec(VALID_BST, 4)
     expect(buildInsertBstCompletionStatus(rejected, null)).toBe(
       'Done. Value 4 already exists at node A — not inserted.',
+    )
+  })
+})
+
+describe('canRunDeleteBst', () => {
+  it('allows an empty tree, but rejects trees with empty node values', () => {
+    expect(canRunDeleteBst({ rootId: null, nodesById: {} })).toBe(true)
+    expect(canRunDeleteBst(VALID_BST)).toBe(true)
+    expect(canRunDeleteBst(makeTree({ A: [null, null, 'empty'] }))).toBe(false)
+  })
+})
+
+describe('runDeleteBstExec', () => {
+  it('reports not found without mutating when the key is missing', () => {
+    const result = runDeleteBstExec(VALID_BST, 5)
+    expect(result.found).toBe(false)
+    expect(result.mutations).toHaveLength(0)
+    expect(result.finalTree.nodesById.A.value).toBe(4)
+    expect(result.steps.at(-1)?.codeLine).toBe(DELETE_BST_CODE_LINES.RETURN)
+  })
+
+  it('splices out a leaf (zero children)', () => {
+    const result = runDeleteBstExec(VALID_BST, 1)
+    expect(result.found).toBe(true)
+    expect(result.mutations.some((m) => m.kind === 'spliceOut')).toBe(true)
+    expect(result.finalTree.nodesById.D).toBeUndefined()
+    expect(result.finalTree.nodesById.B.leftId).toBeNull()
+    expect(runValidateBstExec(result.finalTree).isValid).toBe(true)
+  })
+
+  it('splices out a one-child node by promoting the child', () => {
+    // Delete C(6) which only has right child F(7)
+    const result = runDeleteBstExec(VALID_BST, 6)
+    expect(result.found).toBe(true)
+    expect(result.finalTree.nodesById.C).toBeUndefined()
+    expect(result.finalTree.nodesById.A.rightId).toBe('F')
+    expect(result.finalTree.nodesById.F.value).toBe(7)
+    expect(runValidateBstExec(result.finalTree).isValid).toBe(true)
+  })
+
+  it('copies the successor value before removing the successor (two children)', () => {
+    // Delete A(4): successor is E(3)? Wait inorder of VALID_BST: D1 B2 E3 A4 C6 F7
+    // Right of A is C. Min of right subtree is C itself (C has no left). Successor = C(6).
+    const result = runDeleteBstExec(VALID_BST, 4)
+    expect(result.found).toBe(true)
+    expect(result.targetNodeId).toBe('A')
+
+    const copy = result.mutations.find((m) => m.kind === 'setValue')
+    expect(copy).toEqual(expect.objectContaining({ kind: 'setValue', nodeId: 'A', value: 6 }))
+
+    const copyStep = result.steps.find((s) => s.copied)
+    expect(copyStep?.codeLine).toBe(DELETE_BST_CODE_LINES.COPY_VALUE)
+    expect(copyStep?.nodeId).toBe('A')
+
+    // After copy but before splice, A should show 6 and C still exists.
+    const afterCopy = treeAfterDeleteMutations(
+      result.baseTree,
+      result.mutations,
+      copy!.stepIndex,
+    )
+    expect(afterCopy.nodesById.A.value).toBe(6)
+    expect(afterCopy.nodesById.C).toBeDefined()
+
+    // Final tree: C gone, A holds 6, F hangs off A.
+    expect(result.finalTree.nodesById.A.value).toBe(6)
+    expect(result.finalTree.nodesById.C).toBeUndefined()
+    expect(result.finalTree.nodesById.A.rightId).toBe('F')
+    expect(runValidateBstExec(result.finalTree).isValid).toBe(true)
+
+    // Scrubbing must expose the intermediate copy before the structural shift.
+    expect(copy!.stepIndex).toBeLessThan(
+      result.mutations.find((m) => m.kind === 'spliceOut')!.stepIndex,
+    )
+  })
+
+  it('uses a deeper successor when the right child has a left spine', () => {
+    //        A(5)
+    //       / \
+    //     B(3) C(9)
+    //         /
+    //       D(7)
+    const tree = makeTree({
+      A: ['B', 'C', 5],
+      B: [null, null, 3],
+      C: ['D', null, 9],
+      D: [null, null, 7],
+    })
+    const result = runDeleteBstExec(tree, 5)
+    const copy = result.mutations.find((m) => m.kind === 'setValue')
+    expect(copy).toEqual(expect.objectContaining({ nodeId: 'A', value: 7 }))
+    expect(result.finalTree.nodesById.A.value).toBe(7)
+    expect(result.finalTree.nodesById.D).toBeUndefined()
+    expect(result.finalTree.nodesById.C.leftId).toBeNull()
+    expect(runValidateBstExec(result.finalTree).isValid).toBe(true)
+  })
+})
+
+describe('buildDeleteBstCompletionStatus', () => {
+  it('describes found and missing outcomes', () => {
+    expect(buildDeleteBstCompletionStatus(runDeleteBstExec(VALID_BST, 1))).toContain('Deleted key 1')
+    expect(buildDeleteBstCompletionStatus(runDeleteBstExec(VALID_BST, 5))).toBe(
+      'Done. Key 5 is not in the tree.',
     )
   })
 })

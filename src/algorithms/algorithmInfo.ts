@@ -32,6 +32,7 @@ export type AlgorithmInfoKey =
   | 'bt-validate'
   | 'bt-search'
   | 'bt-insert'
+  | 'bt-delete'
 
 export type AlgorithmInfo = {
   name: string
@@ -389,6 +390,20 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     cons: [
       'Does not rebalance — repeated inserts can skew the tree toward O(n)',
       'Duplicate values are rejected instead of stored',
+    ],
+  },
+  'bt-delete': {
+    name: 'BST Delete',
+    time: 'O(h)',
+    space: 'O(h)',
+    summary: 'Removes a key by walking to its node. Zero or one child → splice that node out. Two children → copy the inorder successor’s value into the node, then delete the successor from the right subtree.',
+    pros: [
+      'Preserves strict BST order after every case',
+      'Successor copy makes the value hand-off visible before the structure changes',
+    ],
+    cons: [
+      'Two-child case walks the right subtree twice (find min, then delete it)',
+      'Does not rebalance — deletes can still leave a skewed tree',
     ],
   },
 }

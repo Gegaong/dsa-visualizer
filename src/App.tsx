@@ -215,10 +215,20 @@ function App() {
   const handleUndoBstInsert = useCallback((nodeId: string) => {
     setBinaryTree((prev) => removeBstInsertedNode(prev, nodeId))
   }, [])
+  const handleSyncDeleteTree = useCallback((nextTree: BinaryTree) => {
+    setBinaryTree(nextTree)
+    let max = 0
+    for (const id of Object.keys(nextTree.nodesById)) {
+      const match = /^bt-(\d+)$/.exec(id)
+      if (match) max = Math.max(max, Number(match[1]))
+    }
+    nextBinaryTreeId.current = max + 1
+  }, [])
   const binaryTreeBst = useBinaryTreeBstPlayback({
     tree: binaryTree,
     onApplyInsert: handleApplyBstInsert,
     onUndoInsert: handleUndoBstInsert,
+    onSyncDeleteTree: handleSyncDeleteTree,
   })
 
   const traversalVisualSetters = {

@@ -3,18 +3,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { BinaryTree, BinaryTreeSide } from '../types'
 
 import {
+  buildDeleteBstCompletionStatus,
   buildInsertBstCompletionStatus,
   buildSearchBstCompletionStatus,
   buildValidateBstCompletionStatus,
+  canRunDeleteBst,
   canRunInsertBst,
   canRunValidateBst,
   formatBstBound,
+  runDeleteBstExec,
   runInsertBstExec,
   runSearchBstExec,
   runValidateBstExec,
   insertBstHighlightLines,
+  treeAfterDeleteMutations,
   type BinaryTreeBstAlgorithm,
   type BinaryTreeBstExecResult,
+  type BinaryTreeDeleteBstResult,
   type BinaryTreeInsertBstResult,
 } from '../algorithms/binaryTreeBst'
 
@@ -34,13 +39,18 @@ const ALGO_LABEL: Record<BinaryTreeBstAlgorithm, string> = {
   delete: 'Delete',
 }
 
-const IMPLEMENTED: ReadonlySet<BinaryTreeBstAlgorithm> = new Set(['validate', 'search', 'insert'])
+const IMPLEMENTED: ReadonlySet<BinaryTreeBstAlgorithm> = new Set([
+  'validate',
+  'search',
+  'insert',
+  'delete',
+])
 
 const IDLE_STATUS: Record<BinaryTreeBstAlgorithm, string> = {
   validate: 'Run Validate BST to check the search-tree property.',
   search: 'Run Search to look up a target value in the BST.',
   insert: 'Run Insert to place a value into the BST.',
-  delete: 'Delete is coming soon.',
+  delete: 'Run Delete to remove a key from the BST.',
 }
 
 type ApplyInsertResult = { id: string; label: string }
@@ -55,6 +65,8 @@ type UseBinaryTreeBstPlaybackParams = {
   ) => ApplyInsertResult
   // Called when stepping back before CREATE_NODE — removes the leaf added by onApplyInsert.
   onUndoInsert?: (nodeId: string) => void
+  // Called during Delete playback to sync the canvas tree to the step's mutation state.
+  onSyncDeleteTree?: (tree: BinaryTree) => void
 }
 
 export type BinaryTreeBstHandle = {
@@ -69,7 +81,7 @@ export type BinaryTreeBstHandle = {
   startNodeId: string | null
   // Node that broke the BST range check — rendered red on the canvas.
   violationNodeIds: string[]
-  // Matched search / newly inserted / existing duplicate on reject — blue goal on canvas.
+  // Matched search / insert / delete focus — blue goal on canvas.
   goalNodeIds: string[]
 
   isRunning: boolean
@@ -137,10 +149,24 @@ function buildInsertVarsRows(
   ]]
 }
 
+function buildDeleteVarsRows(
+  nodeLabel: string,
+  key: number | null,
+  succLabel: string | null,
+): string[][] {
+  const row = [
+    `node = ${nodeLabel}`,
+    `key = ${key === null ? '—' : String(key)}`,
+  ]
+  if (succLabel !== null) row.push(`succ = ${succLabel}`)
+  return [row]
+}
+
 export function useBinaryTreeBstPlayback({
   tree,
   onApplyInsert,
   onUndoInsert,
+  onSyncDeleteTree,
 }: UseBinaryTreeBstPlaybackParams): BinaryTreeBstHandle {
   const [algorithm, setAlgorithmState] = useState<BinaryTreeBstAlgorithm>('validate')
   const [targetValueInput, setTargetValueInput] = useState('')
@@ -162,6 +188,7 @@ export function useBinaryTreeBstPlayback({
   const stopPlaybackRef = useRef(() => {})
   const onApplyInsertRef = useRef(onApplyInsert)
   const onUndoInsertRef = useRef(onUndoInsert)
+  const onSyncDeleteTreeRef = useRef(onSyncDeleteTree)
   const [playbackSession, setPlaybackSession] = useState(0)
 
   useEffect(() => {
@@ -171,7 +198,8 @@ export function useBinaryTreeBstPlayback({
   useEffect(() => {
     onApplyInsertRef.current = onApplyInsert
     onUndoInsertRef.current = onUndoInsert
-  }, [onApplyInsert, onUndoInsert])
+    onSyncDeleteTreeRef.current = onSyncDeleteTree
+  }, [onApplyInsert, onUndoInsert, onSyncDeleteTree])
 
   const rootLabel = tree.rootId ? (tree.nodesById[tree.rootId]?.label ?? '—') : '—'
   const rootLabelTagged = rootLabel === '—' ? rootLabel : `${rootLabel}(root)`
@@ -205,9 +233,18 @@ export function useBinaryTreeBstPlayback({
     return new Set([codeLine])
   }
 
+  const syncDeleteTreeToStep = (result: BinaryTreeDeleteBstResult, stepIndex: number) => {
+    const nextTree =
+      stepIndex < 0
+        ? result.baseTree
+        : treeAfterDeleteMutations(result.baseTree, result.mutations, stepIndex)
+    onSyncDeleteTreeRef.current?.(nextTree)
+  }
+
   const applyStepIndex = (currentResult: BinaryTreeBstExecResult, index: number) => {
     if (index < 0) {
       if (currentResult.kind === 'insert') undoInsertIfNeeded()
+      if (currentResult.kind === 'delete') syncDeleteTreeToStep(currentResult, -1)
       setCurrentNodeId(tree.rootId)
       setVisitedNodeIds([])
       setCodeHighlighted(highlightForStep(currentResult, 0))
@@ -222,6 +259,9 @@ export function useBinaryTreeBstPlayback({
 
     if (currentResult.kind === 'insert') {
       syncInsertPresence(currentResult, boundedIndex)
+    }
+    if (currentResult.kind === 'delete') {
+      syncDeleteTreeToStep(currentResult, boundedIndex)
     }
 
     const insertedId = insertedNodeIdRef.current
@@ -267,6 +307,12 @@ export function useBinaryTreeBstPlayback({
       boundedIndex >= currentResult.rejectStepIndex
     ) {
       setGoalNodeIds([currentResult.existingNodeId])
+    } else if (
+      currentResult.kind === 'delete' &&
+      step.nodeId &&
+      (step.matched || step.copied || step.removed)
+    ) {
+      setGoalNodeIds([step.nodeId])
     } else {
       setGoalNodeIds([])
     }
@@ -323,6 +369,15 @@ export function useBinaryTreeBstPlayback({
         return
       }
 
+      if (finishedResult.kind === 'delete') {
+        onSyncDeleteTreeRef.current?.(finishedResult.finalTree)
+        setVisitedNodeIds([])
+        setGoalNodeIds([])
+        setViolationNodeIds([])
+        setStatusText(buildDeleteBstCompletionStatus(finishedResult))
+        return
+      }
+
       // Insert: keep the walk path; blue goal on the new node, or on the existing duplicate.
       if (finishedResult.didInsert) {
         const insertedId = insertedNodeIdRef.current
@@ -350,7 +405,11 @@ export function useBinaryTreeBstPlayback({
           : algorithm
 
       stopPlaybackRef.current()
-      // Keep an already-applied insert on Stop — the tree mutation is intentional.
+      // Keep applied insert/delete mutations on Stop — finish delete to the final tree.
+      const active = execResultRef.current
+      if (active?.kind === 'delete') {
+        onSyncDeleteTreeRef.current?.(active.finalTree)
+      }
       setVisitedNodeIds([])
       setCurrentNodeId(null)
       setViolationNodeIds([])
@@ -437,6 +496,20 @@ export function useBinaryTreeBstPlayback({
         return
       }
       beginRun(runInsertBstExec(tree, value), 'Insert ready. Press Play or step through line by line.')
+      return
+    }
+
+    if (algorithm === 'delete') {
+      if (!canRunDeleteBst(tree)) {
+        setStatusText('Warning: fill every node with a number before running Delete.')
+        return
+      }
+      const key = parseNumberInput(targetValueInput)
+      if (key === null) {
+        setStatusText('Warning: enter a key before running Delete.')
+        return
+      }
+      beginRun(runDeleteBstExec(tree, key), 'Delete ready. Press Play or step through line by line.')
     }
   }
 
@@ -457,6 +530,9 @@ export function useBinaryTreeBstPlayback({
     if (replayFromEnd && execResult.kind === 'insert' && execResult.didInsert) {
       // Replay needs a clean tree so CREATE_NODE can add the leaf again.
       undoInsertIfNeeded()
+    }
+    if (replayFromEnd && execResult.kind === 'delete') {
+      onSyncDeleteTreeRef.current?.(execResult.baseTree)
     }
     playback.togglePlay()
     if (replayFromEnd) {
@@ -479,6 +555,7 @@ export function useBinaryTreeBstPlayback({
   const parsedTarget = parseNumberInput(targetValueInput)
   const treeReadyForValidate = canRunValidateBst(tree)
   const treeReadyForInsert = canRunInsertBst(tree)
+  const treeReadyForDelete = canRunDeleteBst(tree)
 
   const canRunAlgorithm =
     algorithm === 'validate'
@@ -487,16 +564,20 @@ export function useBinaryTreeBstPlayback({
         ? algorithmReady && treeReadyForValidate && parsedTarget !== null
         : algorithm === 'insert'
           ? algorithmReady && treeReadyForInsert && parsedTarget !== null
-          : false
+          : algorithm === 'delete'
+            ? algorithmReady && treeReadyForDelete && parsedTarget !== null
+            : false
 
   let sidebarStatusText = statusText
   if (!algorithmReady) {
     sidebarStatusText = `${ALGO_LABEL[algorithm]} is coming soon.`
   } else if (!canRunAlgorithm) {
-    if (algorithm !== 'insert' && nodes.length === 0) {
+    if (algorithm !== 'insert' && algorithm !== 'delete' && nodes.length === 0) {
       sidebarStatusText = `Warning: add at least one node before running ${ALGO_LABEL[algorithm]}.`
     } else if (algorithm === 'insert' && !treeReadyForInsert) {
       sidebarStatusText = 'Warning: fill every node with a number before running Insert.'
+    } else if (algorithm === 'delete' && !treeReadyForDelete) {
+      sidebarStatusText = 'Warning: fill every node with a number before running Delete.'
     } else if (algorithm !== 'insert' && !treeReadyForValidate) {
       sidebarStatusText =
         `Warning: fill every node with a number before running ${ALGO_LABEL[algorithm]}.`
@@ -504,7 +585,9 @@ export function useBinaryTreeBstPlayback({
       sidebarStatusText =
         algorithm === 'insert'
           ? 'Warning: enter a value before running Insert.'
-          : 'Warning: enter a target value before running Search.'
+          : algorithm === 'delete'
+            ? 'Warning: enter a key before running Delete.'
+            : 'Warning: enter a target value before running Search.'
     }
   }
 
@@ -547,6 +630,24 @@ export function useBinaryTreeBstPlayback({
       )
     }
 
+    if (execResult.kind === 'delete') {
+      if (playback.stepIndex < 0) {
+        return buildDeleteVarsRows(
+          tree.rootId ? rootLabelTagged : '—',
+          execResult.key,
+          null,
+        )
+      }
+      const si = Math.min(playback.stepIndex, execResult.steps.length - 1)
+      const step = execResult.steps[si]
+      const isDone = playback.isPlaybackComplete
+      return buildDeleteVarsRows(
+        isDone ? '—' : (step.nodeLabel ?? '—'),
+        isDone ? null : (step.target ?? execResult.key),
+        isDone ? null : (step.succLabel ?? null),
+      )
+    }
+
     if (playback.stepIndex < 0) {
       return buildValidateVarsRows(rootLabelTagged, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, {
         leftOk: '—',
@@ -577,7 +678,7 @@ export function useBinaryTreeBstPlayback({
     tree.rootId,
   ])
 
-  // Hide the green start ring after a valid Validate finishes, or after Search/Insert finishes.
+  // Hide the green start ring after a valid Validate finishes, or after Search/Insert/Delete finishes.
   const showStartHighlight =
     isRunning &&
     !(

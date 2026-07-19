@@ -17,7 +17,7 @@ const INFO_KEY_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, AlgorithmInfoKey | n
   validate: 'bt-validate',
   search: 'bt-search',
   insert: 'bt-insert',
-  delete: null,
+  delete: 'bt-delete',
 }
 
 const VALIDATE_CODE = `function isValidBST(node, min, max):
@@ -91,24 +91,56 @@ Each call carries open bounds (min, max):
 The new leaf sits strictly inside every
 ancestor's range.`
 
+const DELETE_CODE = `function deleteBST(node, key):
+    if node = null: return null
+    if key < node.value:
+        node.left ← deleteBST(node.left, key)
+    else if key > node.value:
+        node.right ← deleteBST(node.right, key)
+    else if node.left = null: return node.right
+    else if node.right = null: return node.left
+    else:
+        succ ← node.right
+        while succ.left ≠ null: succ ← succ.left
+        node.value ← succ.value
+        node.right ← deleteBST(node.right, succ.value)
+    return node`
+
+const DELETE_LOGIC = `Delete a key from a strict BST.
+Two children → replace with inorder
+successor, then remove that successor.
+──────────────────────────────────────────
+  · Missing node → nothing to delete.
+  · Key smaller → recurse left.
+  · Key larger → recurse right.
+  · No left child → replace with right.
+  · No right child → replace with left.
+  · Both children → find min in right,
+    copy its value into node, then
+    delete that successor from the right.
+──────────────────────────────────────────
+Value copy is visible before the
+successor node is spliced out.`
+
 const CODE_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   validate: VALIDATE_CODE,
   search: SEARCH_CODE,
   insert: INSERT_CODE,
-  delete: '// Coming soon',
+  delete: DELETE_CODE,
 }
 
 const LOGIC_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   validate: VALIDATE_LOGIC,
   search: SEARCH_LOGIC,
   insert: INSERT_LOGIC,
-  delete: 'Delete is coming soon.',
+  delete: DELETE_LOGIC,
 }
 
 const HIGHLIGHT_READY: ReadonlySet<BinaryTreeBstAlgorithm> = new Set([
   'validate',
   'search',
   'insert',
+  'delete',
 ])
 
 const NO_HIGHLIGHTS = new Set<number>()
@@ -170,7 +202,7 @@ export const BinaryTreeBstPage = ({
     ALGORITHM_OPTIONS.find((option) => option.value === algorithm)?.label ?? algorithm
   const infoKey = INFO_KEY_BY_ALGORITHM[algorithm]
   const showHighlights = HIGHLIGHT_READY.has(algorithm)
-  const showValueInput = algorithm === 'search' || algorithm === 'insert'
+  const showValueInput = algorithm === 'search' || algorithm === 'insert' || algorithm === 'delete'
 
   return (
     <div className="sidebar-page-body">
@@ -197,7 +229,7 @@ export const BinaryTreeBstPage = ({
           <h3>Inputs</h3>
           <label className="field">
             <span>
-              {algorithm === 'insert' ? 'Value' : 'Target value'}{' '}
+              {algorithm === 'insert' ? 'Value' : algorithm === 'delete' ? 'Key' : 'Target value'}{' '}
               <span className="required-indicator" aria-hidden="true">*</span>
             </span>
             <input
