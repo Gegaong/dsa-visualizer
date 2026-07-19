@@ -16,7 +16,7 @@ const ALGORITHM_OPTIONS: { value: BinaryTreeBstAlgorithm; label: string }[] = [
 const INFO_KEY_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, AlgorithmInfoKey | null> = {
   validate: 'bt-validate',
   search: 'bt-search',
-  insert: null,
+  insert: 'bt-insert',
   delete: null,
 }
 
@@ -65,21 +65,48 @@ Walk from the root toward the target:
 ──────────────────────────────────────────
 Found node returned, or null if missing.`
 
+const INSERT_CODE = `function insertBST(node, value,
+    min, max):
+    if node = null:
+        return new Node(value)
+    if value < node.value:
+        node.left ← insertBST(node.left, value, min, node.value)
+    else:
+        node.right ← insertBST(node.right, value, node.value, max)
+    return node`
+
+const INSERT_LOGIC = `Insert a value while keeping BST order:
+no bigger value on the left,
+no smaller value on the right.
+──────────────────────────────────────────
+Each call carries allowed bounds [min, max]:
+  · Root starts with [-∞, +∞].
+  · Empty slot → create the new node there.
+  · Value < node → left, with max = node.value.
+  · Value ≥ node → right, with min = node.value.
+  · After linking the child, return node.
+──────────────────────────────────────────
+The new leaf sits inside every ancestor's range.`
+
 const CODE_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   validate: VALIDATE_CODE,
   search: SEARCH_CODE,
-  insert: '// Coming soon',
+  insert: INSERT_CODE,
   delete: '// Coming soon',
 }
 
 const LOGIC_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   validate: VALIDATE_LOGIC,
   search: SEARCH_LOGIC,
-  insert: 'Insert is coming soon.',
+  insert: INSERT_LOGIC,
   delete: 'Delete is coming soon.',
 }
 
-const HIGHLIGHT_READY: ReadonlySet<BinaryTreeBstAlgorithm> = new Set(['validate', 'search'])
+const HIGHLIGHT_READY: ReadonlySet<BinaryTreeBstAlgorithm> = new Set([
+  'validate',
+  'search',
+  'insert',
+])
 
 const NO_HIGHLIGHTS = new Set<number>()
 
@@ -140,6 +167,7 @@ export const BinaryTreeBstPage = ({
     ALGORITHM_OPTIONS.find((option) => option.value === algorithm)?.label ?? algorithm
   const infoKey = INFO_KEY_BY_ALGORITHM[algorithm]
   const showHighlights = HIGHLIGHT_READY.has(algorithm)
+  const showValueInput = algorithm === 'search' || algorithm === 'insert'
 
   return (
     <div className="sidebar-page-body">
@@ -161,12 +189,13 @@ export const BinaryTreeBstPage = ({
 
       {infoKey && <AlgorithmInfoCard infoKey={infoKey} />}
 
-      {algorithm === 'search' && (
+      {showValueInput && (
         <div className="sidebar-section algorithm-inputs-section">
           <h3>Inputs</h3>
           <label className="field">
             <span>
-              Target value <span className="required-indicator" aria-hidden="true">*</span>
+              {algorithm === 'insert' ? 'Value' : 'Target value'}{' '}
+              <span className="required-indicator" aria-hidden="true">*</span>
             </span>
             <input
               {...NODE_VALUE_FIELD_ATTRS}

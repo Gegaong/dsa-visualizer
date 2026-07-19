@@ -80,6 +80,7 @@ import { useNQueensPlayback } from './hooks/useNQueensPlayback'
 import { useBinaryTreeTraversalPlayback } from './hooks/useBinaryTreeTraversalPlayback'
 import { useBinaryTreeBstPlayback } from './hooks/useBinaryTreeBstPlayback'
 import { collectSubtreeIds, findParentId, findChildSide, convertBinaryTreeToBst } from './algorithms/binaryTreeShared'
+import { applyBstInsert, removeBstInsertedNode } from './algorithms/binaryTreeBst'
 
 const CANVAS_ORDER: CanvasType[] = ['graph', 'binary-tree', 'weighted-graph', 'grid', 'nqueens']
 
@@ -197,7 +198,28 @@ function App() {
   })
 
   const binaryTreeTraversal = useBinaryTreeTraversalPlayback({ tree: binaryTree })
-  const binaryTreeBst = useBinaryTreeBstPlayback({ tree: binaryTree })
+  const handleApplyBstInsert = useCallback(
+    (parentNodeId: string | null, side: BinaryTreeSide | null, value: number) => {
+      const newId = `bt-${nextBinaryTreeId.current}`
+      nextBinaryTreeId.current += 1
+      let label = '?'
+      setBinaryTree((prev) => {
+        const next = applyBstInsert(prev, { parentNodeId, side, value, newId })
+        label = next.nodesById[newId]?.label ?? '?'
+        return next
+      })
+      return { id: newId, label }
+    },
+    [],
+  )
+  const handleUndoBstInsert = useCallback((nodeId: string) => {
+    setBinaryTree((prev) => removeBstInsertedNode(prev, nodeId))
+  }, [])
+  const binaryTreeBst = useBinaryTreeBstPlayback({
+    tree: binaryTree,
+    onApplyInsert: handleApplyBstInsert,
+    onUndoInsert: handleUndoBstInsert,
+  })
 
   const traversalVisualSetters = {
     setTraversalVisitedNodeIds: traversal.setTraversalVisitedNodeIds,

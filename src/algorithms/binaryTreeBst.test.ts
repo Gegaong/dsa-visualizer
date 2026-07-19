@@ -5,12 +5,18 @@ import type { BinaryTree } from '../types'
 import {
   buildValidateBstCompletionStatus,
   buildSearchBstCompletionStatus,
+  buildInsertBstCompletionStatus,
   canRunValidateBst,
+  canRunInsertBst,
   formatBstBound,
   runValidateBstExec,
   runSearchBstExec,
+  runInsertBstExec,
+  applyBstInsert,
+  removeBstInsertedNode,
   VALIDATE_BST_CODE_LINES,
   SEARCH_BST_CODE_LINES,
+  INSERT_BST_CODE_LINES,
 } from './binaryTreeBst'
 
 function makeTree(
@@ -226,6 +232,113 @@ describe('buildSearchBstCompletionStatus', () => {
     )
     expect(buildSearchBstCompletionStatus(runSearchBstExec(VALID_BST, 5))).toBe(
       'Done. Target 5 is not in the tree.',
+    )
+  })
+})
+
+describe('canRunInsertBst', () => {
+  it('allows an empty tree, but rejects trees with empty node values', () => {
+    expect(canRunInsertBst({ rootId: null, nodesById: {} })).toBe(true)
+    expect(canRunInsertBst(VALID_BST)).toBe(true)
+    expect(canRunInsertBst(makeTree({ A: [null, null, 'empty'] }))).toBe(false)
+  })
+})
+
+describe('runInsertBstExec', () => {
+  it('inserts as root on an empty tree', () => {
+    const result = runInsertBstExec({ rootId: null, nodesById: {} }, 4)
+    expect(result.parentNodeId).toBeNull()
+    expect(result.side).toBeNull()
+    expect(result.steps.at(-1)?.codeLine).toBe(INSERT_BST_CODE_LINES.CREATE_NODE)
+    expect(result.steps[result.insertStepIndex]?.inserted).toBe(true)
+  })
+
+  it('walks left for a smaller value and records the left slot', () => {
+    const result = runInsertBstExec(VALID_BST, 0)
+    expect(result.parentNodeId).toBe('D')
+    expect(result.side).toBe('left')
+    expect(result.steps.at(-1)?.visitedNodeIds).toEqual(['A', 'B', 'D'])
+  })
+
+  it('sends equal or larger values down the right branch from a node', () => {
+    const equal = runInsertBstExec(VALID_BST, 4)
+    const atRoot = equal.steps.filter((step) => step.nodeLabel === 'A')
+    expect(atRoot.some((step) => step.codeLine === INSERT_BST_CODE_LINES.ASSIGN_RIGHT)).toBe(true)
+    // 4 goes A→right→C, then C→left→null
+    expect(equal.parentNodeId).toBe('C')
+    expect(equal.side).toBe('left')
+
+    const larger = runInsertBstExec(VALID_BST, 8)
+    expect(larger.parentNodeId).toBe('F')
+    expect(larger.side).toBe('right')
+  })
+
+  it('tightens max when descending left and min when descending right', () => {
+    const left = runInsertBstExec(VALID_BST, 0)
+    const enterD = left.steps.find(
+      (step) => step.codeLine === INSERT_BST_CODE_LINES.ENTER && step.nodeLabel === 'D',
+    )
+    expect(enterD?.minBound).toBe(Number.NEGATIVE_INFINITY)
+    expect(enterD?.maxBound).toBe(2)
+
+    const right = runInsertBstExec(VALID_BST, 8)
+    const enterF = right.steps.find(
+      (step) => step.codeLine === INSERT_BST_CODE_LINES.ENTER && step.nodeLabel === 'F',
+    )
+    expect(enterF?.minBound).toBe(6)
+    expect(enterF?.maxBound).toBe(Number.POSITIVE_INFINITY)
+  })
+
+  it('keeps a valid BST valid after the planned insert is applied', () => {
+    const plan = runInsertBstExec(VALID_BST, 0)
+    const next = applyBstInsert(VALID_BST, {
+      parentNodeId: plan.parentNodeId,
+      side: plan.side,
+      value: plan.value,
+      newId: 'bt-new',
+    })
+    expect(runValidateBstExec(next).isValid).toBe(true)
+  })
+})
+
+describe('applyBstInsert / removeBstInsertedNode', () => {
+  it('adds a valued leaf and can undo the insert', () => {
+    const inserted = applyBstInsert(VALID_BST, {
+      parentNodeId: 'D',
+      side: 'left',
+      value: 0,
+      newId: 'bt-new',
+    })
+    expect(inserted.nodesById['bt-new']?.value).toBe(0)
+    expect(inserted.nodesById.D.leftId).toBe('bt-new')
+    expect(Object.keys(inserted.nodesById)).toHaveLength(7)
+
+    const undone = removeBstInsertedNode(inserted, 'bt-new')
+    expect(undone.nodesById['bt-new']).toBeUndefined()
+    expect(undone.nodesById.D.leftId).toBeNull()
+    expect(Object.keys(undone.nodesById)).toHaveLength(6)
+  })
+
+  it('can insert a root into an empty tree', () => {
+    const inserted = applyBstInsert(
+      { rootId: null, nodesById: {} },
+      { parentNodeId: null, side: null, value: 5, newId: 'bt-1' },
+    )
+    expect(inserted.rootId).toBe('bt-1')
+    expect(inserted.nodesById['bt-1']?.value).toBe(5)
+    expect(inserted.nodesById['bt-1']?.label).toBe('A')
+  })
+})
+
+describe('buildInsertBstCompletionStatus', () => {
+  it('describes root and child inserts', () => {
+    const rootResult = runInsertBstExec({ rootId: null, nodesById: {} }, 5)
+    expect(buildInsertBstCompletionStatus(rootResult, 'A')).toBe(
+      'Done. Inserted 5 as root node A.',
+    )
+    const childResult = runInsertBstExec(VALID_BST, 0)
+    expect(buildInsertBstCompletionStatus(childResult, 'G')).toBe(
+      'Done. Inserted 0 as node G.',
     )
   })
 })

@@ -31,6 +31,7 @@ export type AlgorithmInfoKey =
   | 'bt-levelorder'
   | 'bt-validate'
   | 'bt-search'
+  | 'bt-insert'
 
 export type AlgorithmInfo = {
   name: string
@@ -374,6 +375,20 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     cons: [
       'Correctness depends on the tree actually being a BST',
       'Degenerates to O(n) on a skewed tree',
+    ],
+  },
+  'bt-insert': {
+    name: 'BST Insert',
+    time: 'O(h)',
+    space: 'O(h)',
+    summary: 'Places a new value by walking from the root with tightening [min, max] bounds — left when smaller (max becomes the node), right when greater or equal (min becomes the node) — then links a new leaf in that slot.',
+    pros: [
+      'Keeps the search-tree order: nothing bigger on the left, nothing smaller on the right',
+      'Same bound-passing idea as Validate BST, on a single root-to-leaf walk',
+    ],
+    cons: [
+      'Does not rebalance — repeated inserts can skew the tree toward O(n)',
+      'Duplicate values always go right, so equals are not unique keys',
     ],
   },
 }

@@ -1,6 +1,8 @@
-import type { BinaryTree, BinaryTreeNode } from '../types'
+import type { BinaryTree, BinaryTreeNode, BinaryTreeSide } from '../types'
 
-import { treeHasAllNumericValues } from './binaryTreeShared'
+import { relabelBinaryTree } from '../utils/format'
+
+import { findChildSide, findParentId, treeHasAllNumericValues } from './binaryTreeShared'
 
 export type BinaryTreeBstAlgorithm = 'validate' | 'search' | 'insert' | 'delete'
 
@@ -30,6 +32,28 @@ export const SEARCH_BST_CODE_LINES = {
   RECURSE_RIGHT: 7,
 } as const
 
+// Line indices into BinaryTreeBstPage INSERT_CODE — keep in sync when editing pseudocode.
+// ENTER_CONT is the wrapped `min, max):` line; highlight it together with ENTER.
+export const INSERT_BST_CODE_LINES = {
+  ENTER: 0,
+  ENTER_CONT: 1,
+  NULL_CHECK: 2,
+  CREATE_NODE: 3,
+  COMPARE: 4,
+  ASSIGN_LEFT: 5,
+  ELSE: 6,
+  ASSIGN_RIGHT: 7,
+  RETURN: 8,
+} as const
+
+/** Insert signature spans two lines; ENTER highlights both. */
+export function insertBstHighlightLines(codeLine: number): Set<number> {
+  if (codeLine === INSERT_BST_CODE_LINES.ENTER) {
+    return new Set([INSERT_BST_CODE_LINES.ENTER, INSERT_BST_CODE_LINES.ENTER_CONT])
+  }
+  return new Set([codeLine])
+}
+
 export type BinaryTreeBstExecStep = {
   order: number
   codeLine: number
@@ -46,6 +70,8 @@ export type BinaryTreeBstExecStep = {
   target?: number
   /** True on the search step that returns the matching node. */
   matched?: boolean
+  /** True on the insert step that creates the new node. */
+  inserted?: boolean
 }
 
 export type BinaryTreeValidateBstResult = {
@@ -65,7 +91,27 @@ export type BinaryTreeSearchBstResult = {
   target: number
 }
 
-export type BinaryTreeBstExecResult = BinaryTreeValidateBstResult | BinaryTreeSearchBstResult
+export type BinaryTreeInsertBstResult = {
+  kind: 'insert'
+  steps: BinaryTreeBstExecStep[]
+  value: number
+  parentNodeId: string | null
+  side: BinaryTreeSide | null
+  /** Index into steps where the new node should appear on the canvas. */
+  insertStepIndex: number
+}
+
+export type BinaryTreeBstExecResult =
+  | BinaryTreeValidateBstResult
+  | BinaryTreeSearchBstResult
+  | BinaryTreeInsertBstResult
+
+export type ApplyBstInsertSpec = {
+  parentNodeId: string | null
+  side: BinaryTreeSide | null
+  value: number
+  newId: string
+}
 
 export function formatBstBound(bound: number): string {
   if (bound === Number.NEGATIVE_INFINITY) return '-∞'
@@ -94,7 +140,8 @@ export function runValidateBstExec(tree: BinaryTree): BinaryTreeValidateBstResul
   const steps: BinaryTreeBstExecStep[] = []
   const visitedOrder: string[] = []
   let stopped = false
-  let violationNode: BinaryTreeNode | null = null
+  let violationNodeId: string | null = null
+  let violationNodeLabel: string | null = null
 
   const push = (
     codeLine: number,
@@ -141,7 +188,8 @@ export function runValidateBstExec(tree: BinaryTree): BinaryTreeValidateBstResul
     const node = tree.nodesById[nodeId]
     if (!node || typeof node.value !== 'number') {
       // Treat missing / empty as invalid data; should be gated before run.
-      violationNode = node ?? null
+      violationNodeId = nodeId
+      violationNodeLabel = node?.label ?? null
       stopped = true
       push(L.RETURN_FALSE, nodeId, parentNodeId, minBound, maxBound, frame(), { violated: true })
       return false
@@ -150,7 +198,8 @@ export function runValidateBstExec(tree: BinaryTree): BinaryTreeValidateBstResul
     push(L.RANGE_CHECK, nodeId, parentNodeId, minBound, maxBound, frame())
 
     if (node.value < minBound || node.value > maxBound) {
-      violationNode = node
+      violationNodeId = node.id
+      violationNodeLabel = node.label
       stopped = true
       push(L.RETURN_FALSE, nodeId, parentNodeId, minBound, maxBound, frame(), { violated: true })
       return false
@@ -178,8 +227,8 @@ export function runValidateBstExec(tree: BinaryTree): BinaryTreeValidateBstResul
     kind: 'validate',
     steps,
     isValid,
-    violationNodeId: violationNode?.id ?? null,
-    violationNodeLabel: violationNode?.label ?? null,
+    violationNodeId,
+    violationNodeLabel,
   }
 }
 
@@ -267,7 +316,174 @@ export function runSearchBstExec(tree: BinaryTree, target: number): BinaryTreeSe
   }
 }
 
+export function buildInsertBstCompletionStatus(
+  result: BinaryTreeInsertBstResult,
+  insertedLabel: string | null,
+): string {
+  const label = insertedLabel ?? '?'
+  if (result.parentNodeId === null) {
+    return `Done. Inserted ${result.value} as root node ${label}.`
+  }
+  return `Done. Inserted ${result.value} as node ${label}.`
+}
+
+/**
+ * Line-by-line BST insert with tightening [min, max] bounds (same rule as Validate):
+ * left child may not exceed node.value; right child may not be below node.value.
+ * Walks to a null slot inside the allowed range, then creates the leaf there.
+ * Does not mutate the tree — the playback layer applies the insert at CREATE_NODE.
+ */
+export function runInsertBstExec(tree: BinaryTree, value: number): BinaryTreeInsertBstResult {
+  const L = INSERT_BST_CODE_LINES
+  const steps: BinaryTreeBstExecStep[] = []
+  const visitedOrder: string[] = []
+  let parentNodeId: string | null = null
+  let side: BinaryTreeSide | null = null
+  let insertStepIndex = -1
+
+  const push = (
+    codeLine: number,
+    nodeId: string | null,
+    parentId: string | null,
+    minBound: number,
+    maxBound: number,
+    opts?: { markVisited?: boolean; inserted?: boolean },
+  ) => {
+    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
+      visitedOrder.push(nodeId)
+    }
+    if (opts?.inserted) insertStepIndex = steps.length
+    steps.push({
+      order: steps.length + 1,
+      codeLine,
+      nodeId,
+      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
+      parentNodeId: parentId,
+      visitedNodeIds: [...visitedOrder],
+      minBound,
+      maxBound,
+      target: value,
+      inserted: opts?.inserted,
+    })
+  }
+
+  function insertBST(
+    nodeId: string | null,
+    parentId: string | null,
+    childSide: BinaryTreeSide | null,
+    minBound: number,
+    maxBound: number,
+  ): void {
+    push(L.ENTER, nodeId, parentId, minBound, maxBound)
+    push(L.NULL_CHECK, nodeId, parentId, minBound, maxBound)
+
+    if (!nodeId) {
+      parentNodeId = parentId
+      side = childSide
+      push(L.CREATE_NODE, null, parentId, minBound, maxBound, { inserted: true })
+      return
+    }
+
+    const node = tree.nodesById[nodeId]
+    if (!node || typeof node.value !== 'number') {
+      // Gated before run; treat as insert-at-this-slot if it still happens.
+      parentNodeId = parentId
+      side = childSide
+      push(L.CREATE_NODE, null, parentId, minBound, maxBound, { inserted: true })
+      return
+    }
+
+    // Smaller → left (max tightens to node.value); ≥ → right (min tightens to node.value).
+    push(L.COMPARE, nodeId, parentId, minBound, maxBound, { markVisited: true })
+    if (value < node.value) {
+      push(L.ASSIGN_LEFT, nodeId, parentId, minBound, maxBound)
+      insertBST(node.leftId, nodeId, 'left', minBound, node.value)
+    } else {
+      push(L.ELSE, nodeId, parentId, minBound, maxBound)
+      push(L.ASSIGN_RIGHT, nodeId, parentId, minBound, maxBound)
+      insertBST(node.rightId, nodeId, 'right', node.value, maxBound)
+    }
+    push(L.RETURN, nodeId, parentId, minBound, maxBound)
+  }
+
+  insertBST(tree.rootId, null, null, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY)
+
+  return {
+    kind: 'insert',
+    steps,
+    value,
+    parentNodeId,
+    side,
+    insertStepIndex,
+  }
+}
+
+/** Adds a valued leaf at the BST insert location and relabels A, B, C, … */
+export function applyBstInsert(tree: BinaryTree, spec: ApplyBstInsertSpec): BinaryTree {
+  const newNode: BinaryTreeNode = {
+    id: spec.newId,
+    label: '',
+    value: spec.value,
+    leftId: null,
+    rightId: null,
+  }
+
+  if (spec.parentNodeId === null) {
+    if (tree.rootId) return tree
+    return relabelBinaryTree({
+      rootId: spec.newId,
+      nodesById: { ...tree.nodesById, [spec.newId]: newNode },
+    })
+  }
+
+  const parent = tree.nodesById[spec.parentNodeId]
+  if (!parent || spec.side === null) return tree
+  if (spec.side === 'left' ? parent.leftId : parent.rightId) return tree
+
+  const updatedParent =
+    spec.side === 'left'
+      ? { ...parent, leftId: spec.newId }
+      : { ...parent, rightId: spec.newId }
+
+  return relabelBinaryTree({
+    rootId: tree.rootId,
+    nodesById: {
+      ...tree.nodesById,
+      [spec.parentNodeId]: updatedParent,
+      [spec.newId]: newNode,
+    },
+  })
+}
+
+/** Removes a leaf inserted by BST insert (used when stepping back past CREATE_NODE). */
+export function removeBstInsertedNode(tree: BinaryTree, nodeId: string): BinaryTree {
+  if (!tree.nodesById[nodeId]) return tree
+
+  const nodesById = { ...tree.nodesById }
+  delete nodesById[nodeId]
+
+  const rootId = tree.rootId === nodeId ? null : tree.rootId
+  const parentId = findParentId(tree, nodeId)
+  if (parentId && nodesById[parentId]) {
+    const childSide = findChildSide(tree, parentId, nodeId)
+    if (childSide === 'left') {
+      nodesById[parentId] = { ...nodesById[parentId], leftId: null }
+    } else if (childSide === 'right') {
+      nodesById[parentId] = { ...nodesById[parentId], rightId: null }
+    }
+  }
+
+  return relabelBinaryTree({ rootId, nodesById })
+}
+
 /** True when BST algorithms can safely run (every node has a number). */
 export function canRunValidateBst(tree: BinaryTree): boolean {
+  return treeHasAllNumericValues(tree)
+}
+
+/** Insert may start from an empty tree; otherwise every existing node must be numeric. */
+export function canRunInsertBst(tree: BinaryTree): boolean {
+  const nodes = Object.values(tree.nodesById)
+  if (nodes.length === 0) return true
   return treeHasAllNumericValues(tree)
 }
