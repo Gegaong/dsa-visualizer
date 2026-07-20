@@ -208,6 +208,32 @@ function formatSubtreeResult(node: BinaryTreeNode | null | undefined): string {
   return node.label
 }
 
+// Shared step-record boilerplate common to every traversal variant below: computed `order`,
+// resolved `nodeLabel`, and idempotent visited-tracking. Callers spread their own
+// algorithm-specific extras (matchedGoal/leftResult/rightResult, runningBest, queueLabels, ...)
+// over the result.
+function buildStepBase(
+  tree: BinaryTree,
+  stepCount: number,
+  visitedOrder: string[],
+  codeLine: number,
+  nodeId: string | null,
+  parentNodeId: string | null,
+  markVisited: boolean | undefined,
+) {
+  if (markVisited && nodeId && !visitedOrder.includes(nodeId)) {
+    visitedOrder.push(nodeId)
+  }
+  return {
+    order: stepCount + 1,
+    codeLine,
+    nodeId,
+    nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
+    parentNodeId,
+    visitedNodeIds: [...visitedOrder],
+  }
+}
+
 function runPreorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecResult {
   const L = PREORDER_TARGET_CODE_LINES
   const steps: BinaryTreeExecStep[] = []
@@ -222,16 +248,8 @@ function runPreorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecR
     frame: { leftResult: BinaryTreeNode | null | undefined; rightResult: BinaryTreeNode | null | undefined },
     opts?: { markVisited?: boolean; matchedGoal?: boolean },
   ) => {
-    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
-      visitedOrder.push(nodeId)
-    }
     steps.push({
-      order: steps.length + 1,
-      codeLine,
-      nodeId,
-      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
-      parentNodeId,
-      visitedNodeIds: [...visitedOrder],
+      ...buildStepBase(tree, steps.length, visitedOrder, codeLine, nodeId, parentNodeId, opts?.markVisited),
       matchedGoal: opts?.matchedGoal,
       leftResult: formatSubtreeResult(frame.leftResult),
       rightResult: formatSubtreeResult(frame.rightResult),
@@ -285,7 +303,10 @@ function runPreorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecR
 
   preorder(tree.rootId, null)
 
-  const finalNode = foundNode
+  // TS narrows `foundNode` to `never` here (a known over-aggressive narrowing of a mutable
+  // closure variable reassigned-then-returned inside the recursive walk above); the assertion
+  // restores its declared type, which is what the runtime value actually is.
+  const finalNode = foundNode as BinaryTreeNode | null
   return {
     steps,
     foundNodeId: finalNode?.id ?? null,
@@ -310,16 +331,8 @@ function runPreorderExtremeExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExec
     runningBest?: number | null,
     opts?: { markVisited?: boolean },
   ) => {
-    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
-      visitedOrder.push(nodeId)
-    }
     steps.push({
-      order: steps.length + 1,
-      codeLine,
-      nodeId,
-      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
-      parentNodeId,
-      visitedNodeIds: [...visitedOrder],
+      ...buildStepBase(tree, steps.length, visitedOrder, codeLine, nodeId, parentNodeId, opts?.markVisited),
       runningBest: runningBest ?? extremeValue,
     })
   }
@@ -391,16 +404,8 @@ function runInorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecRe
     frame: { leftResult: BinaryTreeNode | null | undefined; rightResult: BinaryTreeNode | null | undefined },
     opts?: { markVisited?: boolean; matchedGoal?: boolean },
   ) => {
-    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
-      visitedOrder.push(nodeId)
-    }
     steps.push({
-      order: steps.length + 1,
-      codeLine,
-      nodeId,
-      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
-      parentNodeId,
-      visitedNodeIds: [...visitedOrder],
+      ...buildStepBase(tree, steps.length, visitedOrder, codeLine, nodeId, parentNodeId, opts?.markVisited),
       matchedGoal: opts?.matchedGoal,
       leftResult: formatSubtreeResult(frame.leftResult),
       rightResult: formatSubtreeResult(frame.rightResult),
@@ -454,7 +459,10 @@ function runInorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecRe
 
   inorder(tree.rootId, null)
 
-  const finalNode = foundNode
+  // TS narrows `foundNode` to `never` here (a known over-aggressive narrowing of a mutable
+  // closure variable reassigned-then-returned inside the recursive walk above); the assertion
+  // restores its declared type, which is what the runtime value actually is.
+  const finalNode = foundNode as BinaryTreeNode | null
   return {
     steps,
     foundNodeId: finalNode?.id ?? null,
@@ -479,16 +487,8 @@ function runInorderExtremeExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExecR
     runningBest?: number | null,
     opts?: { markVisited?: boolean },
   ) => {
-    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
-      visitedOrder.push(nodeId)
-    }
     steps.push({
-      order: steps.length + 1,
-      codeLine,
-      nodeId,
-      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
-      parentNodeId,
-      visitedNodeIds: [...visitedOrder],
+      ...buildStepBase(tree, steps.length, visitedOrder, codeLine, nodeId, parentNodeId, opts?.markVisited),
       runningBest: runningBest ?? extremeValue,
     })
   }
@@ -560,16 +560,8 @@ function runPostorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExec
     frame: { leftResult: BinaryTreeNode | null | undefined; rightResult: BinaryTreeNode | null | undefined },
     opts?: { markVisited?: boolean; matchedGoal?: boolean },
   ) => {
-    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
-      visitedOrder.push(nodeId)
-    }
     steps.push({
-      order: steps.length + 1,
-      codeLine,
-      nodeId,
-      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
-      parentNodeId,
-      visitedNodeIds: [...visitedOrder],
+      ...buildStepBase(tree, steps.length, visitedOrder, codeLine, nodeId, parentNodeId, opts?.markVisited),
       matchedGoal: opts?.matchedGoal,
       leftResult: formatSubtreeResult(frame.leftResult),
       rightResult: formatSubtreeResult(frame.rightResult),
@@ -630,7 +622,10 @@ function runPostorderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExec
 
   postorder(tree.rootId, null)
 
-  const finalNode = foundNode
+  // TS narrows `foundNode` to `never` here (a known over-aggressive narrowing of a mutable
+  // closure variable reassigned-then-returned inside the recursive walk above); the assertion
+  // restores its declared type, which is what the runtime value actually is.
+  const finalNode = foundNode as BinaryTreeNode | null
   return {
     steps,
     foundNodeId: finalNode?.id ?? null,
@@ -655,16 +650,8 @@ function runPostorderExtremeExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExe
     runningBest?: number | null,
     opts?: { markVisited?: boolean },
   ) => {
-    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
-      visitedOrder.push(nodeId)
-    }
     steps.push({
-      order: steps.length + 1,
-      codeLine,
-      nodeId,
-      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
-      parentNodeId,
-      visitedNodeIds: [...visitedOrder],
+      ...buildStepBase(tree, steps.length, visitedOrder, codeLine, nodeId, parentNodeId, opts?.markVisited),
       runningBest: runningBest ?? extremeValue,
     })
   }
@@ -741,16 +728,8 @@ function runLevelOrderTargetExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeExe
     queue: QueueEntry[],
     opts?: { markVisited?: boolean; matchedGoal?: boolean },
   ) => {
-    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
-      visitedOrder.push(nodeId)
-    }
     steps.push({
-      order: steps.length + 1,
-      codeLine,
-      nodeId,
-      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
-      parentNodeId,
-      visitedNodeIds: [...visitedOrder],
+      ...buildStepBase(tree, steps.length, visitedOrder, codeLine, nodeId, parentNodeId, opts?.markVisited),
       matchedGoal: opts?.matchedGoal,
       queueLabels: queueLabelsFrom(tree, queue),
     })
@@ -824,16 +803,8 @@ function runLevelOrderExtremeExec(tree: BinaryTree, goal: BfsGoal): BinaryTreeEx
     runningBest?: number | null,
     opts?: { markVisited?: boolean },
   ) => {
-    if (opts?.markVisited && nodeId && !visitedOrder.includes(nodeId)) {
-      visitedOrder.push(nodeId)
-    }
     steps.push({
-      order: steps.length + 1,
-      codeLine,
-      nodeId,
-      nodeLabel: nodeId ? (tree.nodesById[nodeId]?.label ?? null) : null,
-      parentNodeId,
-      visitedNodeIds: [...visitedOrder],
+      ...buildStepBase(tree, steps.length, visitedOrder, codeLine, nodeId, parentNodeId, opts?.markVisited),
       runningBest: runningBest ?? extremeValue,
       queueLabels: queueLabelsFrom(tree, queue),
     })

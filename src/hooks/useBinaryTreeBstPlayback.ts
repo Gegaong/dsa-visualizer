@@ -195,6 +195,8 @@ export function useBinaryTreeBstPlayback({
     execResultRef.current = execResult
   }, [execResult])
 
+  const isPlaybackCompleteRef = useRef(false)
+
   useEffect(() => {
     onApplyInsertRef.current = onApplyInsert
     onUndoInsertRef.current = onUndoInsert
@@ -338,6 +340,10 @@ export function useBinaryTreeBstPlayback({
   })
 
   useEffect(() => {
+    isPlaybackCompleteRef.current = playback.isPlaybackComplete
+  }, [playback.isPlaybackComplete])
+
+  useEffect(() => {
     finalizeRunRef.current = (finishedResult: BinaryTreeBstExecResult) => {
       playback.stopPlayback()
       setCurrentNodeId(null)
@@ -405,10 +411,15 @@ export function useBinaryTreeBstPlayback({
           : algorithm
 
       stopPlaybackRef.current()
-      // Keep applied insert/delete mutations on Stop — finish delete to the final tree.
+      // Finish an in-progress mutation on Stop: delete always commits to its final tree; an
+      // insert that already created its leaf (past CREATE_NODE) commits too if the walk finished
+      // unwinding, but gets undone if it didn't — otherwise the new node would silently survive
+      // with the hook no longer tracking it as removable.
       const active = execResultRef.current
       if (active?.kind === 'delete') {
         onSyncDeleteTreeRef.current?.(active.finalTree)
+      } else if (active?.kind === 'insert' && !isPlaybackCompleteRef.current) {
+        undoInsertIfNeeded()
       }
       setVisitedNodeIds([])
       setCurrentNodeId(null)
@@ -453,14 +464,21 @@ export function useBinaryTreeBstPlayback({
     }
 
     stopPlaybackRef.current()
+    // Same undo-vs-commit guard as resetVisualization, in case this is ever reached with a prior
+    // insert still mid-walk (the Run/Stop toggle currently prevents it, but keep this safe).
+    const active = execResultRef.current
+    if (active?.kind === 'insert' && !isPlaybackCompleteRef.current) {
+      undoInsertIfNeeded()
+    } else {
+      insertedNodeIdRef.current = null
+      insertedLabelRef.current = null
+      setInsertedLabel(null)
+    }
     setVisitedNodeIds([])
     setCurrentNodeId(null)
     setViolationNodeIds([])
     setGoalNodeIds([])
     setCodeHighlighted(new Set())
-    insertedNodeIdRef.current = null
-    insertedLabelRef.current = null
-    setInsertedLabel(null)
 
     if (algorithm === 'validate') {
       if (!canRunValidateBst(tree)) {

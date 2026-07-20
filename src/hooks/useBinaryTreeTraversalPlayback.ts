@@ -353,9 +353,9 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
           { queueLabels: [] },
         )
       }
+      // algorithm is already known not to be 'level-order' here (handled above).
       const extras =
-        algorithm !== 'level-order' &&
-        (goalType === 'target-node' || goalType === 'target-value')
+        goalType === 'target-node' || goalType === 'target-value'
           ? { leftResult: '—', rightResult: '—' }
           : undefined
       return buildVarsRows(

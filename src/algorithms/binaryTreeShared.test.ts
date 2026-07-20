@@ -4,6 +4,7 @@ import type { BinaryTree } from '../types'
 import {
   collectSubtreeIds,
   findParentId,
+  buildParentIdMap,
   findChildSide,
   getNodeCount,
   getTreeHeight,
@@ -81,6 +82,28 @@ describe('findParentId', () => {
     })
     expect(findParentId(tree, 'B')).toBe('A')
     expect(findParentId(tree, 'C')).toBe('A')
+  })
+})
+
+describe('buildParentIdMap', () => {
+  it('is empty for an empty tree or a lone root', () => {
+    expect(buildParentIdMap(EMPTY_TREE).size).toBe(0)
+    expect(buildParentIdMap(makeTree({ A: [null, null] })).size).toBe(0)
+  })
+
+  it('maps every child id to its direct parent, agreeing with findParentId', () => {
+    const tree = makeTree({
+      A: ['B', 'C'],
+      B: ['D', 'E'],
+      C: [null, null],
+      D: [null, null],
+      E: [null, null],
+    })
+    const map = buildParentIdMap(tree)
+    for (const id of ['B', 'C', 'D', 'E']) {
+      expect(map.get(id)).toBe(findParentId(tree, id))
+    }
+    expect(map.has('A')).toBe(false)
   })
 })
 

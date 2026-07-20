@@ -21,11 +21,25 @@ export function collectSubtreeIds(tree: BinaryTree, nodeId: string): string[] {
 
 // Finds the id of nodeId's parent by scanning every node's children (no parent pointer is stored,
 // matching the plain {value, left, right} node shape). Returns null for the root or an unknown id.
+// O(n) per call — fine for a one-off lookup, but resolving parents for several nodes at once
+// should use buildParentIdMap instead so the tree is only scanned once.
 export function findParentId(tree: BinaryTree, nodeId: string): string | null {
   for (const node of Object.values(tree.nodesById)) {
     if (node.leftId === nodeId || node.rightId === nodeId) return node.id
   }
   return null
+}
+
+// One-pass child-id -> parent-id lookup for every node in the tree. Building this once and
+// reading from it (O(1) per lookup) is cheaper than calling findParentId in a loop, which would
+// rescan the whole tree for every node.
+export function buildParentIdMap(tree: BinaryTree): Map<string, string> {
+  const parentById = new Map<string, string>()
+  for (const node of Object.values(tree.nodesById)) {
+    if (node.leftId) parentById.set(node.leftId, node.id)
+    if (node.rightId) parentById.set(node.rightId, node.id)
+  }
+  return parentById
 }
 
 // Finds which side (left/right) childId hangs off of its parent. Null if parentId has no such child.

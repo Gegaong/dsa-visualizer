@@ -79,7 +79,7 @@ import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
 import { useNQueensPlayback } from './hooks/useNQueensPlayback'
 import { useBinaryTreeTraversalPlayback } from './hooks/useBinaryTreeTraversalPlayback'
 import { useBinaryTreeBstPlayback } from './hooks/useBinaryTreeBstPlayback'
-import { collectSubtreeIds, findParentId, findChildSide, convertBinaryTreeToBst } from './algorithms/binaryTreeShared'
+import { collectSubtreeIds, buildParentIdMap, findChildSide, convertBinaryTreeToBst } from './algorithms/binaryTreeShared'
 import { applyBstInsert, removeBstInsertedNode } from './algorithms/binaryTreeBst'
 
 const CANVAS_ORDER: CanvasType[] = ['graph', 'binary-tree', 'weighted-graph', 'grid', 'nqueens']
@@ -582,8 +582,10 @@ function App() {
 
       const rootId = prev.rootId && idsToRemove.has(prev.rootId) ? null : prev.rootId
 
+      // One scan to resolve every parent, instead of a fresh scan per removed node.
+      const parentById = buildParentIdMap(prev)
       for (const id of idsToRemove) {
-        const parentId = findParentId(prev, id)
+        const parentId = parentById.get(id) ?? null
         if (!parentId || !nodesById[parentId] || idsToRemove.has(parentId)) continue
         const side = findChildSide(prev, parentId, id)
         if (side === 'left') nodesById[parentId] = { ...nodesById[parentId], leftId: null }
