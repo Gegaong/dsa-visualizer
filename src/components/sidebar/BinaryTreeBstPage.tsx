@@ -136,13 +136,6 @@ const LOGIC_BY_ALGORITHM: Record<BinaryTreeBstAlgorithm, string> = {
   delete: DELETE_LOGIC,
 }
 
-const HIGHLIGHT_READY: ReadonlySet<BinaryTreeBstAlgorithm> = new Set([
-  'validate',
-  'search',
-  'insert',
-  'delete',
-])
-
 const NO_HIGHLIGHTS = new Set<number>()
 
 export type BinaryTreeBstPageProps = {
@@ -201,7 +194,6 @@ export const BinaryTreeBstPage = ({
   const algoLabel =
     ALGORITHM_OPTIONS.find((option) => option.value === algorithm)?.label ?? algorithm
   const infoKey = INFO_KEY_BY_ALGORITHM[algorithm]
-  const showHighlights = HIGHLIGHT_READY.has(algorithm)
   const showValueInput = algorithm === 'search' || algorithm === 'insert' || algorithm === 'delete'
 
   return (
@@ -267,9 +259,9 @@ export const BinaryTreeBstPage = ({
       <PseudocodePanel
         codeText={CODE_BY_ALGORITHM[algorithm]}
         logicText={LOGIC_BY_ALGORITHM[algorithm]}
-        codeHighlighted={showHighlights ? bstCodeHighlighted : NO_HIGHLIGHTS}
+        codeHighlighted={bstCodeHighlighted}
         logicHighlighted={NO_HIGHLIGHTS}
-        varsRows={showHighlights ? bstVarsRows : null}
+        varsRows={bstVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}
         canDetach={!isBstPlaying}

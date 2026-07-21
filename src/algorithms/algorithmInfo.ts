@@ -51,37 +51,85 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'For Loop + BFS',
     time: 'O(M × N)',
     space: 'O(M × N)',
-    summary: 'Scans every cell in a configurable order. When an unvisited island cell is found, BFS flood-fills the entire connected island (level by level) before the scan resumes.',
+    summary: 'Scans every cell once in a configurable order, skipping water and visited land instantly. When the scan lands on an unvisited land cell, an inner BFS flood-fills that whole island level by level before the outer scan resumes where it left off.',
+    pros: [
+      'Scan order is fully controllable — shows how discovery order affects which island is found first',
+      'Straightforward to reason about: outer loop finds islands, inner BFS measures them',
+    ],
+    cons: [
+      'No early exit — always scans the whole grid even if all islands are found early',
+      'Two nested searches can be harder to trace than a single pass',
+    ],
   },
   'grid-for-dfs': {
     name: 'For Loop + DFS',
     time: 'O(M × N)',
     space: 'O(M × N)',
-    summary: 'Scans every cell in a configurable order. When an unvisited island cell is found, DFS flood-fills the entire connected island (stack-deep first) before the scan resumes.',
+    summary: 'Same outer scan as For Loop + BFS, but the inner fill is depth-first — it dives as far as possible along one direction before backtracking to catch the rest of the island. Only the fill order inside each island changes; the outer scan itself is untouched.',
+    pros: [
+      'Same predictable total work as the BFS-inner variant',
+      'DFS fill order highlights snake-shaped or winding islands well',
+    ],
+    cons: [
+      'No early exit — always scans the whole grid regardless of how many islands remain',
+      'Stack-deep fills can look chaotic on irregular islands compared to BFS\'s tidy rings',
+    ],
   },
   'grid-bfs-bfs': {
     name: 'BFS + BFS',
     time: 'O(M × N)',
     space: 'O(M × N)',
-    summary: 'Outer BFS explores the whole grid breadth-first from the start cell — cells closer to the start are processed first. When it reaches an unvisited island cell, inner BFS flood-fills that island level by level before the outer BFS continues.',
+    summary: 'The outer BFS expands outward from the start cell(s) in rings, reaching closer cells first regardless of land or water. When it dequeues an unvisited land cell, an inner BFS flood-fills that island level by level before the outer search resumes.',
+    pros: [
+      'Outer discovery order (closest cells first) suits "nearest island" style questions',
+      'Supports multiple simultaneous start cells (multi-source BFS)',
+    ],
+    cons: [
+      'Two BFS queues running at once makes the live state busier to follow',
+      'Far-away islands are only discovered after everything closer is processed',
+    ],
   },
   'grid-bfs-dfs': {
     name: 'BFS + DFS',
     time: 'O(M × N)',
     space: 'O(M × N)',
-    summary: 'Outer BFS explores the whole grid breadth-first from the start cell. When it reaches an unvisited island cell, inner DFS flood-fills that island depth-first before the outer BFS continues.',
+    summary: 'Outer BFS expands in rings from the start cell(s), same as BFS + BFS. The inner fill differs: once a land cell is dequeued, an inner DFS dives deep along one direction to flood that island instead of expanding level by level.',
+    pros: [
+      'Combines BFS\'s "nearest first" outer discovery with DFS\'s low-overhead inner fill',
+      'Good for contrasting one outer strategy against two different inner fill styles',
+    ],
+    cons: [
+      'Mixing BFS and DFS mid-algorithm makes the live state harder to predict',
+      'Inner DFS fill order can look erratic on islands with many branches',
+    ],
   },
   'grid-dfs-bfs': {
     name: 'DFS + BFS',
     time: 'O(M × N)',
     space: 'O(M × N)',
-    summary: 'Outer DFS explores the whole grid depth-first from the start cell — goes as deep as possible in one direction before backtracking. When it reaches an unvisited island cell, inner BFS flood-fills that island level by level before the outer DFS continues.',
+    summary: 'Outer DFS commits to one direction and backtracks only when stuck, rather than expanding in rings like BFS. When it pops an unvisited land cell, an inner BFS flood-fills that island level by level before the outer walk resumes.',
+    pros: [
+      'Outer DFS has less overhead per step than outer BFS on grids with clear "corridors"',
+      'Good contrast case: fill order (inner) is independent of discovery order (outer)',
+    ],
+    cons: [
+      'Outer discovery order is harder to predict than BFS\'s "nearest first"',
+      'Deep outer stacks on winding regions are less intuitive to trace',
+    ],
   },
   'grid-dfs-dfs': {
     name: 'DFS + DFS',
     time: 'O(M × N)',
     space: 'O(M × N)',
-    summary: 'Outer DFS explores the whole grid depth-first from the start cell. When it reaches an unvisited island cell, inner DFS flood-fills that island depth-first too — both layers dive deep before backtracking.',
+    summary: 'Both layers are depth-first: the outer walk winds through the grid via backtracking, and the inner fill floods each island the same way — diving deep along one direction before backtracking to catch the rest.',
+    pros: [
+      'Lowest bookkeeping overhead of the six combos — just two cooperating stacks',
+      'Good for illustrating how far "just keep going" wanders before backtracking',
+    ],
+    cons: [
+      'Least predictable discovery and fill order of the six combos',
+      'Deep stacks on large winding regions are the least intuitive to read step by step',
+    ],
   },
   'traversal-bfs': {
     name: 'BFS — Breadth-First Search',
@@ -115,7 +163,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Connected Components — BFS',
     time: BFS_DFS_GENERIC_TIME,
     space: BFS_DFS_GENERIC_SPACE,
-    summary: 'Picks an unvisited node and BFS-floods to find all reachable nodes (one component). Repeats for each unvisited node. Color-codes each component differently.',
+    summary: 'Floods outward from any unvisited node with BFS to find every node reachable from it — that\'s one component — then repeats from the next unvisited node until none remain, coloring each component differently.',
     pros: [
       'Single linear scan over the graph',
       'Reveals component sizes and members',
@@ -128,20 +176,21 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Connected Components — DFS',
     time: BFS_DFS_GENERIC_TIME,
     space: BFS_DFS_GENERIC_SPACE,
-    summary: 'Picks an unvisited node and DFS-floods to find all reachable nodes (one component). Repeats for each unvisited node. Color-codes each component differently.',
+    summary: 'Same idea as the BFS version, but floods each component depth-first, diving down one chain of neighbors before backtracking to pick up the rest.',
     pros: [
       'Single linear scan over the graph',
       'Recursion mirrors how components branch out',
     ],
     cons: [
       'Defined for undirected graphs only here',
+      'Deep, chain-like components can push the call stack close to its limit',
     ],
   },
   'cycle-bfs': {
     name: "Cycle Detection — Kahn's Algorithm (BFS)",
     time: BFS_DFS_GENERIC_TIME,
     space: BFS_DFS_GENERIC_SPACE,
-    summary: 'Iteratively removes nodes with in-degree 0 (no incoming edges) and decrements their neighbors. Nodes that never reach in-degree 0 are trapped behind a cycle.',
+    summary: 'Repeatedly removes nodes whose in-degree has hit 0 (no remaining incoming edges) and decrements their neighbors. Nodes that never reach in-degree 0 are stuck waiting on each other — proof a cycle exists — and a short walk over those leftovers reconstructs one concrete cycle.',
     pros: [
       'Also gives a valid topological order when no cycle exists',
       'Iterative — no recursion depth concerns',
@@ -154,7 +203,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Cycle Detection — DFS Back-Edge',
     time: BFS_DFS_GENERIC_TIME,
     space: BFS_DFS_GENERIC_SPACE,
-    summary: 'Tracks nodes currently on the active DFS path. An edge pointing to a node already on that path is a back edge, which proves a cycle exists.',
+    summary: 'Walks the graph depth-first, tracking which nodes are on the current active path from the root down. An edge pointing back to a still-active ancestor is a back edge — definitive proof of a cycle — and the search stops the instant one is found.',
     pros: [
       'Returns the cycle itself, not just a yes/no',
       'Stops the moment the first cycle is found',
@@ -167,7 +216,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Bipartite Check — BFS 2-Coloring',
     time: BFS_DFS_GENERIC_TIME,
     space: BFS_DFS_GENERIC_SPACE,
-    summary: 'Colors nodes with 0 or 1 as it explores level by level, alternating colors at each step. If any neighbor already has the current color, bipartiteness fails.',
+    summary: 'Colors the start node 0 and BFS-floods outward, alternating colors (0/1) with each level. An edge connecting two same-colored nodes proves the graph isn\'t bipartite, since it means an odd cycle exists.',
     pros: [
       'Single pass over the graph',
       'Works component-by-component across disconnected graphs',
@@ -180,7 +229,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Bipartite Check — DFS 2-Coloring',
     time: BFS_DFS_GENERIC_TIME,
     space: BFS_DFS_GENERIC_SPACE,
-    summary: 'Recursively assigns colors (0 or 1) to each neighbor, opposite to its parent. If any neighbor is already the current color, a conflict proves the graph is not bipartite.',
+    summary: 'Same 2-coloring idea as the BFS version, but recurses depth-first, coloring each child the opposite of its parent. A same-color conflict on any edge proves the graph isn\'t bipartite.',
     pros: [
       'Single pass over the graph',
       'Compact recursive structure',
@@ -193,7 +242,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Shortest Path — BFS',
     time: BFS_DFS_GENERIC_TIME,
     space: BFS_DFS_GENERIC_SPACE,
-    summary: 'BFS reaches every node by minimum edge-count from the start — the first time the goal is dequeued is guaranteed to be the shortest path.',
+    summary: 'Runs a standard BFS but stops the instant the goal is dequeued. Because BFS always explores nodes in strict order of hop-distance from the start, that first arrival is guaranteed to use the fewest possible edges.',
     pros: [
       'Guaranteed fewest-edges path',
       'Linear time on unweighted graphs',
@@ -206,7 +255,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Shortest Path — DFS Exhaustive',
     time: 'O(V!) worst case',
     space: 'O(V)',
-    summary: 'Exhaustively tries every simple path with backtracking, tracking the shortest found so far. Prunes branches longer than the current best to reduce search time.',
+    summary: 'DFS has no built-in "closest first" order, so a guaranteed-shortest path means trying every simple path via backtracking and keeping the shortest one found. Branches that can no longer beat the current best are abandoned early, though the worst case still means trying most of them.',
     pros: [
       'Always returns a true shortest path',
       'Pruning shortens the search in practice',
@@ -220,7 +269,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Weighted Pathfinder — BFS',
     time: 'O(V!) worst case',
     space: 'O(2^V) worst case',
-    summary: 'Explores every acyclic path using a queue (FIFO order, not by cost). Finds the true cheapest path because it eventually tries all possibilities.',
+    summary: 'Exhaustively explores every acyclic path by cost rather than edge count, using a FIFO queue — so every path of the current length is fully expanded before any longer path starts. That queueing order means an entire "generation" of same-length paths can sit in the queue at once, which is what makes memory usage blow up on dense graphs.',
     pros: [
       'Finds the true minimum-cost path',
       'Visits paths in breadth-first order',
@@ -234,7 +283,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Weighted Pathfinder — DFS',
     time: 'O(V!) worst case',
     space: 'O(V)',
-    summary: 'Explores every acyclic path using a stack (LIFO order, not by cost). Finds the true cheapest path because it eventually tries all possibilities.',
+    summary: 'Same exhaustive cost-search as the BFS version, but with a stack instead of a queue: popping the most-recently-discovered path means the search always keeps extending one branch to its end before backtracking to a sibling, so only the unexplored siblings along the current path are ever held in memory at once.',
     pros: [
       'Finds the true minimum-cost path',
       'Low memory while a single path is in flight',
@@ -248,7 +297,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: "Dijkstra's Algorithm",
     time: 'O((V + E) log V)',
     space: 'O(V)',
-    summary: 'Greedily settles the cheapest unsettled node each iteration, then updates its neighbors. Each node settles once — guaranteed optimal on non-negative weights.',
+    summary: 'Repeatedly pulls the cheapest not-yet-settled node from a priority queue, locks in its cost as final, and relaxes its neighbors — updating their best-known cost if this node offers a cheaper route. Since weights are never negative, once a node is settled no later discovery can ever beat it, so each node is settled exactly once.',
     pros: [
       'Guaranteed shortest path on non-negative weights',
       'Each node is settled at most once',
@@ -262,7 +311,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'A* Search',
     time: 'O((V + E) log V)',
     space: 'O(V)',
-    summary: 'Like Dijkstra, but orders the queue by g + h (known cost plus heuristic estimate to goal). Far fewer expansions with a good heuristic; optimal if the heuristic is admissible.',
+    summary: 'Same settle-and-relax machinery as Dijkstra, but orders the priority queue by g + h — known cost so far plus a heuristic estimate of the remaining distance to the goal — which steers the search toward the goal instead of expanding equally in every direction. Only optimal when the heuristic never overestimates the true remaining cost.',
     pros: [
       'Far fewer expansions than Dijkstra when the heuristic is informative',
       'Optimal when the heuristic is admissible (never overestimates)',
@@ -276,7 +325,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Greedy Best-First Search',
     time: 'O((V + E) log V)',
     space: 'O(V)',
-    summary: 'Always expands the node looking closest to goal (lowest h value), ignoring true cost. Not optimal, but often finds a path fast if the heuristic points the right way.',
+    summary: 'Uses the same priority queue as Dijkstra and A*, but orders purely by the heuristic h and ignores cost so far entirely. That makes it commit fast to a promising-looking direction, but it can walk straight past a cheaper route and never reconsider once a node is popped.',
     pros: [
       'Very fast when the heuristic points the right way',
       'Often finds a path with few expansions',
@@ -290,7 +339,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'N-Queens Backtracking',
     time: 'O(N!)',
     space: 'O(N)',
-    summary: 'Places queens column by column. For each column every row is tried; if the position is safe the queen is locked and the solver recurses into the next column. When a conflict is found the queen is removed and the next row is tried. The search continues until all solutions have been found.',
+    summary: 'Places queens column by column: for the current column, every row is tried in turn, and a queen is locked in if it doesn\'t conflict with an already-placed queen on the same row or diagonal (columns can\'t conflict, since each column gets exactly one queen). A dead end — every row in a column conflicts — backtracks to the previous column and tries its next row instead of restarting.',
     pros: [
       'Finds every valid solution, not just the first',
       'Conflict pruning cuts most branches before they are explored',
@@ -303,7 +352,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Preorder Traversal',
     time: 'O(n)',
     space: 'O(h)',
-    summary: 'Visits each node before its children: the node itself, then its entire left subtree, then its entire right subtree.',
+    summary: 'Visits the node itself first, then its entire left subtree, then its entire right subtree. This "node first" order is why preorder is the natural way to serialize a tree and rebuild its exact shape later.',
     pros: [
       'Visits parents before children — natural for copying or serializing a tree',
       'Simple recursive structure',
@@ -316,7 +365,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Inorder Traversal',
     time: 'O(n)',
     space: 'O(h)',
-    summary: 'Visits the left subtree, then the node itself, then the right subtree — each node is visited in between its two children.',
+    summary: 'Visits the entire left subtree, then the node, then the entire right subtree. On a binary search tree specifically, this order reads out every value from smallest to largest.',
     pros: [
       'Produces values in sorted order on a binary search tree',
       'Simple recursive structure',
@@ -329,7 +378,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Postorder Traversal',
     time: 'O(n)',
     space: 'O(h)',
-    summary: 'Visits both children before their parent: the entire left subtree, then the entire right subtree, then the node itself.',
+    summary: 'Visits both children fully before their parent: the entire left subtree, then the entire right subtree, then the node itself. That\'s why it\'s the safe order for deleting a tree — nothing is ever removed while something still depends on it.',
     pros: [
       'Children are visited before their parent — safe order for deleting or freeing a tree',
       'Simple recursive structure',
@@ -342,7 +391,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Level-Order Traversal',
     time: 'O(n)',
     space: 'O(w)',
-    summary: 'Visits nodes level by level from the root down, left to right within each level — the same breadth-first idea as graph BFS.',
+    summary: 'Visits nodes level by level from the root down, left to right within each level, using a queue instead of recursion — the same idea as graph BFS.',
     pros: [
       'Visits nodes closest to the root first',
       'Reveals the tree\'s shape one level at a time',
@@ -355,7 +404,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'Validate BST',
     time: 'O(n)',
     space: 'O(h)',
-    summary: 'Checks whether every node sits strictly inside a tightening (min, max) window inherited from its ancestors — left values must be < the parent, right values > the parent. Equal values are not allowed.',
+    summary: 'Walks the tree carrying a shrinking (min, max) window of legal values: going left tightens the max to the parent\'s value, going right raises the min. A node landing outside the window it inherited from its ancestors breaks the search-tree property.',
     pros: [
       'One depth-first walk confirms the full search-tree property',
       'Can fail fast as soon as a violating node is found',
@@ -368,27 +417,27 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'BST Search',
     time: 'O(h)',
     space: 'O(h)',
-    summary: 'Looks up a target value by walking from the root: go left when the target is smaller, right when it is larger, and stop when the value matches or a null child is reached. In a strict BST there is at most one match.',
+    summary: 'Compares the target to the current node and skips one entire subtree at each step — left if the target is smaller, right if larger — since everything in the skipped subtree is guaranteed to be on the wrong side. Only one root-to-leaf path is ever walked, never the whole tree.',
     pros: [
       'Only follows one root-to-leaf path — much faster than a full traversal on tall trees',
       'Natural fit for sorted dictionaries and ordered maps',
     ],
     cons: [
       'Correctness depends on the tree actually being a BST',
-      'Degenerates to O(n) on a skewed tree',
+      'Degenerates to a full-height walk on a skewed tree',
     ],
   },
   'bt-insert': {
     name: 'BST Insert',
     time: 'O(h)',
     space: 'O(h)',
-    summary: 'Places a new value by walking from the root with tightening (min, max) bounds — left when smaller, right when larger — and refuses to insert if the value already exists.',
+    summary: 'Walks from the root using the same shrinking-bounds logic as Validate BST, stopping at the first empty child slot to create the new leaf there — or rejecting the insert outright if the value already exists.',
     pros: [
       'Keeps strict search-tree order: left < node < right',
       'Same bound-passing idea as Validate BST, on a single root-to-leaf walk',
     ],
     cons: [
-      'Does not rebalance — repeated inserts can skew the tree toward O(n)',
+      'Does not rebalance — repeated inserts can skew the tree toward a slow, linked-list shape',
       'Duplicate values are rejected instead of stored',
     ],
   },
@@ -396,7 +445,7 @@ export const ALGORITHM_INFO: Record<AlgorithmInfoKey, AlgorithmInfo> = {
     name: 'BST Delete',
     time: 'O(h)',
     space: 'O(h)',
-    summary: 'Removes a key by walking to its node. Zero or one child → splice that node out. Two children → copy the inorder successor’s value into the node, then delete the successor from the right subtree.',
+    summary: 'Locates the key the same way Search does, then removes it based on its children: zero or one child gets spliced out directly with its child promoted into its place; two children instead copies in the inorder successor\'s value (the smallest value in the right subtree, found by walking left as far as possible) and then deletes that successor using the simple one-child case.',
     pros: [
       'Preserves strict BST order after every case',
       'Successor copy makes the value hand-off visible before the structure changes',

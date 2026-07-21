@@ -39,13 +39,6 @@ const ALGO_LABEL: Record<BinaryTreeBstAlgorithm, string> = {
   delete: 'Delete',
 }
 
-const IMPLEMENTED: ReadonlySet<BinaryTreeBstAlgorithm> = new Set([
-  'validate',
-  'search',
-  'insert',
-  'delete',
-])
-
 const IDLE_STATUS: Record<BinaryTreeBstAlgorithm, string> = {
   validate: 'Run Validate BST to check the search-tree property.',
   search: 'Run Search to look up a target value in the BST.',
@@ -458,10 +451,6 @@ export function useBinaryTreeBstPlayback({
 
   const runAlgorithm = () => {
     if (playback.isPlaying) return
-    if (!IMPLEMENTED.has(algorithm)) {
-      setStatusText(`${ALGO_LABEL[algorithm]} is coming soon.`)
-      return
-    }
 
     stopPlaybackRef.current()
     // Same undo-vs-commit guard as resetVisualization, in case this is ever reached with a prior
@@ -569,7 +558,6 @@ export function useBinaryTreeBstPlayback({
   }
 
   const nodes = Object.values(tree.nodesById)
-  const algorithmReady = IMPLEMENTED.has(algorithm)
   const parsedTarget = parseNumberInput(targetValueInput)
   const treeReadyForValidate = canRunValidateBst(tree)
   const treeReadyForInsert = canRunInsertBst(tree)
@@ -577,19 +565,15 @@ export function useBinaryTreeBstPlayback({
 
   const canRunAlgorithm =
     algorithm === 'validate'
-      ? algorithmReady && treeReadyForValidate
+      ? treeReadyForValidate
       : algorithm === 'search'
-        ? algorithmReady && treeReadyForValidate && parsedTarget !== null
+        ? treeReadyForValidate && parsedTarget !== null
         : algorithm === 'insert'
-          ? algorithmReady && treeReadyForInsert && parsedTarget !== null
-          : algorithm === 'delete'
-            ? algorithmReady && treeReadyForDelete && parsedTarget !== null
-            : false
+          ? treeReadyForInsert && parsedTarget !== null
+          : treeReadyForDelete && parsedTarget !== null
 
   let sidebarStatusText = statusText
-  if (!algorithmReady) {
-    sidebarStatusText = `${ALGO_LABEL[algorithm]} is coming soon.`
-  } else if (!canRunAlgorithm) {
+  if (!canRunAlgorithm) {
     if (algorithm !== 'insert' && algorithm !== 'delete' && nodes.length === 0) {
       sidebarStatusText = `Warning: add at least one node before running ${ALGO_LABEL[algorithm]}.`
     } else if (algorithm === 'insert' && !treeReadyForInsert) {

@@ -649,12 +649,12 @@ function App() {
     })
   }
 
-  // Sidebar: updates the binary tree fill-range minimum (digits only).
+  // Sidebar: updates the binary tree fill-range minimum (digits, with an optional leading '-').
   const handleBinaryTreeFillMinChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setBinaryTreeFillMin(sanitizeNumericInput(event.target.value))
   }
 
-  // Sidebar: updates the binary tree fill-range maximum (digits only).
+  // Sidebar: updates the binary tree fill-range maximum (digits, with an optional leading '-').
   const handleBinaryTreeFillMaxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setBinaryTreeFillMax(sanitizeNumericInput(event.target.value))
   }
