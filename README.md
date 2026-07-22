@@ -4,21 +4,25 @@ An interactive web-based sandbox for Data Structures and Algorithms. Features a 
 
 ## Features
 
-The visualizer is split into four distinct environments:
+The visualizer is split into five distinct environments:
 
 ### 1. Unweighted Graphs
 - **Canvas:** Drag-and-drop nodes, connect edges, toggle directed/undirected, and use preset templates.
 - **Algorithms:** Breadth-First Search (BFS), Depth-First Search (DFS), Weakly Connected Components, Cycle Detection, Bipartite Check, Shortest Path.
 
-### 2. Weighted Graphs
+### 2. Binary Trees
+- **Canvas:** Grow the tree by clicking "+" slots for empty child positions, edit node values, delete a node and its subtree, and load preset trees (plain binary trees and valid BSTs), or convert any tree into a strict BST in place.
+- **Algorithms:** Preorder, Inorder, Postorder, and Level-Order traversal (each searchable by target node, target value, or max/min value), plus BST-only operations — Validate BST, Search, Insert, and Delete (with successor promotion on two-child deletes).
+
+### 3. Weighted Graphs
 - **Canvas:** Edit edge weights, toggle directed/undirected.
 - **Algorithms:** Dijkstra's Algorithm, A* Search (Euclidean heuristic), Greedy Best-First Search.
 
-### 3. Grid Environment
+### 4. Grid Environment
 - **Canvas:** Paint land/water islands, toggle 4-directional or 8-directional connectivity, zoom controls.
 - **Algorithms:** 6 combinations of Island Search (For-loop/BFS/DFS outer loops × BFS/DFS inner flood-fill).
 
-### 4. N-Queens Solver
+### 5. N-Queens Solver
 - **Canvas:** N×N chessboard (adjustable N).
 - **Algorithms:** Backtracking solver with step-by-step playback, phase tracking, and conflict checking.
 
