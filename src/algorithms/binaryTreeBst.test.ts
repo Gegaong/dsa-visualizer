@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest'
 
-import type { BinaryTree } from '../types'
-
 import {
   buildValidateBstCompletionStatus,
   buildSearchBstCompletionStatus,
@@ -23,17 +21,7 @@ import {
   INSERT_BST_CODE_LINES,
   DELETE_BST_CODE_LINES,
 } from './binaryTreeBst'
-
-function makeTree(
-  spec: Record<string, [string | null, string | null, (number | 'empty')?]>,
-  rootId: string | null = 'A',
-): BinaryTree {
-  const nodesById: BinaryTree['nodesById'] = {}
-  for (const [id, [leftId, rightId, value]] of Object.entries(spec)) {
-    nodesById[id] = { id, label: id, value: value ?? 'empty', leftId, rightId }
-  }
-  return { rootId, nodesById }
-}
+import { makeTree } from './__testutils__/fixtures'
 
 // Valid BST:
 //        A(4)

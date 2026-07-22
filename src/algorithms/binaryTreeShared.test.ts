@@ -13,15 +13,7 @@ import {
   convertBinaryTreeToBst,
 } from './binaryTreeShared'
 import { runValidateBstExec } from './binaryTreeBst'
-
-// Builds a tree from a terse spec: id -> [leftId | null, rightId | null]. rootId defaults to 'A'.
-function makeTree(spec: Record<string, [string | null, string | null]>, rootId: string | null = 'A'): BinaryTree {
-  const nodesById: BinaryTree['nodesById'] = {}
-  for (const [id, [leftId, rightId]] of Object.entries(spec)) {
-    nodesById[id] = { id, label: id, value: 'empty', leftId, rightId }
-  }
-  return { rootId, nodesById }
-}
+import { makeTree } from './__testutils__/fixtures'
 
 const EMPTY_TREE: BinaryTree = { rootId: null, nodesById: {} }
 

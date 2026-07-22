@@ -1,4 +1,4 @@
-import type { GraphEdge, GraphNode } from '../../types'
+import type { BinaryTree, GraphEdge, GraphNode } from '../../types'
 
 // [from, to, weight?, direction?] — weight omitted leaves the edge unweighted; direction
 // defaults to 'both' so graphs read as undirected unless a test says otherwise.
@@ -71,4 +71,17 @@ export function gridFrom(ascii: string): { islands: Set<string>; rows: number; c
     }
   }
   return { islands, rows, cols }
+}
+
+// Builds a binary tree from a terse spec: id -> [leftId | null, rightId | null, value?].
+// rootId defaults to 'A'. Value defaults to 'empty' when omitted.
+export function makeTree(
+  spec: Record<string, [string | null, string | null, (number | 'empty')?]>,
+  rootId: string | null = 'A',
+): BinaryTree {
+  const nodesById: BinaryTree['nodesById'] = {}
+  for (const [id, [leftId, rightId, value]] of Object.entries(spec)) {
+    nodesById[id] = { id, label: id, value: value ?? 'empty', leftId, rightId }
+  }
+  return { rootId, nodesById }
 }

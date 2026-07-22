@@ -133,8 +133,10 @@ export function useBinaryTreeTraversalPlayback({ tree }: UseBinaryTreeTraversalP
         return [[`node = ${nodeLabel}`, `min = ${runningBest ?? '—'}`], ...queueRow]
       }
 
+      // Matches each goal type's actual pseudocode parameter name: target-node's code calls it
+      // "goal", target-value's calls it "target" — the displayed variable should say the same.
       const goalCell =
-        goalType === 'target-node' ? `goal = "${goalNodeLabel}"` : `goal = ${goalValueInput}`
+        goalType === 'target-node' ? `goal = "${goalNodeLabel}"` : `target = ${goalValueInput}`
       const row1 = [`node = ${nodeLabel}`, goalCell]
       if (queueRow.length > 0) return [row1, ...queueRow]
       if (extras?.leftResult !== undefined && extras?.rightResult !== undefined) {

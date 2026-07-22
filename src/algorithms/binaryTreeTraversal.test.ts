@@ -14,18 +14,7 @@ import {
   runBinaryTreePreorderExec,
   runBinaryTreePreorderSearch,
 } from './binaryTreeTraversal'
-
-// Builds a tree from a terse spec: id -> [leftId | null, rightId | null, value?]. rootId defaults to 'A'.
-function makeTree(
-  spec: Record<string, [string | null, string | null, (number | 'empty')?]>,
-  rootId: string | null = 'A',
-): BinaryTree {
-  const nodesById: BinaryTree['nodesById'] = {}
-  for (const [id, [leftId, rightId, value]] of Object.entries(spec)) {
-    nodesById[id] = { id, label: id, value: value ?? 'empty', leftId, rightId }
-  }
-  return { rootId, nodesById }
-}
+import { makeTree } from './__testutils__/fixtures'
 
 const EMPTY_TREE: BinaryTree = { rootId: null, nodesById: {} }
 

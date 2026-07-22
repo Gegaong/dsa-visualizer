@@ -1643,6 +1643,7 @@ function App() {
               targetValueInput: binaryTreeBst.targetValueInput,
               onTargetValueInputChange: binaryTreeBst.handleTargetValueInputChange,
               isBstRunning: binaryTreeBst.isRunning,
+              isBeforeFirstStep: binaryTreeBst.isBeforeFirstStep,
               onRunAlgorithm: binaryTreeBst.runAlgorithm,
               onStopAlgorithm: () => binaryTreeBst.resetVisualization(),
               canRunAlgorithm: binaryTreeBst.canRunAlgorithm,

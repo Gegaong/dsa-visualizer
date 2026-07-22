@@ -78,6 +78,10 @@ export type BinaryTreeBstHandle = {
   goalNodeIds: string[]
 
   isRunning: boolean
+  // True only before the very first step (the pre-play "ready" preview) — distinct from being on
+  // the first real step, which already counts as regular playback (matches graph traversal's
+  // 'ready' vs 'step-regular' phase split).
+  isBeforeFirstStep: boolean
 
   isPlaying: boolean
   playbackSpeed: number
@@ -702,6 +706,7 @@ export function useBinaryTreeBstPlayback({
     goalNodeIds,
 
     isRunning,
+    isBeforeFirstStep: playback.stepIndex < 0,
 
     isPlaying: playback.isPlaying,
     playbackSpeed: playback.playbackSpeed,
