@@ -1616,6 +1616,7 @@ function App() {
               goalValueInput: binaryTreeTraversal.goalValueInput,
               onGoalValueInputChange: binaryTreeTraversal.handleGoalValueInputChange,
               isTraversalRunning: binaryTreeTraversal.isRunning,
+              isBeforeFirstStep: binaryTreeTraversal.isBeforeFirstStep,
               onRunTraversal: binaryTreeTraversal.runTraversal,
               onStopTraversal: () => binaryTreeTraversal.resetVisualization(),
               canRunTraversal: binaryTreeTraversal.canRunTraversal,

@@ -8,7 +8,7 @@ export type BinaryTreeTraversalAlgorithm = 'preorder' | 'inorder' | 'postorder' 
 
 // Line indices into BinaryTreeTraversalPage CODE_BY_ALGORITHM_AND_GOAL — keep in sync when editing
 // pseudocode. Keys that are never pushed (e.g. level-order RETURN_EARLY) still document the panel line.
-const PREORDER_TARGET_CODE_LINES = {
+export const PREORDER_TARGET_CODE_LINES = {
   ENTER: 0,
   NULL_CHECK: 1,
   RETURN_NULL: 2,
@@ -21,7 +21,7 @@ const PREORDER_TARGET_CODE_LINES = {
   RETURN: 9,
 } as const
 
-const PREORDER_EXTREME_CODE_LINES = {
+export const PREORDER_EXTREME_CODE_LINES = {
   WRAPPER_ENTER: 0,
   INIT_BEST: 1,
   INNER_FN: 2,
@@ -35,7 +35,7 @@ const PREORDER_EXTREME_CODE_LINES = {
   RETURN: 10,
 } as const
 
-const INORDER_TARGET_CODE_LINES = {
+export const INORDER_TARGET_CODE_LINES = {
   ENTER: 0,
   NULL_CHECK: 1,
   RETURN_NULL: 2,
@@ -48,7 +48,7 @@ const INORDER_TARGET_CODE_LINES = {
   RETURN: 9,
 } as const
 
-const INORDER_EXTREME_CODE_LINES = {
+export const INORDER_EXTREME_CODE_LINES = {
   WRAPPER_ENTER: 0,
   INIT_BEST: 1,
   INNER_FN: 2,
@@ -62,7 +62,7 @@ const INORDER_EXTREME_CODE_LINES = {
   RETURN: 10,
 } as const
 
-const POSTORDER_TARGET_CODE_LINES = {
+export const POSTORDER_TARGET_CODE_LINES = {
   ENTER: 0,
   NULL_CHECK: 1,
   RETURN_NULL: 2,
@@ -77,7 +77,7 @@ const POSTORDER_TARGET_CODE_LINES = {
   RETURN: 11,
 } as const
 
-const POSTORDER_EXTREME_CODE_LINES = {
+export const POSTORDER_EXTREME_CODE_LINES = {
   WRAPPER_ENTER: 0,
   INIT_BEST: 1,
   INNER_FN: 2,
@@ -91,7 +91,7 @@ const POSTORDER_EXTREME_CODE_LINES = {
   RETURN: 10,
 } as const
 
-const LEVEL_ORDER_TARGET_CODE_LINES = {
+export const LEVEL_ORDER_TARGET_CODE_LINES = {
   ENTER: 0,
   NULL_CHECK: 1,
   RETURN_NULL: 2,
@@ -107,7 +107,7 @@ const LEVEL_ORDER_TARGET_CODE_LINES = {
   RETURN: 12,
 } as const
 
-const LEVEL_ORDER_EXTREME_CODE_LINES = {
+export const LEVEL_ORDER_EXTREME_CODE_LINES = {
   ENTER: 0,
   INIT_BEST: 1,
   NULL_CHECK: 2,

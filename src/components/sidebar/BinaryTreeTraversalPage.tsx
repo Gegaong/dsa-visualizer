@@ -1,5 +1,15 @@
 import type { AlgorithmInfoKey } from '../../algorithms/algorithmInfo'
 import type { BinaryTreeTraversalAlgorithm } from '../../algorithms/binaryTreeTraversal'
+import {
+  PREORDER_EXTREME_CODE_LINES,
+  PREORDER_TARGET_CODE_LINES,
+  INORDER_EXTREME_CODE_LINES,
+  INORDER_TARGET_CODE_LINES,
+  POSTORDER_EXTREME_CODE_LINES,
+  POSTORDER_TARGET_CODE_LINES,
+  LEVEL_ORDER_EXTREME_CODE_LINES,
+  LEVEL_ORDER_TARGET_CODE_LINES,
+} from '../../algorithms/binaryTreeTraversal'
 import type { GoalType } from '../../types'
 
 import { AlgorithmInfoCard } from './AlgorithmInfoCard'
@@ -240,6 +250,7 @@ const LOGIC_BY_ALGORITHM_AND_GOAL: Record<
     'target-node': `Preorder visits node
 before its children.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Visit the current node.
   · If it matches the goal → stop now.
@@ -250,6 +261,7 @@ No nodes left → goal is unreachable.`,
     'target-value': `Preorder visits node
 before its children.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Visit the current node.
   · If its value matches → stop now.
@@ -260,6 +272,7 @@ No nodes left → target value not found.`,
     'max-value': `Preorder keeps a
 running max while walking.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Visit the current node.
   · Compare node.value with the running max.
@@ -270,6 +283,7 @@ Walk ends → return max.`,
     'min-value': `Preorder keeps a
 running min while walking.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Visit the current node.
   · Compare node.value with the running min.
@@ -283,6 +297,7 @@ Walk ends → return min.`,
     'target-node': `Inorder visits left,
 then node, then right.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Recurse into the left child.
     - Non-null leftResult → return it.
@@ -293,6 +308,7 @@ No nodes left → goal is unreachable.`,
     'target-value': `Inorder visits left,
 then node, then right.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Recurse into the left child.
     - Non-null leftResult → return it.
@@ -303,6 +319,7 @@ No nodes left → target value not found.`,
     'max-value': `Inorder updates max
 when each node is visited.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Recurse left.
   · Visit current node; compare to running max.
@@ -313,6 +330,7 @@ Walk ends → return max.`,
     'min-value': `Inorder updates min
 when each node is visited.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Recurse left.
   · Visit current node; compare to running min.
@@ -326,6 +344,7 @@ Walk ends → return min.`,
     'target-node': `Postorder visits
 children before node.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Recurse left subtree.
     - Non-null leftResult → return it.
@@ -337,6 +356,7 @@ No nodes left → goal is unreachable.`,
     'target-value': `Postorder visits
 children before node.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Recurse left subtree.
     - Non-null leftResult → return it.
@@ -348,6 +368,7 @@ No nodes left → target value not found.`,
     'max-value': `Postorder updates max
 after both subtrees.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Recurse left, then right.
   · After children: compare current node.value to max.
@@ -357,6 +378,7 @@ Walk ends → return max.`,
     'min-value': `Postorder updates min
 after both subtrees.
 ──────────────────────────────────────────
+Init: start at the root.
 Each step:
   · Recurse left, then right.
   · After children: compare current node.value to min.
@@ -369,6 +391,7 @@ Walk ends → return min.`,
     'target-node': `Level-order visits
 nodes level by level.
 ──────────────────────────────────────────
+Init: add root to queue.
 Each step:
   · Dequeue a node to visit.
   · If it matches the goal → stop now.
@@ -378,6 +401,7 @@ Queue empties → goal is unreachable.`,
     'target-value': `Level-order visits
 nodes level by level.
 ──────────────────────────────────────────
+Init: add root to queue.
 Each step:
   · Dequeue a node to visit.
   · If its value matches → stop now.
@@ -387,6 +411,7 @@ Queue empties → target value not found.`,
     'max-value': `Level-order walks all
 nodes with a running max.
 ──────────────────────────────────────────
+Init: add root to queue.
 Each step:
   · Dequeue the current node.
   · Compare node.value with the running max.
@@ -397,6 +422,7 @@ Queue empties → return max.`,
     'min-value': `Level-order walks all
 nodes with a running min.
 ──────────────────────────────────────────
+Init: add root to queue.
 Each step:
   · Dequeue the current node.
   · Compare node.value with the running min.
@@ -407,7 +433,177 @@ Queue empties → return min.`,
   },
 }
 
-const NO_HIGHLIGHTS = new Set<number>()
+// Maps each pseudocode line to the logic-text line(s) it corresponds to, so the logic panel
+// highlights in sync with playback the same way the code panel already does. Hand-built per
+// algorithm (same maintenance convention as the *_CODE_LINES maps). Every logic block's line 3
+// is its "Init:" line (line-for-line consistent across all 16 blocks); a code line with no
+// natural counterpart in the prose otherwise maps to an empty array rather than forcing a match
+// that isn't really there.
+//
+// One structural wrinkle worth calling out: preorder/inorder/postorder are recursive, so their
+// ENTER/NULL_CHECK line reruns on *every* node visit, not just the root — mapping it straight to
+// Init would be wrong (it would relabel every child visit as "start at the root"). Only the
+// genuine one-time setup lines (WRAPPER_ENTER/INIT_BEST/INNER_FN/CALL in the extreme variants;
+// ENTER/NULL_CHECK/INIT_QUEUE in level-order, which is iterative and never revisits them) map
+// directly to Init here. The recursive orders' true first-entry-only case is instead handled by
+// isBeforeFirstStep in getLogicHighlighted, which overrides everything else exactly once, before
+// any real step has been taken.
+
+const PT = PREORDER_TARGET_CODE_LINES
+const PREORDER_TARGET_LOGIC_LINES: Record<number, number[]> = {
+  [PT.ENTER]: [5],
+  [PT.NULL_CHECK]: [5],
+  [PT.RETURN_NULL]: [10],
+  [PT.MATCH_CHECK]: [6],
+  [PT.RETURN_MATCH]: [6],
+  [PT.RECURSE_LEFT]: [7],
+  [PT.CHECK_LEFT]: [8],
+  [PT.RETURN_LEFT]: [8],
+  [PT.RECURSE_RIGHT]: [7],
+  [PT.RETURN]: [8],
+}
+
+const PE = PREORDER_EXTREME_CODE_LINES
+const PREORDER_EXTREME_LOGIC_LINES: Record<number, number[]> = {
+  [PE.WRAPPER_ENTER]: [3],
+  [PE.INIT_BEST]: [3],
+  [PE.INNER_FN]: [3],
+  [PE.NULL_CHECK]: [5],
+  [PE.RETURN_VOID]: [],
+  [PE.COMPARE]: [6],
+  [PE.UPDATE_BEST]: [7],
+  [PE.RECURSE_LEFT]: [8],
+  [PE.RECURSE_RIGHT]: [8],
+  [PE.CALL]: [3],
+  [PE.RETURN]: [10],
+}
+
+const IT = INORDER_TARGET_CODE_LINES
+const INORDER_TARGET_LOGIC_LINES: Record<number, number[]> = {
+  [IT.ENTER]: [5],
+  [IT.NULL_CHECK]: [5],
+  [IT.RETURN_NULL]: [10],
+  [IT.RECURSE_LEFT]: [5],
+  [IT.CHECK_LEFT]: [6],
+  [IT.RETURN_LEFT]: [6],
+  [IT.MATCH_CHECK]: [7],
+  [IT.RETURN_MATCH]: [7],
+  [IT.RECURSE_RIGHT]: [8],
+  [IT.RETURN]: [8],
+}
+
+const IE = INORDER_EXTREME_CODE_LINES
+const INORDER_EXTREME_LOGIC_LINES: Record<number, number[]> = {
+  [IE.WRAPPER_ENTER]: [3],
+  [IE.INIT_BEST]: [3],
+  [IE.INNER_FN]: [3],
+  [IE.NULL_CHECK]: [5],
+  [IE.RETURN_VOID]: [],
+  [IE.RECURSE_LEFT]: [5],
+  [IE.COMPARE]: [6],
+  [IE.UPDATE_BEST]: [7],
+  [IE.RECURSE_RIGHT]: [8],
+  [IE.CALL]: [3],
+  [IE.RETURN]: [10],
+}
+
+const PoT = POSTORDER_TARGET_CODE_LINES
+const POSTORDER_TARGET_LOGIC_LINES: Record<number, number[]> = {
+  [PoT.ENTER]: [5],
+  [PoT.NULL_CHECK]: [5],
+  [PoT.RETURN_NULL]: [11],
+  [PoT.RECURSE_LEFT]: [5],
+  [PoT.CHECK_LEFT]: [6],
+  [PoT.RETURN_LEFT]: [6],
+  [PoT.RECURSE_RIGHT]: [7],
+  [PoT.CHECK_RIGHT]: [8],
+  [PoT.RETURN_RIGHT]: [8],
+  [PoT.MATCH_CHECK]: [9],
+  [PoT.RETURN_MATCH]: [9],
+  [PoT.RETURN]: [11],
+}
+
+const PoE = POSTORDER_EXTREME_CODE_LINES
+const POSTORDER_EXTREME_LOGIC_LINES: Record<number, number[]> = {
+  [PoE.WRAPPER_ENTER]: [3],
+  [PoE.INIT_BEST]: [3],
+  [PoE.INNER_FN]: [3],
+  [PoE.NULL_CHECK]: [5],
+  [PoE.RETURN_VOID]: [],
+  [PoE.RECURSE_LEFT]: [5],
+  [PoE.RECURSE_RIGHT]: [5],
+  [PoE.COMPARE]: [6],
+  [PoE.UPDATE_BEST]: [7],
+  [PoE.CALL]: [3],
+  [PoE.RETURN]: [9],
+}
+
+const LT = LEVEL_ORDER_TARGET_CODE_LINES
+const LEVEL_ORDER_TARGET_LOGIC_LINES: Record<number, number[]> = {
+  [LT.ENTER]: [3],
+  [LT.NULL_CHECK]: [3],
+  // Structurally unreachable (the outer dispatch already filters out a null root before this
+  // runs), but still mapped for documentation, same as LEVEL_ORDER_EXTREME_CODE_LINES.RETURN_EARLY.
+  [LT.RETURN_NULL]: [9],
+  [LT.INIT_QUEUE]: [3],
+  [LT.WHILE]: [5],
+  [LT.DEQUEUE]: [5],
+  [LT.MATCH_CHECK]: [6],
+  [LT.RETURN_MATCH]: [6],
+  [LT.CHECK_LEFT]: [7],
+  [LT.ENQUEUE_LEFT]: [7],
+  [LT.CHECK_RIGHT]: [7],
+  [LT.ENQUEUE_RIGHT]: [7],
+  [LT.RETURN]: [9],
+}
+
+const LE = LEVEL_ORDER_EXTREME_CODE_LINES
+const LEVEL_ORDER_EXTREME_LOGIC_LINES: Record<number, number[]> = {
+  [LE.ENTER]: [3],
+  [LE.INIT_BEST]: [3],
+  [LE.NULL_CHECK]: [3],
+  // Structurally unreachable — see LEVEL_ORDER_TARGET_LOGIC_LINES.RETURN_NULL above.
+  [LE.RETURN_EARLY]: [10],
+  [LE.INIT_QUEUE]: [3],
+  [LE.WHILE]: [5],
+  [LE.DEQUEUE]: [5],
+  [LE.COMPARE]: [6],
+  [LE.UPDATE_BEST]: [7],
+  [LE.CHECK_LEFT]: [8],
+  [LE.ENQUEUE_LEFT]: [8],
+  [LE.CHECK_RIGHT]: [8],
+  [LE.ENQUEUE_RIGHT]: [8],
+  [LE.RETURN]: [10],
+}
+
+const LOGIC_LINE_MAPS: Record<BinaryTreeTraversalAlgorithm, { target: Record<number, number[]>; extreme: Record<number, number[]> }> = {
+  preorder: { target: PREORDER_TARGET_LOGIC_LINES, extreme: PREORDER_EXTREME_LOGIC_LINES },
+  inorder: { target: INORDER_TARGET_LOGIC_LINES, extreme: INORDER_EXTREME_LOGIC_LINES },
+  postorder: { target: POSTORDER_TARGET_LOGIC_LINES, extreme: POSTORDER_EXTREME_LOGIC_LINES },
+  'level-order': { target: LEVEL_ORDER_TARGET_LOGIC_LINES, extreme: LEVEL_ORDER_EXTREME_LOGIC_LINES },
+}
+
+// The "Init:" line index is the same (3) across every logic block, so the pre-first-step preview
+// can highlight it directly without needing a per-algorithm lookup.
+const INIT_LOGIC_LINE = new Set([3])
+
+function getLogicHighlighted(
+  algorithm: BinaryTreeTraversalAlgorithm,
+  goalType: GoalType,
+  codeHighlighted: Set<number>,
+  isBeforeFirstStep: boolean,
+): Set<number> {
+  if (isBeforeFirstStep) return INIT_LOGIC_LINE
+
+  const isExtreme = goalType === 'max-value' || goalType === 'min-value'
+  const map = isExtreme ? LOGIC_LINE_MAPS[algorithm].extreme : LOGIC_LINE_MAPS[algorithm].target
+
+  const lines = new Set<number>()
+  for (const codeLine of codeHighlighted) {
+    for (const logicLine of map[codeLine] ?? []) lines.add(logicLine)
+  }
+  return lines
+}
 
 export type BinaryTreeTraversalPageProps = {
   algorithm: BinaryTreeTraversalAlgorithm
@@ -419,6 +615,7 @@ export type BinaryTreeTraversalPageProps = {
   goalValueInput: string
   onGoalValueInputChange: (value: string) => void
   isTraversalRunning: boolean
+  isBeforeFirstStep: boolean
   onRunTraversal: () => void
   onStopTraversal: () => void
   canRunTraversal: boolean
@@ -453,6 +650,7 @@ export const BinaryTreeTraversalPage = ({
   goalValueInput,
   onGoalValueInputChange,
   isTraversalRunning,
+  isBeforeFirstStep,
   onRunTraversal,
   onStopTraversal,
   canRunTraversal,
@@ -565,7 +763,7 @@ export const BinaryTreeTraversalPage = ({
         codeText={CODE_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
         logicText={LOGIC_BY_ALGORITHM_AND_GOAL[algorithm][goalType]}
         codeHighlighted={traversalCodeHighlighted}
-        logicHighlighted={NO_HIGHLIGHTS}
+        logicHighlighted={getLogicHighlighted(algorithm, goalType, traversalCodeHighlighted, isBeforeFirstStep)}
         varsRows={traversalVarsRows}
         showLogic={pseudocodeShowLogic}
         onFlip={onPseudocodeFlip}

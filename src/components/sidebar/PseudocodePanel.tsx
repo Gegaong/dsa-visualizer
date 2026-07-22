@@ -54,14 +54,11 @@ function PseudocodeBody({ text, highlighted, varsRows, showLogic }: PseudocodeBo
             : undefined
 
           if (showLogic) {
-            const logicStyle = indent > 0 && isActive
-              ? { paddingLeft: `calc(12px + ${indent}ch)`, textIndent: `-${indent}ch` }
-              : indentStyle
             return (
               <span
                 key={i}
                 className={`pseudocode-line${isActive ? ' pseudocode-line--active' : ''}`}
-                style={logicStyle}
+                style={indentStyle}
               >
                 {line}
               </span>
