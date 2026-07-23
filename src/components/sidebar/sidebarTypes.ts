@@ -1,10 +1,10 @@
 import type { GoalType, GraphPreset } from '../../types'
 
-import type { WeightedPathfindingPanelProps } from './WeightedPathfindingPanel'
+import type { WeightedPathfindingPanelProps } from './graph/WeightedPathfindingPanel'
 
 export type { WeightedPathfindingPanelProps }
 
-import type { TraversalStrategy } from '../../algorithms/algorithmTypes'
+import type { TraversalStrategy } from '../../algorithms/graph/algorithmTypes'
 
 import type { TraversalPhase } from '../../hooks/useTraversalPlayback'
 

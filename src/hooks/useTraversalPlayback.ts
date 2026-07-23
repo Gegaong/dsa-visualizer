@@ -11,10 +11,8 @@ import type {
   GoalType,
 } from '../types'
 
-import type {
-  BfsResult,
-  TraversalStrategy,
-} from '../algorithms/algorithmTypes'
+import type { TraversalStrategy } from '../algorithms/graph/algorithmTypes'
+import type { BfsResult } from '../algorithms/sharedSearchTypes'
 
 import {
   PLAYBACK_MIN_DELAY_MS,
@@ -28,12 +26,12 @@ import {
   sanitizeNodeLabelInput,
 } from '../utils/format'
 
-import { runDirectedGoalTraversal } from '../algorithms/directedGoalTraversal'
+import { runDirectedGoalTraversal } from '../algorithms/graph/directedGoalTraversal'
 
 import {
   buildTraversalCompletionStatus,
   prepareTraversalRunInputs,
-} from '../algorithms/traversalUIHelpers'
+} from '../algorithms/graph/traversalUIHelpers'
 
 import { useStepPlayback } from './useStepPlayback'
 

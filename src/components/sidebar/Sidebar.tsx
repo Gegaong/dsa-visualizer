@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react'
 
 import type { SidebarPage, SidebarProps } from './sidebarTypes'
 
-import { CanvasSetupPage } from './CanvasSetupPage'
+import { CanvasSetupPage } from './graph/CanvasSetupPage'
 
-import { TraversalPage } from './TraversalPage'
+import { TraversalPage } from './graph/TraversalPage'
 
-import { AlgorithmsPage } from './AlgorithmsPage'
+import { AlgorithmsPage } from './graph/AlgorithmsPage'
 
-import { WeightedPathfindingPanel } from './WeightedPathfindingPanel'
+import { WeightedPathfindingPanel } from './graph/WeightedPathfindingPanel'
 
 export type { SidebarPage, AlgorithmMode } from './sidebarTypes'
 

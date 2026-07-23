@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStepPlayback } from './useStepPlayback'
-import { solveNQueens } from '../algorithms/nqueens'
-import type { NQueensStep } from '../algorithms/nqueens'
+import { solveNQueens } from '../algorithms/nqueens/nqueens'
+import type { NQueensStep } from '../algorithms/nqueens/nqueens'
 import {
   NQUEENS_PLAYBACK_MIN_DELAY_MS,
   NQUEENS_PLAYBACK_MAX_DELAY_MS,

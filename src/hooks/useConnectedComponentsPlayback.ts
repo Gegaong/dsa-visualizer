@@ -13,7 +13,7 @@ import type {
 import type {
   ConnectedComponentsResult,
   TraversalStrategy,
-} from '../algorithms/algorithmTypes'
+} from '../algorithms/graph/algorithmTypes'
 
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 
@@ -21,14 +21,14 @@ import type { WeakCCOutlineHSL } from '../utils/weakCCOutlineHues'
 
 import { buildWeakCCOutlineHSLByNodeId } from '../utils/weakCCOutlineHues'
 
-import { runConnectedComponents } from '../algorithms/connectedComponents'
+import { runConnectedComponents } from '../algorithms/graph/connectedComponents'
 
 import { sanitizeNodeLabelInput } from '../utils/format'
 
 import {
   buildConnectedComponentsCompletionStatus,
   formatWeakCCGroupsDisplay,
-} from '../algorithms/connectedComponentsUIHelpers'
+} from '../algorithms/graph/connectedComponentsUIHelpers'
 
 import {
   useAlgorithmPlayback,

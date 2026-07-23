@@ -13,18 +13,18 @@ import type {
 import type {
   ShortestPathResult,
   TraversalStrategy,
-} from '../algorithms/algorithmTypes'
+} from '../algorithms/graph/algorithmTypes'
 
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 
-import { runShortestPath } from '../algorithms/shortestPath'
+import { runShortestPath } from '../algorithms/graph/shortestPath'
 
 import { sanitizeNodeLabelInput } from '../utils/format'
 
 import {
   buildShortestPathCompletionStatus,
   formatShortestPathNodeLabels,
-} from '../algorithms/shortestPathUIHelpers'
+} from '../algorithms/graph/shortestPathUIHelpers'
 
 import {
   useAlgorithmPlayback,

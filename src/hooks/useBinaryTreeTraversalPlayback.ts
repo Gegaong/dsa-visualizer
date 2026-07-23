@@ -10,8 +10,8 @@ import {
   runBinaryTreeLevelOrderExec,
   runBinaryTreePostorderExec,
   runBinaryTreePreorderExec,
-} from '../algorithms/binaryTreeTraversal'
-import type { BinaryTreeExecResult, BinaryTreeTraversalAlgorithm } from '../algorithms/binaryTreeTraversal'
+} from '../algorithms/binaryTree/binaryTreeTraversal'
+import type { BinaryTreeExecResult, BinaryTreeTraversalAlgorithm } from '../algorithms/binaryTree/binaryTreeTraversal'
 
 import {
   PLAYBACK_MIN_DELAY_MS,

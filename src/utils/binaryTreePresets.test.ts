@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
-import { runValidateBstExec } from '../algorithms/binaryTreeBst'
-import { getNodeCount, getTreeHeight } from '../algorithms/binaryTreeShared'
+import { runValidateBstExec } from '../algorithms/binaryTree/binaryTreeBst'
+import { getNodeCount, getTreeHeight } from '../algorithms/binaryTree/binaryTreeShared'
 
 import { BINARY_TREE_PRESETS, buildBinaryTreePreset } from './binaryTreePresets'
 

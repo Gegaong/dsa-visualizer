@@ -33,18 +33,18 @@ import {
   GRID_ZOOM_STEP,
 } from './utils/constants'
 
-import { EdgeContextMenu } from './components/EdgeContextMenu'
-import { GraphCanvas } from './components/GraphCanvas'
-import { GridCanvas } from './components/GridCanvas'
-import { GridSidebar } from './components/sidebar/GridSidebar'
-import { NQueensCanvas } from './components/NQueensCanvas'
-import { NQueensSidebar } from './components/sidebar/NQueensSidebar'
-import { BinaryTreeCanvas } from './components/BinaryTreeCanvas'
-import { BinaryTreeSidebar } from './components/sidebar/BinaryTreeSidebar'
-import type { BinaryTreeSidebarPage } from './components/sidebar/BinaryTreeSidebar'
+import { EdgeContextMenu } from './components/graph/EdgeContextMenu'
+import { GraphCanvas } from './components/graph/GraphCanvas'
+import { GridCanvas } from './components/grid/GridCanvas'
+import { GridSidebar } from './components/sidebar/grid/GridSidebar'
+import { NQueensCanvas } from './components/nqueens/NQueensCanvas'
+import { NQueensSidebar } from './components/sidebar/nqueens/NQueensSidebar'
+import { BinaryTreeCanvas } from './components/binaryTree/BinaryTreeCanvas'
+import { BinaryTreeSidebar } from './components/sidebar/binaryTree/BinaryTreeSidebar'
+import type { BinaryTreeSidebarPage } from './components/sidebar/binaryTree/BinaryTreeSidebar'
 import { Header } from './components/Header'
 import { ConfirmModal } from './components/Modals'
-import { NodeContextMenu } from './components/NodeContextMenu'
+import { NodeContextMenu } from './components/graph/NodeContextMenu'
 import { Sidebar } from './components/sidebar/Sidebar'
 import type { AlgorithmMode, SidebarPage } from './components/sidebar/sidebarTypes'
 
@@ -65,7 +65,7 @@ import { clampToRange, getVisibleCanvasRegion, isOverlapping } from './utils/geo
 import { buildPresetGraph } from './utils/presets'
 import { buildBinaryTreePreset } from './utils/binaryTreePresets'
 
-import type { TraversalStrategy, WeightedAlgorithm } from './algorithms/algorithmTypes'
+import type { TraversalStrategy, WeightedAlgorithm } from './algorithms/graph/algorithmTypes'
 
 import { useTraversalPlayback } from './hooks/useTraversalPlayback'
 import { useConnectedComponentsPlayback } from './hooks/useConnectedComponentsPlayback'
@@ -79,8 +79,8 @@ import type { GridSearchMode } from './hooks/useForLoopBFSPlayback'
 import { useNQueensPlayback } from './hooks/useNQueensPlayback'
 import { useBinaryTreeTraversalPlayback } from './hooks/useBinaryTreeTraversalPlayback'
 import { useBinaryTreeBstPlayback } from './hooks/useBinaryTreeBstPlayback'
-import { collectSubtreeIds, buildParentIdMap, findChildSide, convertBinaryTreeToBst } from './algorithms/binaryTreeShared'
-import { applyBstInsert, removeBstInsertedNode } from './algorithms/binaryTreeBst'
+import { collectSubtreeIds, buildParentIdMap, findChildSide, convertBinaryTreeToBst } from './algorithms/binaryTree/binaryTreeShared'
+import { applyBstInsert, removeBstInsertedNode } from './algorithms/binaryTree/binaryTreeBst'
 
 const CANVAS_ORDER: CanvasType[] = ['graph', 'binary-tree', 'weighted-graph', 'grid', 'nqueens']
 

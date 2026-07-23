@@ -2,18 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { GraphEdge, GraphNode } from '../types'
 
-import type { BipartiteResult, TraversalStrategy } from '../algorithms/algorithmTypes'
+import type { BipartiteResult, TraversalStrategy } from '../algorithms/graph/algorithmTypes'
 
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 
-import { runBipartiteCheck } from '../algorithms/bipartiteCheck'
+import { runBipartiteCheck } from '../algorithms/graph/bipartiteCheck'
 
 import { sanitizeNodeLabelInput } from '../utils/format'
 
 import {
   buildBipartiteCompletionStatus,
   formatBipartiteGroupLabels,
-} from '../algorithms/bipartiteUIHelpers'
+} from '../algorithms/graph/bipartiteUIHelpers'
 
 import { useAlgorithmPlayback, type TraversalVisualSetters } from './useAlgorithmPlayback'
 

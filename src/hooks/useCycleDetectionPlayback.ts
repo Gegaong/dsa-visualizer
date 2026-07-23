@@ -13,20 +13,20 @@ import type {
 import type {
   CycleDetectionResult,
   TraversalStrategy,
-} from '../algorithms/algorithmTypes'
+} from '../algorithms/graph/algorithmTypes'
 
 import type { AlgorithmMode } from '../components/sidebar/sidebarTypes'
 
-import { runCycleDetection } from '../algorithms/cycleDetection'
+import { runCycleDetection } from '../algorithms/graph/cycleDetection'
 
-import { buildNeighborsMap } from '../algorithms/graphAdjacency'
+import { buildNeighborsMap } from '../algorithms/graph/graphAdjacency'
 
 import { sanitizeNodeLabelInput } from '../utils/format'
 
 import {
   buildCycleDetectionCompletionStatus,
   formatCycleNodeLabels,
-} from '../algorithms/cycleDetectionUIHelpers'
+} from '../algorithms/graph/cycleDetectionUIHelpers'
 
 import {
   useAlgorithmPlayback,

@@ -21,7 +21,7 @@ import {
   type BinaryTreeBstExecResult,
   type BinaryTreeDeleteBstResult,
   type BinaryTreeInsertBstResult,
-} from '../algorithms/binaryTreeBst'
+} from '../algorithms/binaryTree/binaryTreeBst'
 
 import {
   PLAYBACK_MIN_DELAY_MS,

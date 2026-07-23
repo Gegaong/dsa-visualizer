@@ -14,7 +14,7 @@ import type {
   PriorityPathResult,
   WeightedAlgorithm,
   WeightedPathResult,
-} from '../algorithms/algorithmTypes'
+} from '../algorithms/graph/algorithmTypes'
 
 import type { WPOutput } from '../components/sidebar/sidebarTypes'
 
@@ -22,18 +22,18 @@ import {
   runWeightedPathfinding,
   getDirectedEdgeId,
   getDirectedEdgeInfo,
-} from '../algorithms/weightedPathfinding'
+} from '../algorithms/graph/weightedPathfinding'
 
 import { formatCost, sanitizeNodeLabelInput } from '../utils/format'
 
-import { runDijkstra, runAStar, runGreedy } from '../algorithms/priorityPathfinding'
+import { runDijkstra, runAStar, runGreedy } from '../algorithms/graph/priorityPathfinding'
 
 import {
   buildWPCompletionStatus,
   buildPriorityCompletionStatus,
   formatWPPathNodeLabels,
   formatPriorityPathNodeLabels,
-} from '../algorithms/weightedPathfindingUIHelpers'
+} from '../algorithms/graph/weightedPathfindingUIHelpers'
 
 import {
   PLAYBACK_MIN_DELAY_MS,

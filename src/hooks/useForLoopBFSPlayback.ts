@@ -1,21 +1,21 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStepPlayback } from './useStepPlayback'
-import { runForLoopOuter } from '../algorithms/gridForLoopOuter'
-import { runOuterBFS, runOuterDFS } from '../algorithms/gridOuterSearch'
-import type { GridResult, GridSubPhase } from '../algorithms/gridTypes'
-import type { InnerAlgo } from '../algorithms/gridTypes'
+import { runForLoopOuter } from '../algorithms/grid/gridForLoopOuter'
+import { runOuterBFS, runOuterDFS } from '../algorithms/grid/gridOuterSearch'
+import type { GridResult, GridSubPhase } from '../algorithms/grid/gridTypes'
+import type { InnerAlgo } from '../algorithms/grid/gridTypes'
 import { buildGridIslandColorMap } from '../utils/gridIslandColors'
 import type { IslandHSL } from '../utils/gridIslandColors'
-import type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
+import type { ForLoopScanMode } from '../algorithms/grid/gridForLoopOuter'
 import {
   GRID_PLAYBACK_MIN_DELAY_MS,
   GRID_PLAYBACK_MAX_DELAY_MS,
   GRID_PLAYBACK_DEFAULT_DELAY_MS,
 } from '../utils/constants'
 export type { IslandHSL } from '../utils/gridIslandColors'
-export type { ForLoopScanMode } from '../algorithms/gridForLoopOuter'
-export type { InnerAlgo } from '../algorithms/gridTypes'
-export type { GridSubPhase } from '../algorithms/gridTypes'
+export type { ForLoopScanMode } from '../algorithms/grid/gridForLoopOuter'
+export type { InnerAlgo } from '../algorithms/grid/gridTypes'
+export type { GridSubPhase } from '../algorithms/grid/gridTypes'
 
 export type GridSearchMode =
   | 'for-bfs' | 'for-dfs'
