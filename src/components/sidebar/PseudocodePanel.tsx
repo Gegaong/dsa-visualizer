@@ -119,8 +119,21 @@ export const PseudocodePanel = ({
   const [isFlipping, setIsFlipping] = useState(false)
   const [isDetached, setIsDetached] = useState(false)
   const [pos, setPos] = useState({ x: 96, y: 96 })
+  const [size, setSize] = useState<{ width: number; height?: number }>({ width: 400 })
+  const [isResizing, setIsResizing] = useState(false)
+
   const dragOffset = useRef<{ x: number; y: number } | null>(null)
+  const resizeRef = useRef<{
+    direction: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
+    startX: number
+    startY: number
+    startPosX: number
+    startPosY: number
+    startWidth: number
+    startHeight: number
+  } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const detachedRef = useRef<HTMLDivElement>(null)
 
   const text = showLogic ? logicText : codeText
   const highlighted = showLogic ? logicHighlighted : codeHighlighted
@@ -136,7 +149,14 @@ export const PseudocodePanel = ({
   const toggleDetached = () => {
     if (!isDetached && cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect()
-      setPos({ x: rect.left, y: rect.top })
+      const initialWidth = Math.max(380, Math.min(rect.width + 40, window.innerWidth - 32))
+      const initialX = Math.max(16, Math.min(rect.left - 20, window.innerWidth - initialWidth - 24))
+      const initialY = Math.max(16, Math.min(rect.top, window.innerHeight - 280))
+      setPos({ x: initialX, y: initialY })
+      setSize((prev) => ({
+        width: Math.max(prev.width || 380, initialWidth),
+        height: prev.height,
+      }))
     }
     setIsDetached((v) => !v)
   }
@@ -147,10 +167,89 @@ export const PseudocodePanel = ({
   }
   const onHeaderPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!dragOffset.current) return
-    setPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y })
+    const currentWidth = size.width || 380
+    const rawX = e.clientX - dragOffset.current.x
+    const rawY = e.clientY - dragOffset.current.y
+    const clampedX = Math.max(8, Math.min(window.innerWidth - currentWidth - 8, rawX))
+    const clampedY = Math.max(8, Math.min(window.innerHeight - 60, rawY))
+    setPos({ x: clampedX, y: clampedY })
   }
   const onHeaderPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
     dragOffset.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+  }
+
+  const MIN_WIDTH = 260
+  const MIN_HEIGHT = 140
+
+  const onResizePointerDown = (
+    e: ReactPointerEvent<HTMLDivElement>,
+    direction: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!detachedRef.current) return
+
+    const rect = detachedRef.current.getBoundingClientRect()
+    resizeRef.current = {
+      direction,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: pos.x,
+      startPosY: pos.y,
+      startWidth: rect.width,
+      startHeight: rect.height,
+    }
+    setIsResizing(true)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const onResizePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!resizeRef.current) return
+    const { direction, startX, startY, startPosX, startPosY, startWidth, startHeight } = resizeRef.current
+    const dx = e.clientX - startX
+    const dy = e.clientY - startY
+
+    let newWidth = startWidth
+    let newHeight = startHeight
+    let newX = startPosX
+    let newY = startPosY
+
+    // Horizontal resizing (sides)
+    if (direction.includes('e')) {
+      const maxWidth = Math.max(MIN_WIDTH, window.innerWidth - startPosX - 12)
+      newWidth = Math.min(maxWidth, Math.max(MIN_WIDTH, startWidth + dx))
+    } else if (direction.includes('w')) {
+      const maxExpansion = startPosX - 12
+      const maxAllowedWidth = startWidth + maxExpansion
+      const targetWidth = startWidth - dx
+      newWidth = Math.min(maxAllowedWidth, Math.max(MIN_WIDTH, targetWidth))
+      const deltaW = newWidth - startWidth
+      newX = startPosX - deltaW
+    }
+
+    // Vertical resizing
+    if (direction.includes('s')) {
+      const maxHeight = Math.max(MIN_HEIGHT, window.innerHeight - startPosY - 12)
+      newHeight = Math.min(maxHeight, Math.max(MIN_HEIGHT, startHeight + dy))
+    } else if (direction.includes('n')) {
+      const maxExpansion = startPosY - 12
+      const maxAllowedHeight = startHeight + maxExpansion
+      const targetHeight = startHeight - dy
+      newHeight = Math.min(maxAllowedHeight, Math.max(MIN_HEIGHT, targetHeight))
+      const deltaH = newHeight - startHeight
+      newY = startPosY - deltaH
+    }
+
+    setPos({ x: Math.max(8, newX), y: Math.max(8, newY) })
+    setSize({ width: Math.round(newWidth), height: Math.round(newHeight) })
+  }
+
+  const onResizePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    resizeRef.current = null
+    setIsResizing(false)
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId)
     }
@@ -175,8 +274,8 @@ export const PseudocodePanel = ({
           <button
             type="button"
             className="pseudocode-card-btn"
-            title="Pop out pseudocode"
-            aria-label="Pop out pseudocode"
+            title="Expand / pop out pseudocode"
+            aria-label="Expand / pop out pseudocode"
             onClick={toggleDetached}
           >
             {POP_OUT_ICON}
@@ -187,7 +286,83 @@ export const PseudocodePanel = ({
       <PseudocodeBody text={text} highlighted={highlighted} varsRows={varsRows} showLogic={showLogic} />
 
       {isDetached && createPortal(
-        <div className="pseudocode-detached" style={{ left: pos.x, top: pos.y }}>
+        <div
+          ref={detachedRef}
+          className={`pseudocode-detached${isResizing ? ' pseudocode-detached--resizing' : ''}`}
+          style={{
+            left: pos.x,
+            top: pos.y,
+            width: size.width,
+            height: size.height ? `${size.height}px` : undefined,
+          }}
+        >
+          {/* Side & corner resize handles */}
+          <div
+            className="pseudocode-resize-handle pseudocode-resize-handle--w"
+            title="Drag side to resize width"
+            onPointerDown={(e) => onResizePointerDown(e, 'w')}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          />
+          <div
+            className="pseudocode-resize-handle pseudocode-resize-handle--e"
+            title="Drag side to resize width"
+            onPointerDown={(e) => onResizePointerDown(e, 'e')}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          />
+          <div
+            className="pseudocode-resize-handle pseudocode-resize-handle--n"
+            title="Drag top to resize height"
+            onPointerDown={(e) => onResizePointerDown(e, 'n')}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          />
+          <div
+            className="pseudocode-resize-handle pseudocode-resize-handle--s"
+            title="Drag bottom to resize height"
+            onPointerDown={(e) => onResizePointerDown(e, 's')}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          />
+          <div
+            className="pseudocode-resize-handle pseudocode-resize-handle--nw"
+            onPointerDown={(e) => onResizePointerDown(e, 'nw')}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          />
+          <div
+            className="pseudocode-resize-handle pseudocode-resize-handle--ne"
+            onPointerDown={(e) => onResizePointerDown(e, 'ne')}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          />
+          <div
+            className="pseudocode-resize-handle pseudocode-resize-handle--sw"
+            onPointerDown={(e) => onResizePointerDown(e, 'sw')}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          />
+          <div
+            className="pseudocode-resize-handle pseudocode-resize-handle--se"
+            title="Drag corner to resize"
+            onPointerDown={(e) => onResizePointerDown(e, 'se')}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          >
+            <svg className="pseudocode-resize-grip-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M8 2L2 8M8 5L5 8M8 8L8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+
           <div
             className="pseudocode-detached-header"
             onPointerDown={onHeaderPointerDown}
