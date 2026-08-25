@@ -10,8 +10,9 @@ import { PseudocodePanel } from '../PseudocodePanel'
 
 import { confirmNodeLabelFieldOnEnter, NODE_LABEL_FIELD_ATTRS } from '../sidebarFieldHelpers'
 
-// ─── Code pseudocode strings (17 lines each, 0–16) ──────────────────────────
+// ─── Code pseudocode strings (19 lines each, 0–18) ──────────────────────────
 // Two-function structure: outer loop finds component roots; inner BFS/DFS traverses each.
+// The inner function collects its own node list (`component`) and returns it to the outer loop.
 
 const BFS_CODE = `function ConnectedComponents(graph):
     visited ← {}; components ← []
@@ -22,9 +23,11 @@ const BFS_CODE = `function ConnectedComponents(graph):
     return components
 
 function BFS(start, visited, graph):
+    component ← []
     queue ← [start]; visited.add(start)
     while queue ≠ empty:
         u ← queue.dequeue()
+        component.add(u)
         for each nb of u in graph:
             if nb ∉ visited:
                 visited.add(nb)
@@ -40,9 +43,11 @@ const DFS_CODE = `function ConnectedComponents(graph):
     return components
 
 function DFS(start, visited, graph):
+    component ← []
     stack ← [start]; visited.add(start)
     while stack ≠ empty:
         u ← stack.pop()
+        component.add(u)
         for each nb of u in graph:
             if nb ∉ visited:
                 visited.add(nb)
@@ -79,13 +84,14 @@ No more unvisited nodes → all done.`
 
 // ─── Highlight maps ──────────────────────────────────────────────────────────
 
-// Code: 17 lines (0–16). Outer function lines 0–6 + blank line 7 + inner function lines 8–16.
-// step-root covers the outer-loop discovery (2,3,4) + seed (9) AND the while-body (10–15):
+// Code: 19 lines (0–18). Outer function lines 0–6 + blank line 7 + inner function lines 8–18.
+// step-root covers the outer-loop discovery (2,3,4) + seed (9,10) AND the while-body (11–17):
 // the root is dequeued and its neighbors enqueued in the same step, so its frontier fills here.
+// Line 9 (`component ← []`) is root-only: the list is created once per component, not per step.
 const CODE_HIGHLIGHTS: Record<CCPhase, number[]> = {
   ready:        [0, 1],
-  'step-root':  [2, 3, 4, 9, 10, 11, 12, 13, 14, 15],
-  'step-inner': [10, 11, 12, 13, 14, 15],
+  'step-root':  [2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+  'step-inner': [11, 12, 13, 14, 15, 16, 17],
   done:         [6],
 }
 

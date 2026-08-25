@@ -4,9 +4,33 @@ import { PlaybackControls } from '../PlaybackControls'
 import { PseudocodePanel } from '../PseudocodePanel'
 import type { GridOutput, ForLoopScanMode, GridSearchMode, GridSubPhase } from '../../../hooks/useForLoopBFSPlayback'
 
-const FOR_BFS_CODE = `function SCAN(grid, rows, cols):
-    for r ← 0 to rows-1:
-        for c ← 0 to cols-1:
+type ScanCorner = 'tl' | 'tr' | 'bl' | 'br'
+
+// The outer scan's two `for` lines depend on the start corner and primary axis, so the displayed
+// pseudocode has to be built per scan mode rather than hardcoded to top-left/row-major.
+// Both helpers always emit exactly one line each, keeping the highlight indices below valid
+// across all 8 combinations.
+const scanLoopLines = (corner: ScanCorner, primary: 'h' | 'v'): [string, string] => {
+  const rowLoop = corner[0] === 't' ? 'for r ← 0 to rows-1' : 'for r ← rows-1 down to 0'
+  const colLoop = corner[1] === 'l' ? 'for c ← 0 to cols-1' : 'for c ← cols-1 down to 0'
+  // Horizontal primary → rows outermost; vertical primary → columns outermost.
+  return primary === 'h' ? [rowLoop, colLoop] : [colLoop, rowLoop]
+}
+
+const scanOrderPhrase = (corner: ScanCorner, primary: 'h' | 'v'): string => {
+  const vertical = corner[0] === 't' ? 'top-down' : 'bottom-up'
+  const horizontal = corner[1] === 'l' ? 'left to right' : 'right to left'
+  return primary === 'h'
+    ? `row by row, ${vertical}, ${horizontal}.`
+    : `column by column, ${horizontal}, ${vertical}.`
+}
+
+const forBfsCode = (corner: ScanCorner, primary: 'h' | 'v') => {
+  const [outerLoop, innerLoop] = scanLoopLines(corner, primary)
+  return `function SCAN(grid, rows, cols):
+    islands ← []; visited ← {}
+    ${outerLoop}:
+        ${innerLoop}:
             if grid[r][c] = water → skip
             if (r,c) ∈ visited  → skip
             island ← BFS_FILL(r,c, grid, visited)
@@ -14,6 +38,7 @@ const FOR_BFS_CODE = `function SCAN(grid, rows, cols):
     return islands
 
 function BFS_FILL(start, grid, visited):
+    island ← []
     queue ← [start]
     visited.add(start)
     while queue ≠ empty:
@@ -24,9 +49,10 @@ function BFS_FILL(start, grid, visited):
                 visited.add(nb)
                 queue.enqueue(nb)
     return island`
+}
 
-const FOR_BFS_LOGIC = `Go through every cell in the grid,
-row by row, left to right.
+const forBfsLogic = (corner: ScanCorner, primary: 'h' | 'v') => `Go through every cell in the grid,
+${scanOrderPhrase(corner, primary)}
 ──────────────────────────────────────────
 For each cell:
   · Water → skip it.
@@ -43,9 +69,12 @@ For each cell:
 Once every cell has been checked,
 all islands have been found.`
 
-const FOR_DFS_CODE = `function SCAN(grid, rows, cols):
-    for r ← 0 to rows-1:
-        for c ← 0 to cols-1:
+const forDfsCode = (corner: ScanCorner, primary: 'h' | 'v') => {
+  const [outerLoop, innerLoop] = scanLoopLines(corner, primary)
+  return `function SCAN(grid, rows, cols):
+    islands ← []; visited ← {}
+    ${outerLoop}:
+        ${innerLoop}:
             if grid[r][c] = water → skip
             if (r,c) ∈ visited  → skip
             island ← DFS_FILL(r,c, grid, visited)
@@ -53,6 +82,7 @@ const FOR_DFS_CODE = `function SCAN(grid, rows, cols):
     return islands
 
 function DFS_FILL(start, grid, visited):
+    island ← []
     stack ← [start]
     visited.add(start)
     while stack ≠ empty:
@@ -63,9 +93,10 @@ function DFS_FILL(start, grid, visited):
                 visited.add(nb)
                 stack.push(nb)
     return island`
+}
 
-const FOR_DFS_LOGIC = `Go through every cell in the grid,
-row by row, left to right.
+const forDfsLogic = (corner: ScanCorner, primary: 'h' | 'v') => `Go through every cell in the grid,
+${scanOrderPhrase(corner, primary)}
 ──────────────────────────────────────────
 For each cell:
   · Water → skip it.
@@ -248,11 +279,13 @@ all islands have been found.`
 
 // Line indices (0-based) to highlight per sub-phase for each pseudocode style.
 // FOR-BFS and FOR-DFS share the same line structure — only the function name changes.
+// Code: 22 lines (0–21). SCAN lines 0–8 + blank line 9 + FILL lines 10–21.
+// Line 11 (`island ← []`) is start-only: the list is created once per island, not per step.
 const FOR_CODE_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
-  'outer-water':     [1, 2, 3],
-  'outer-visited':   [1, 2, 4],
-  'inner-start':     [5, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-  'inner-process':   [12, 13, 14, 15, 16, 17, 18],
+  'outer-water':     [2, 3, 4],
+  'outer-visited':   [2, 3, 5],
+  'inner-start':     [6, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+  'inner-process':   [14, 15, 16, 17, 18, 19, 20],
   'bfs-outer-skip':  [],
   'bfs-outer-water': [],
   'dfs-outer-skip':  [],
@@ -318,14 +351,14 @@ const DFS_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
 
 // lifecycle drives the pre-step and post-finish highlights, consistent with every other algorithm:
 //   'ready' = session started, not yet stepped → the setup (signature + any pre-loop init; logic
-//             shows the opening overview before the first divider). FOR loops immediately → code [0].
+//             shows the opening overview before the first divider).
 //   'done'  = playback finished → the terminal `return islands` (code) and the closing conclusion (logic).
 //   null    = mid-run → use the live sub-phase.
 type GridLifecycle = 'ready' | 'done' | null
 
 function getForHighlights(subPhase: GridSubPhase | null, isLogic: boolean, lifecycle: GridLifecycle): Set<number> {
-  if (lifecycle === 'ready') return new Set(isLogic ? [0, 1] : [0])
-  if (lifecycle === 'done') return new Set(isLogic ? [15, 16] : [7])
+  if (lifecycle === 'ready') return new Set([0, 1])
+  if (lifecycle === 'done') return new Set(isLogic ? [15, 16] : [8])
   if (!subPhase) return new Set()
   const map = isLogic ? FOR_LOGIC_HIGHLIGHTS : FOR_CODE_HIGHLIGHTS
   return new Set(map[subPhase])
@@ -346,8 +379,6 @@ function getDfsHighlights(subPhase: GridSubPhase | null, isLogic: boolean, lifec
   const map = isLogic ? DFS_LOGIC_HIGHLIGHTS : DFS_CODE_HIGHLIGHTS
   return new Set(map[subPhase])
 }
-
-type ScanCorner = 'tl' | 'tr' | 'bl' | 'br'
 
 const CORNER_ICONS: Record<ScanCorner, string> = { tl: '↖', tr: '↗', bl: '↙', br: '↘' }
 const DIRECTION_LABELS: Record<ScanCorner, { h: string; v: string }> = {
@@ -582,8 +613,12 @@ export const GridSidebar = ({
 
         {(mode === 'for-bfs' || mode === 'for-dfs') && (
           <PseudocodePanel
-            codeText={mode === 'for-bfs' ? FOR_BFS_CODE : FOR_DFS_CODE}
-            logicText={mode === 'for-bfs' ? FOR_BFS_LOGIC : FOR_DFS_LOGIC}
+            codeText={mode === 'for-bfs'
+              ? forBfsCode(scanCorner, scanPrimary)
+              : forDfsCode(scanCorner, scanPrimary)}
+            logicText={mode === 'for-bfs'
+              ? forBfsLogic(scanCorner, scanPrimary)
+              : forDfsLogic(scanCorner, scanPrimary)}
             codeHighlighted={getForHighlights(currentSubPhase, false, lifecycle)}
             logicHighlighted={getForHighlights(currentSubPhase, true, lifecycle)}
             showLogic={pseudocodeShowLogic}
