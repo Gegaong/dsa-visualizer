@@ -47,8 +47,10 @@ export const NQueensCanvas = ({ n, onNChange, isRunning, currentStep }: NQueensC
   useLayoutEffect(() => {
     const el = bodyRef.current
     if (!el) return
-    const obs = new ResizeObserver(entries => {
-      setBoardSize(entries[0].contentRect.height)
+    const obs = new ResizeObserver((entries) => {
+      const { height, width } = entries[0].contentRect
+      const maxByWidth = Math.max(200, width - 360)
+      setBoardSize(Math.min(height, maxByWidth))
     })
     obs.observe(el)
     return () => obs.disconnect()

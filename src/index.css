@@ -28,21 +28,127 @@ body {
 		linear-gradient(180deg, #f4f6f1 0%, #ecefe8 100%);
 }
 
+:fullscreen,
+:-webkit-full-screen,
 html:fullscreen,
 html:-webkit-full-screen {
 	overflow: hidden;
+	width: 100%;
+	height: 100%;
 }
 
+:fullscreen body,
+:-webkit-full-screen body,
 html:fullscreen body,
 html:-webkit-full-screen body {
 	height: 100vh;
+	width: 100vw;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
 	display: flex;
-	align-items: center;
+	flex-direction: column;
+	align-items: stretch;
 }
 
+:fullscreen .app,
+:-webkit-full-screen .app,
 html:fullscreen .app,
 html:-webkit-full-screen .app {
-	margin-top: 0;
-	margin-bottom: 0;
-	width: 100%;
+	max-width: none;
+	width: 100vw;
+	height: 100vh;
+	margin: 0;
+	padding: 12px 18px;
+	gap: 12px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+}
+
+:fullscreen .topbar,
+:-webkit-full-screen .topbar,
+html:fullscreen .topbar,
+html:-webkit-full-screen .topbar {
+	flex-shrink: 0;
+	padding: 10px 20px;
+	gap: 8px;
+}
+
+:fullscreen .workspace,
+:-webkit-full-screen .workspace,
+html:fullscreen .workspace,
+html:-webkit-full-screen .workspace {
+	flex: 1;
+	min-height: 0;
+	height: auto;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+	align-items: stretch;
+}
+
+:fullscreen .canvas-panel,
+:-webkit-full-screen .canvas-panel,
+html:fullscreen .canvas-panel,
+html:-webkit-full-screen .canvas-panel,
+:fullscreen .canvas-panel--nqueens,
+:-webkit-full-screen .canvas-panel--nqueens,
+html:fullscreen .canvas-panel--nqueens,
+html:-webkit-full-screen .canvas-panel--nqueens {
+	height: 100%;
+	min-height: 0;
+	box-sizing: border-box;
+}
+
+:fullscreen .canvas,
+:-webkit-full-screen .canvas,
+html:fullscreen .canvas,
+html:-webkit-full-screen .canvas,
+:fullscreen .grid-canvas-area,
+:-webkit-full-screen .grid-canvas-area,
+html:fullscreen .grid-canvas-area,
+html:-webkit-full-screen .grid-canvas-area,
+:fullscreen .binary-tree-canvas-area,
+:-webkit-full-screen .binary-tree-canvas-area,
+html:fullscreen .binary-tree-canvas-area,
+html:-webkit-full-screen .binary-tree-canvas-area {
+	min-height: 0;
+}
+
+:fullscreen .sidebar,
+:-webkit-full-screen .sidebar,
+html:fullscreen .sidebar,
+html:-webkit-full-screen .sidebar,
+:fullscreen .sidebar.is-canvas-setup,
+:-webkit-full-screen .sidebar.is-canvas-setup,
+html:fullscreen .sidebar.is-canvas-setup,
+html:-webkit-full-screen .sidebar.is-canvas-setup,
+:fullscreen .sidebar.is-algorithm-setup,
+:-webkit-full-screen .sidebar.is-algorithm-setup,
+html:fullscreen .sidebar.is-algorithm-setup,
+html:-webkit-full-screen .sidebar.is-algorithm-setup,
+:fullscreen .sidebar.is-pathfinder-setup,
+:-webkit-full-screen .sidebar.is-pathfinder-setup,
+html:fullscreen .sidebar.is-pathfinder-setup,
+html:-webkit-full-screen .sidebar.is-pathfinder-setup,
+:fullscreen .sidebar.is-traversal-setup,
+:-webkit-full-screen .sidebar.is-traversal-setup,
+html:fullscreen .sidebar.is-traversal-setup,
+html:-webkit-full-screen .sidebar.is-traversal-setup,
+:fullscreen .sidebar.is-bst-setup,
+:-webkit-full-screen .sidebar.is-bst-setup,
+html:fullscreen .sidebar.is-bst-setup,
+html:-webkit-full-screen .sidebar.is-bst-setup,
+:fullscreen .sidebar.is-grid-search,
+:-webkit-full-screen .sidebar.is-grid-search,
+html:fullscreen .sidebar.is-grid-search,
+html:-webkit-full-screen .sidebar.is-grid-search,
+:fullscreen .sidebar.is-nqueens,
+:-webkit-full-screen .sidebar.is-nqueens,
+html:fullscreen .sidebar.is-nqueens,
+html:-webkit-full-screen .sidebar.is-nqueens {
+	height: 100%;
+	max-height: 100%;
+	min-height: 0;
+	box-sizing: border-box;
 }

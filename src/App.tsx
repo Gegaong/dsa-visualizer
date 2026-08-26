@@ -348,6 +348,108 @@ function App() {
     setIsUndirectedMode((prev) => !prev)
   }
 
+  // Keeps graph nodes visually anchored to the center when canvas dimensions change (e.g. entering/exiting fullscreen).
+  const lastCanvasSizeRef = useRef<{ width: number; height: number } | null>(null)
+
+  useEffect(() => {
+    lastCanvasSizeRef.current = null
+  }, [canvasType])
+
+  useEffect(() => {
+    if (!canvasElement) return
+    const obs = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect
+      if (width === 0 || height === 0) return
+
+      const prev = lastCanvasSizeRef.current
+      lastCanvasSizeRef.current = { width, height }
+
+      if (prev && prev.width > 0 && prev.height > 0) {
+        const dx = (width - prev.width) / 2
+        const dy = (height - prev.height) / 2
+
+        if (Math.abs(dx) >= 0.5 || Math.abs(dy) >= 0.5) {
+          setNodes((prevNodes) => {
+            if (prevNodes.length === 0) return prevNodes
+            return prevNodes.map((node) => ({
+              ...node,
+              x: Math.max(0, Math.min(width - NODE_SIZE, Math.round(node.x + dx))),
+              y: Math.max(0, Math.min(height - NODE_SIZE, Math.round(node.y + dy))),
+            }))
+          })
+
+          const shiftSaved = (saved: { nodes: GraphNode[] }) => {
+            if (saved.nodes.length > 0) {
+              saved.nodes = saved.nodes.map((node) => ({
+                ...node,
+                x: Math.max(0, Math.min(width - NODE_SIZE, Math.round(node.x + dx))),
+                y: Math.max(0, Math.min(height - NODE_SIZE, Math.round(node.y + dy))),
+              }))
+            }
+          }
+          if (canvasType === 'graph') {
+            shiftSaved(savedWeightedState.current)
+          } else if (canvasType === 'weighted-graph') {
+            shiftSaved(savedGraphState.current)
+          }
+        }
+      }
+    })
+    obs.observe(canvasElement)
+    return () => obs.disconnect()
+  }, [canvasElement, canvasType])
+
+  // Keeps grid islands and start markers centered when column count expands/shrinks on canvas resize.
+  const prevGridColsRef = useRef(gridCols)
+  useEffect(() => {
+    if (
+      prevGridColsRef.current > 0 &&
+      gridCols > 0 &&
+      prevGridColsRef.current !== gridCols &&
+      !gridSearch.isRunning
+    ) {
+      const colDiff = Math.round((gridCols - prevGridColsRef.current) / 2)
+      if (colDiff !== 0) {
+        if (gridIslands.size > 0) {
+          setGridIslands((prev) => {
+            const next = new Set<string>()
+            for (const key of prev) {
+              const [r, c] = key.split(',').map(Number)
+              const newC = c + colDiff
+              if (newC >= 0 && newC < gridCols) {
+                next.add(`${r},${newC}`)
+              }
+            }
+            return next
+          })
+        }
+        if (bfsStartCells.size > 0) {
+          setBfsStartCells((prev) => {
+            const next = new Set<string>()
+            for (const key of prev) {
+              const [r, c] = key.split(',').map(Number)
+              const newC = c + colDiff
+              if (newC >= 0 && newC < gridCols) {
+                next.add(`${r},${newC}`)
+              }
+            }
+            return next
+          })
+        }
+        if (dfsStartCell) {
+          const [r, c] = dfsStartCell.split(',').map(Number)
+          const newC = c + colDiff
+          if (newC >= 0 && newC < gridCols) {
+            setDfsStartCell(`${r},${newC}`)
+          } else {
+            setDfsStartCell(null)
+          }
+        }
+      }
+    }
+    prevGridColsRef.current = gridCols
+  }, [gridCols, gridSearch.isRunning, gridIslands.size, bfsStartCells.size, dfsStartCell])
+
   // Dismisses the node context menu without changing graph state.
   const closeContextMenu = () => setContextMenu(null)
 
