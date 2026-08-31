@@ -1,4 +1,4 @@
-import type { NQueensStep, NQueensPhase } from '../../../algorithms/nqueens/nqueens'
+import type { NQueensStep, NQueensPhase, NQueensPlaybackMode } from '../../../algorithms/nqueens/nqueens'
 
 import { AlgorithmInfoCard } from '../AlgorithmInfoCard'
 
@@ -59,47 +59,128 @@ const EXPLANATORY_HIGHLIGHTS: Record<NQueensPhase, number[]> = {
 // Returns the set of line indices to highlight:
 //   'ready' = not yet stepped → highlight the function signature (line 0).
 //   'done'  = search finished → highlight nothing; the code is no longer executing.
-//   null    = mid-run → use the live phase map.
+//   null    = mid-run → use the live phase or exact codeLine.
 type NQueensLifecycle = 'ready' | 'done' | null
 
 function getHighlightedLines(
-  phase: NQueensPhase | null,
+  step: NQueensStep | null,
   isExplanatory: boolean,
   lifecycle: NQueensLifecycle,
+  mode: NQueensPlaybackMode,
 ): Set<number> {
-  if (lifecycle === 'ready') return new Set([0])
+  if (lifecycle === 'ready') return new Set(isExplanatory ? [0, 2] : [0])
   if (lifecycle === 'done') return new Set()
-  if (!phase) return new Set()
-  const map = isExplanatory ? EXPLANATORY_HIGHLIGHTS : CODE_HIGHLIGHTS
-  return new Set(map[phase])
-}
+  if (!step) return new Set()
 
-// Extracts col, row, and placed queens from a step for display in the variable state panel.
-// col is 0-indexed to match the pseudocode; queens are formatted as chess notation (e.g. a7).
-function deriveVars(step: NQueensStep, n: number) {
-  const { lockedQueens, tryingQueen, phase } = step
-
-  let col: number
-  let row: number | null
-
-  if (tryingQueen) {
-    col = tryingQueen.col
-    row = tryingQueen.row
-  } else if (phase === 'backtrack') {
-    col = lockedQueens.length
-    row = null
-  } else {
-    const last = lockedQueens[lockedQueens.length - 1]
-    col = last?.col ?? 0
-    row = last?.row ?? null
+  if (mode === 'code' && step.codeLine !== undefined) {
+    if (isExplanatory) {
+      return new Set(step.logicLines ?? [0, 2])
+    }
+    return new Set([step.codeLine])
   }
 
-  const queens = [...lockedQueens].sort((a, b) => a.col - b.col).map(q => `${String.fromCharCode(97 + q.col)}${n - q.row}`)
-  return { col, row, queens }
+  const map = isExplanatory ? EXPLANATORY_HIGHLIGHTS : CODE_HIGHLIGHTS
+  return new Set(map[step.phase])
+}
+
+function toChessNotation(col: number, row: number, n: number): string {
+  return `${String.fromCharCode(97 + col)}${n - row}`
+}
+
+// Extracts runtime variables (n, col, row, q, queens) for display in the variable panel.
+// Keeps strictly declared variables visible in fixed slots (using '—' when unset)
+// so the layout stays tight, stable, and predictable on every step.
+function deriveVars(
+  step: NQueensStep | null,
+  n: number,
+  lifecycle: NQueensLifecycle,
+  mode: NQueensPlaybackMode,
+): string[][] | null {
+  if (lifecycle === 'ready') {
+    if (mode === 'code') {
+      return [
+        [`n = ${n}`, `col = 0`, `row = —`, `q = —`],
+        [`queens = []`],
+      ]
+    }
+    return [
+      [`col = 0`, `row = —`],
+      [`queens = []`],
+    ]
+  }
+
+  if (lifecycle === 'done') {
+    if (mode === 'code') {
+      return [
+        [`n = ${n}`, `col = —`, `row = —`, `q = —`],
+        [`queens = []`],
+      ]
+    }
+    return [
+      [`col = —`, `row = —`],
+      [`queens = []`],
+    ]
+  }
+
+  if (!step) {
+    return null
+  }
+
+  const {
+    lockedQueens,
+    tryingQueen,
+    phase,
+    activeCol,
+    activeRow,
+    conflictingQueen,
+    codeLine,
+  } = step
+
+  let colStr: string
+  let rowStr: string
+
+  if (activeCol !== undefined) {
+    colStr = String(activeCol)
+    rowStr = activeRow !== undefined && activeRow !== null ? String(activeRow) : '—'
+  } else if (tryingQueen) {
+    colStr = String(tryingQueen.col)
+    rowStr = String(tryingQueen.row)
+  } else if (phase === 'backtrack') {
+    colStr = String(lockedQueens.length)
+    rowStr = '—'
+  } else {
+    const last = lockedQueens[lockedQueens.length - 1]
+    colStr = last ? String(last.col) : '0'
+    rowStr = last ? String(last.row) : '—'
+  }
+
+  const queensList = [...lockedQueens]
+    .sort((a, b) => a.col - b.col)
+    .map((q) => toChessNotation(q.col, q.row, n))
+
+  if (mode === 'visual' || codeLine === undefined) {
+    return [
+      [`col = ${colStr}`, `row = ${rowStr}`],
+      [`queens = [${queensList.join(', ')}]`],
+    ]
+  }
+
+  // In Code Execution Mode: track strictly declared variables inside the code in stable positions
+  let qStr = '—'
+  if (codeLine === 2 && conflictingQueen) {
+    qStr = toChessNotation(conflictingQueen.col, conflictingQueen.row, n)
+  }
+
+  return [
+    [`n = ${n}`, `col = ${colStr}`, `row = ${rowStr}`, `q = ${qStr}`],
+    [`queens = [${queensList.join(', ')}]`],
+  ]
 }
 
 type NQueensSidebarProps = {
   n: number
+  mode: NQueensPlaybackMode
+  onModeChange: (mode: NQueensPlaybackMode) => void
   isRunning: boolean
   stepIndex: number
   stepCount: number
@@ -137,6 +218,8 @@ function buildNQueensCompletionStatus(n: number, solutionsFound: number): string
 // Sidebar for the N-Queens solver — playback controls, pseudocode panel with live variable state, and solution output.
 export const NQueensSidebar = ({
   n,
+  mode,
+  onModeChange,
   isRunning,
   stepIndex,
   stepCount,
@@ -158,17 +241,12 @@ export const NQueensSidebar = ({
   onSpeedChange,
   onPseudocodeFlip,
 }: NQueensSidebarProps) => {
-  const phase = currentStep?.phase ?? null
   // Pre-step → setup; finished → outcome; mid-run → live phase.
   const lifecycle: NQueensLifecycle = !isRunning ? null : stepIndex < 0 ? 'ready' : isPlaybackComplete ? 'done' : null
-  const codeHighlighted = getHighlightedLines(phase, false, lifecycle)
-  const logicHighlighted = getHighlightedLines(phase, true, lifecycle)
+  const codeHighlighted = getHighlightedLines(currentStep, false, lifecycle, mode)
+  const logicHighlighted = getHighlightedLines(currentStep, true, lifecycle, mode)
 
-  const vars = currentStep ? deriveVars(currentStep, n) : null
-  const varsRows = vars ? [
-    [`n = ${n}`, `col = ${vars.col}`, `row = ${vars.row ?? '—'}`],
-    [`queens = [${vars.queens.join(', ')}]`],
-  ] : null
+  const varsRows = deriveVars(currentStep, n, lifecycle, mode)
 
   return (
   <aside className="sidebar is-nqueens">
@@ -176,6 +254,28 @@ export const NQueensSidebar = ({
       <AlgorithmInfoCard infoKey="nqueens" />
       <div className="sidebar-section sidebar-section--grid-playback">
         <h3>Playback</h3>
+        <div className="playback-mode-toggle" role="radiogroup" aria-label="Playback mode">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={mode === 'visual'}
+            className={`playback-mode-btn ${mode === 'visual' ? 'playback-mode-btn--active' : ''}`}
+            disabled={isRunning}
+            onClick={() => onModeChange('visual')}
+          >
+            Visual Steps
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={mode === 'code'}
+            className={`playback-mode-btn ${mode === 'code' ? 'playback-mode-btn--active' : ''}`}
+            disabled={isRunning}
+            onClick={() => onModeChange('code')}
+          >
+            Line by Line
+          </button>
+        </div>
         <PlaybackControls
           runLabel="Run N-Queens"
           stopLabel="Stop"
@@ -197,7 +297,9 @@ export const NQueensSidebar = ({
           <p className="hint">
             {isPlaybackComplete
               ? buildNQueensCompletionStatus(n, solutionsFound)
-              : `Step ${formatStepDisplay(stepIndex, stepCount)}`}
+              : mode === 'code' && currentStep?.codeLine !== undefined
+                ? `Line ${currentStep.codeLine + 1} · Step ${formatStepDisplay(stepIndex, stepCount)}`
+                : `Step ${formatStepDisplay(stepIndex, stepCount)}`}
           </p>
         )}
       </div>

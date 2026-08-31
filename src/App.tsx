@@ -1669,6 +1669,8 @@ function App() {
         {canvasType === 'nqueens' && (
           <NQueensSidebar
             n={nQueensN}
+            mode={nQueens.mode}
+            onModeChange={nQueens.setMode}
             isRunning={nQueens.isRunning}
             stepIndex={nQueens.stepIndex}
             stepCount={nQueens.stepCount}

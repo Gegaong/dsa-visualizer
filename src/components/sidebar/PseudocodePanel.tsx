@@ -44,23 +44,16 @@ function PseudocodeBody({ text, highlighted, varsRows, showLogic }: PseudocodeBo
       )}
       <pre className="pseudocode-pre">
         {lines.map((line, i) => {
-          const indent = line.match(/^ */)?.[0].length ?? 0
           const isActive = highlighted.has(i)
-          const indentStyle = indent > 0
-            ? {
-                paddingLeft: `${indent}ch`,
-                textIndent: `-${indent}ch`,
-              }
-            : undefined
+          const content = line.length === 0 ? '\u00A0' : line
 
           if (showLogic) {
             return (
               <span
                 key={i}
                 className={`pseudocode-line${isActive ? ' pseudocode-line--active' : ''}`}
-                style={indentStyle}
               >
-                {line}
+                {content}
               </span>
             )
           }
@@ -77,8 +70,8 @@ function PseudocodeBody({ text, highlighted, varsRows, showLogic }: PseudocodeBo
               >
                 {i + 1}
               </span>
-              <span className="pseudocode-line pseudocode-line--code" style={indentStyle}>
-                {line}
+              <span className="pseudocode-line pseudocode-line--code">
+                {content}
               </span>
             </span>
           )

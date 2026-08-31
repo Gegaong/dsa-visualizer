@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStepPlayback } from './useStepPlayback'
-import { solveNQueens } from '../algorithms/nqueens/nqueens'
-import type { NQueensStep } from '../algorithms/nqueens/nqueens'
+import { solveNQueens, solveNQueensCode } from '../algorithms/nqueens/nqueens'
+import type { NQueensStep, NQueensPlaybackMode } from '../algorithms/nqueens/nqueens'
 import {
   NQUEENS_PLAYBACK_MIN_DELAY_MS,
   NQUEENS_PLAYBACK_MAX_DELAY_MS,
@@ -9,6 +9,8 @@ import {
 } from '../utils/constants'
 
 export type NQueensPlaybackHandle = {
+  mode: NQueensPlaybackMode
+  setMode: (mode: NQueensPlaybackMode) => void
   isRunning: boolean
   currentStep: NQueensStep | null
   stepIndex: number
@@ -31,6 +33,7 @@ export type NQueensPlaybackHandle = {
 
 // Manages N-Queens backtracking visualization: runs the solver, stores steps, and drives step-by-step playback.
 export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle {
+  const [mode, setMode] = useState<NQueensPlaybackMode>('visual')
   const [isRunning, setIsRunning] = useState(false)
   const [stepCount, setStepCount] = useState(0)
   const [resetSignal, setResetSignal] = useState(0)
@@ -59,11 +62,11 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
     },
   })
 
-  // Generates all backtracking steps for the current N, precomputes solution counts, and starts playback.
+  // Generates all backtracking steps for the current N and mode, precomputes solution counts, and starts playback.
   const run = useCallback(() => {
     if (pb.isPlaying) return
     pb.stopPlayback()
-    const steps = solveNQueens(n)
+    const steps = mode === 'visual' ? solveNQueens(n) : solveNQueensCode(n)
     resultRef.current = steps
     let c = 0
     solutionCumRef.current = steps.map(s => {
@@ -81,7 +84,7 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
     setIsRunning(true)
     setStepCount(steps.length)
     setResetSignal(s => s + 1)
-  }, [n, pb])
+  }, [mode, n, pb])
 
   // Aborts playback and clears all state, returning to idle.
   const stop = useCallback(() => {
@@ -96,6 +99,8 @@ export function useNQueensPlayback({ n }: { n: number }): NQueensPlaybackHandle 
   }, [pb])
 
   return {
+    mode,
+    setMode,
     isRunning,
     currentStep,
     stepIndex: pb.stepIndex,

@@ -290,20 +290,26 @@
 .pseudocode-vars {
 	font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 	font-size: 11px;
+	line-height: 1.35;
 	color: var(--muted);
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: 1px;
 	padding-bottom: 2px;
+	padding-right: 58px;
 	margin-bottom: 0px;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 	width: 100%;
+	box-sizing: border-box;
 }
 
 .pseudocode-vars-row {
 	display: flex;
-	gap: 16px;
+	gap: 10px;
 	flex-wrap: wrap;
+	line-height: 1.35;
+	margin: 0;
+	padding: 0;
 }
 
 .pseudocode-pre {
@@ -362,7 +368,7 @@
 	position: absolute;
 	top: 8px;
 	right: 8px;
-	z-index: 2;
+	z-index: 10;
 	display: inline-flex;
 	gap: 4px;
 }
@@ -1659,6 +1665,70 @@
 	flex-wrap: wrap;
 	min-width: 0;
 	max-width: 100%;
+}
+
+.playback-mode-toggle {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 3px;
+	width: 100%;
+	padding: 3px;
+	background: rgba(58, 111, 90, 0.08);
+	border: 1px solid rgba(58, 111, 90, 0.22);
+	border-radius: 999px;
+	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+	transition: opacity 160ms ease, border-color 160ms ease;
+}
+
+.playback-mode-btn {
+	width: 100%;
+	padding: 7px 10px;
+	font-size: 12.5px;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	text-align: center;
+	white-space: nowrap;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 100ms ease;
+	user-select: none;
+}
+
+.playback-mode-btn:hover:not(:disabled):not(.playback-mode-btn--active) {
+	color: var(--ink);
+	background: rgba(58, 111, 90, 0.1);
+}
+
+.playback-mode-btn--active {
+	background: var(--accent);
+	color: var(--accent-ink);
+	font-weight: 700;
+	box-shadow: 0 2px 6px rgba(58, 111, 90, 0.32), inset 0 1px 1.5px rgba(255, 255, 255, 0.2);
+}
+
+/* Locked / Running state: cleanly dimmed and locked without muddy double-opacity artifacts */
+.playback-mode-toggle:has(button:disabled) {
+	opacity: 0.65;
+	pointer-events: none;
+	background: rgba(58, 111, 90, 0.05);
+	border-color: rgba(58, 111, 90, 0.15);
+}
+
+.playback-mode-toggle:has(button:disabled) .playback-mode-btn {
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.playback-mode-toggle:has(button:disabled) .playback-mode-btn--active {
+	background: var(--accent);
+	opacity: 0.85;
+	box-shadow: 0 1px 4px rgba(58, 111, 90, 0.2);
 }
 
 .playback-run-btn {

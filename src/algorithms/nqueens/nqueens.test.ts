@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest'
 
-import { solveNQueens } from './nqueens'
+import { solveNQueens, solveNQueensCode } from './nqueens'
 
 // One 'solution' step is emitted each time the final column is successfully filled.
 function solutions(n: number) {
   return solveNQueens(n).filter((step) => step.phase === 'solution')
+}
+
+function solutionsCode(n: number) {
+  return solveNQueensCode(n).filter((step) => step.phase === 'solution')
 }
 
 function solutionCount(n: number): number {
@@ -106,5 +110,34 @@ describe('solveNQueens', () => {
 
   it('emits no steps for n = 0 (no columns to fill)', () => {
     expect(solveNQueens(0)).toEqual([])
+  })
+})
+
+describe('solveNQueensCode', () => {
+  it('finds identical solution counts and identical boards as visual solveNQueens for n = 1–8', () => {
+    for (let n = 1; n <= 8; n++) {
+      const visualSols = solutions(n)
+      const codeSols = solutionsCode(n)
+      expect(codeSols.length).toBe(visualSols.length)
+      const visualBoards = visualSols.map((s) => s.lockedQueens.map((q) => `${q.row},${q.col}`).join(';'))
+      const codeBoards = codeSols.map((s) => s.lockedQueens.map((q) => `${q.row},${q.col}`).join(';'))
+      expect(codeBoards).toEqual(visualBoards)
+    }
+  })
+
+  it('assigns valid codeLine indices (0..8) and logicLines to every step', () => {
+    const steps = solveNQueensCode(4)
+    expect(steps.length).toBeGreaterThan(0)
+    const validLines = new Set([0, 1, 2, 3, 4, 5, 7, 8])
+    for (const step of steps) {
+      expect(step.codeLine).toBeDefined()
+      expect(validLines.has(step.codeLine!)).toBe(true)
+      expect(Array.isArray(step.logicLines)).toBe(true)
+      expect(step.logicLines!.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('emits no steps for n = 0', () => {
+    expect(solveNQueensCode(0)).toEqual([])
   })
 })
