@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 
 import { getInBoundsNeighbors, computeDiscoverySteps } from './gridShared'
-import { runInnerBFS, runInnerDFS } from './gridInnerSearch'
-import { runForLoopOuter } from './gridForLoopOuter'
+import { runInnerBFS, runInnerDFS, runInnerBFSCode, runInnerDFSCode } from './gridInnerSearch'
+import { runForLoopOuter, runForLoopOuterCode } from './gridForLoopOuter'
 import type { ForLoopScanMode } from './gridForLoopOuter'
-import { runOuterBFS, runOuterDFS } from './gridOuterSearch'
+import { runOuterBFS, runOuterBFSCode, runOuterDFS, runOuterDFSCode } from './gridOuterSearch'
 import { gridFrom } from '../__testutils__/fixtures'
 import type { GridStep } from './gridTypes'
 
@@ -517,3 +517,61 @@ describe('runOuterDFS', () => {
     expect(result.steps.some((s) => s.subPhase === 'dfs-outer-skip')).toBe(true)
   })
 })
+
+// ─── Code Execution Mode Tests ───────────────────────────────────────────────
+
+describe('Code Execution Mode (Line by Line)', () => {
+  const { islands, rows, cols } = gridFrom('110\n001\n110')
+
+  it('runForLoopOuterCode matches visual runForLoopOuter for BFS and DFS inner algorithms', () => {
+    const visualBfs = runForLoopOuter(islands, rows, cols, 4, 'tl-h', 'bfs')
+    const codeBfs = runForLoopOuterCode(islands, rows, cols, 4, 'tl-h', 'bfs')
+    expect(normalizeGroups(codeBfs.islandGroups)).toEqual(normalizeGroups(visualBfs.islandGroups))
+    expect(codeBfs.islandGroups.length).toBe(visualBfs.islandGroups.length)
+
+    const visualDfs = runForLoopOuter(islands, rows, cols, 4, 'br-v', 'dfs')
+    const codeDfs = runForLoopOuterCode(islands, rows, cols, 4, 'br-v', 'dfs')
+    expect(normalizeGroups(codeDfs.islandGroups)).toEqual(normalizeGroups(visualDfs.islandGroups))
+    expect(codeDfs.islandGroups.length).toBe(visualDfs.islandGroups.length)
+  })
+
+  it('runOuterBFSCode matches visual runOuterBFS for single and multi-start points', () => {
+    const visualSingle = runOuterBFS(islands, rows, cols, 4, ['0,0'], 'bfs')
+    const codeSingle = runOuterBFSCode(islands, rows, cols, 4, ['0,0'], 'bfs')
+    expect(normalizeGroups(codeSingle.islandGroups)).toEqual(normalizeGroups(visualSingle.islandGroups))
+
+    const visualMulti = runOuterBFS(islands, rows, cols, 4, ['0,0', '2,2'], 'dfs')
+    const codeMulti = runOuterBFSCode(islands, rows, cols, 4, ['0,0', '2,2'], 'dfs')
+    expect(normalizeGroups(codeMulti.islandGroups)).toEqual(normalizeGroups(visualMulti.islandGroups))
+  })
+
+  it('runOuterDFSCode matches visual runOuterDFS', () => {
+    const visual = runOuterDFS(islands, rows, cols, 4, '0,0', 'bfs')
+    const code = runOuterDFSCode(islands, rows, cols, 4, '0,0', 'bfs')
+    expect(normalizeGroups(code.islandGroups)).toEqual(normalizeGroups(visual.islandGroups))
+  })
+
+  it('all code-mode steps have valid codeLine and logicLines properties', () => {
+    const forResult = runForLoopOuterCode(islands, rows, cols, 4, 'tl-h', 'bfs')
+    for (const step of forResult.steps) {
+      expect(typeof step.codeLine).toBe('number')
+      expect(Array.isArray(step.logicLines)).toBe(true)
+      expect(step.logicLines!.length).toBeGreaterThan(0)
+    }
+
+    const bfsResult = runOuterBFSCode(islands, rows, cols, 4, ['0,0'], 'bfs')
+    for (const step of bfsResult.steps) {
+      expect(typeof step.codeLine).toBe('number')
+      expect(Array.isArray(step.logicLines)).toBe(true)
+      expect(step.logicLines!.length).toBeGreaterThan(0)
+    }
+
+    const dfsResult = runOuterDFSCode(islands, rows, cols, 4, '0,0', 'dfs')
+    for (const step of dfsResult.steps) {
+      expect(typeof step.codeLine).toBe('number')
+      expect(Array.isArray(step.logicLines)).toBe(true)
+      expect(step.logicLines!.length).toBeGreaterThan(0)
+    }
+  })
+})
+

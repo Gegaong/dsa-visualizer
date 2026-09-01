@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AlgorithmInfoCard } from '../AlgorithmInfoCard'
 import { PlaybackControls } from '../PlaybackControls'
 import { PseudocodePanel } from '../PseudocodePanel'
-import type { GridOutput, ForLoopScanMode, GridSearchMode, GridSubPhase } from '../../../hooks/useForLoopBFSPlayback'
+import type { GridOutput, ForLoopScanMode, GridSearchMode, GridSubPhase, GridPlaybackMode, GridStep } from '../../../hooks/useForLoopBFSPlayback'
 
 type ScanCorner = 'tl' | 'tr' | 'bl' | 'br'
 
@@ -356,25 +356,70 @@ const DFS_LOGIC_HIGHLIGHTS: Record<GridSubPhase, number[]> = {
 //   null    = mid-run → use the live sub-phase.
 type GridLifecycle = 'ready' | 'done' | null
 
-function getForHighlights(subPhase: GridSubPhase | null, isLogic: boolean, lifecycle: GridLifecycle): Set<number> {
+function getForHighlights(
+  subPhase: GridSubPhase | null,
+  isLogic: boolean,
+  lifecycle: GridLifecycle,
+  playbackMode: GridPlaybackMode,
+  step: GridStep | null,
+): Set<number> {
   if (lifecycle === 'ready') return new Set([0, 1])
   if (lifecycle === 'done') return new Set(isLogic ? [15, 16] : [8])
+  if (!step) return new Set()
+
+  if (playbackMode === 'code' && step.codeLine !== undefined) {
+    if (isLogic) {
+      return new Set(step.logicLines ?? [0, 1])
+    }
+    return new Set([step.codeLine])
+  }
+
   if (!subPhase) return new Set()
   const map = isLogic ? FOR_LOGIC_HIGHLIGHTS : FOR_CODE_HIGHLIGHTS
   return new Set(map[subPhase])
 }
 
-function getBfsHighlights(subPhase: GridSubPhase | null, isLogic: boolean, lifecycle: GridLifecycle): Set<number> {
+function getBfsHighlights(
+  subPhase: GridSubPhase | null,
+  isLogic: boolean,
+  lifecycle: GridLifecycle,
+  playbackMode: GridPlaybackMode,
+  step: GridStep | null,
+): Set<number> {
   if (lifecycle === 'ready') return new Set([0, 1])
   if (lifecycle === 'done') return new Set(isLogic ? [17, 18] : [8])
+  if (!step) return new Set()
+
+  if (playbackMode === 'code' && step.codeLine !== undefined) {
+    if (isLogic) {
+      return new Set(step.logicLines ?? [0, 1])
+    }
+    return new Set([step.codeLine])
+  }
+
   if (!subPhase) return new Set()
   const map = isLogic ? BFS_LOGIC_HIGHLIGHTS : BFS_CODE_HIGHLIGHTS
   return new Set(map[subPhase])
 }
 
-function getDfsHighlights(subPhase: GridSubPhase | null, isLogic: boolean, lifecycle: GridLifecycle): Set<number> {
+function getDfsHighlights(
+  subPhase: GridSubPhase | null,
+  isLogic: boolean,
+  lifecycle: GridLifecycle,
+  playbackMode: GridPlaybackMode,
+  step: GridStep | null,
+): Set<number> {
   if (lifecycle === 'ready') return new Set([0, 1])
   if (lifecycle === 'done') return new Set(isLogic ? [17, 18] : [8])
+  if (!step) return new Set()
+
+  if (playbackMode === 'code' && step.codeLine !== undefined) {
+    if (isLogic) {
+      return new Set(step.logicLines ?? [0, 1])
+    }
+    return new Set([step.codeLine])
+  }
+
   if (!subPhase) return new Set()
   const map = isLogic ? DFS_LOGIC_HIGHLIGHTS : DFS_CODE_HIGHLIGHTS
   return new Set(map[subPhase])
@@ -400,6 +445,9 @@ const MODE_LABELS: Record<GridSearchMode, string> = {
 type GridSidebarProps = {
   mode: GridSearchMode
   onModeChange: (mode: GridSearchMode) => void
+  playbackMode: GridPlaybackMode
+  onPlaybackModeChange: (mode: GridPlaybackMode) => void
+  currentStep: GridStep | null
   isRunning: boolean
   canRun: boolean
   gridOutput: GridOutput | null
@@ -440,6 +488,9 @@ function buildGridCompletionStatus(islandCount: number): string {
 export const GridSidebar = ({
   mode,
   onModeChange,
+  playbackMode,
+  onPlaybackModeChange,
+  currentStep,
   isRunning,
   canRun,
   gridOutput,
@@ -585,6 +636,28 @@ export const GridSidebar = ({
 
         <div className="sidebar-section sidebar-section--grid-playback">
           <h3>Playback</h3>
+          <div className="playback-mode-toggle" role="radiogroup" aria-label="Playback mode">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={playbackMode === 'visual'}
+              className={`playback-mode-btn ${playbackMode === 'visual' ? 'playback-mode-btn--active' : ''}`}
+              disabled={isRunning}
+              onClick={() => onPlaybackModeChange('visual')}
+            >
+              Visual Steps
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={playbackMode === 'code'}
+              className={`playback-mode-btn ${playbackMode === 'code' ? 'playback-mode-btn--active' : ''}`}
+              disabled={isRunning}
+              onClick={() => onPlaybackModeChange('code')}
+            >
+              Line by Line
+            </button>
+          </div>
           <PlaybackControls
             runLabel={`Run ${MODE_LABELS[mode]}`}
             stopLabel={`Stop ${MODE_LABELS[mode]}`}
@@ -606,7 +679,9 @@ export const GridSidebar = ({
             <p className="hint">
               {isPlaybackComplete
                 ? buildGridCompletionStatus(gridOutput?.islandCount ?? 0)
-                : `Step ${formatStepDisplay(stepIndex, stepCount)}`}
+                : playbackMode === 'code' && currentStep?.codeLine !== undefined
+                  ? `Line ${currentStep.codeLine + 1} · Step ${formatStepDisplay(stepIndex, stepCount)}`
+                  : `Step ${formatStepDisplay(stepIndex, stepCount)}`}
             </p>
           )}
         </div>
@@ -619,8 +694,8 @@ export const GridSidebar = ({
             logicText={mode === 'for-bfs'
               ? forBfsLogic(scanCorner, scanPrimary)
               : forDfsLogic(scanCorner, scanPrimary)}
-            codeHighlighted={getForHighlights(currentSubPhase, false, lifecycle)}
-            logicHighlighted={getForHighlights(currentSubPhase, true, lifecycle)}
+            codeHighlighted={getForHighlights(currentSubPhase, false, lifecycle, playbackMode, currentStep)}
+            logicHighlighted={getForHighlights(currentSubPhase, true, lifecycle, playbackMode, currentStep)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
             canDetach={!isPlaying}
@@ -631,8 +706,8 @@ export const GridSidebar = ({
           <PseudocodePanel
             codeText={mode === 'bfs-bfs' ? BFS_BFS_CODE : BFS_DFS_CODE}
             logicText={mode === 'bfs-bfs' ? BFS_BFS_LOGIC : BFS_DFS_LOGIC}
-            codeHighlighted={getBfsHighlights(currentSubPhase, false, lifecycle)}
-            logicHighlighted={getBfsHighlights(currentSubPhase, true, lifecycle)}
+            codeHighlighted={getBfsHighlights(currentSubPhase, false, lifecycle, playbackMode, currentStep)}
+            logicHighlighted={getBfsHighlights(currentSubPhase, true, lifecycle, playbackMode, currentStep)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
             canDetach={!isPlaying}
@@ -643,8 +718,8 @@ export const GridSidebar = ({
           <PseudocodePanel
             codeText={mode === 'dfs-bfs' ? DFS_BFS_CODE : DFS_DFS_CODE}
             logicText={mode === 'dfs-bfs' ? DFS_BFS_LOGIC : DFS_DFS_LOGIC}
-            codeHighlighted={getDfsHighlights(currentSubPhase, false, lifecycle)}
-            logicHighlighted={getDfsHighlights(currentSubPhase, true, lifecycle)}
+            codeHighlighted={getDfsHighlights(currentSubPhase, false, lifecycle, playbackMode, currentStep)}
+            logicHighlighted={getDfsHighlights(currentSubPhase, true, lifecycle, playbackMode, currentStep)}
             showLogic={pseudocodeShowLogic}
             onFlip={onPseudocodeFlip}
             canDetach={!isPlaying}
@@ -690,3 +765,4 @@ export const GridSidebar = ({
     </aside>
   )
 }
+

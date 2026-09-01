@@ -1,5 +1,7 @@
 export type InnerAlgo = 'bfs' | 'dfs'
 
+export type GridPlaybackMode = 'visual' | 'code'
+
 export type GridSubPhase =
   | 'outer-water'
   | 'outer-visited'
@@ -17,6 +19,8 @@ export type GridStep = {
   newVisited: string[]
   frontierCells: string[]
   islandIndex: number
+  codeLine?: number
+  logicLines?: number[]
 }
 
 export type GridResult = {
@@ -26,3 +30,4 @@ export type GridResult = {
   operationCount: number
   discoveryOperations: number
 }
+

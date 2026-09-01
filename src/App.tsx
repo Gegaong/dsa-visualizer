@@ -1634,6 +1634,9 @@ function App() {
           <GridSidebar
             mode={gridSearchMode}
             onModeChange={handleGridModeChange}
+            playbackMode={gridSearch.playbackMode}
+            onPlaybackModeChange={gridSearch.setPlaybackMode}
+            currentStep={gridSearch.currentStep}
             isRunning={gridSearch.isRunning}
             canRun={gridSearch.canRun}
             currentSubPhase={gridSearch.currentSubPhase}

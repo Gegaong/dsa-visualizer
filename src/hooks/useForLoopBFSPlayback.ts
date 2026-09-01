@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStepPlayback } from './useStepPlayback'
-import { runForLoopOuter } from '../algorithms/grid/gridForLoopOuter'
-import { runOuterBFS, runOuterDFS } from '../algorithms/grid/gridOuterSearch'
-import type { GridResult, GridSubPhase } from '../algorithms/grid/gridTypes'
+import { runForLoopOuter, runForLoopOuterCode } from '../algorithms/grid/gridForLoopOuter'
+import { runOuterBFS, runOuterDFS, runOuterBFSCode, runOuterDFSCode } from '../algorithms/grid/gridOuterSearch'
+import type { GridResult, GridStep, GridSubPhase, GridPlaybackMode } from '../algorithms/grid/gridTypes'
 import type { InnerAlgo } from '../algorithms/grid/gridTypes'
 import { buildGridIslandColorMap } from '../utils/gridIslandColors'
 import type { IslandHSL } from '../utils/gridIslandColors'
@@ -14,8 +14,7 @@ import {
 } from '../utils/constants'
 export type { IslandHSL } from '../utils/gridIslandColors'
 export type { ForLoopScanMode } from '../algorithms/grid/gridForLoopOuter'
-export type { InnerAlgo } from '../algorithms/grid/gridTypes'
-export type { GridSubPhase } from '../algorithms/grid/gridTypes'
+export type { InnerAlgo, GridPlaybackMode, GridStep, GridSubPhase } from '../algorithms/grid/gridTypes'
 
 export type GridSearchMode =
   | 'for-bfs' | 'for-dfs'
@@ -37,6 +36,9 @@ export type GridOutput = {
 }
 
 export type ForLoopBFSPlaybackHandle = {
+  playbackMode: GridPlaybackMode
+  setPlaybackMode: (mode: GridPlaybackMode) => void
+  currentStep: GridStep | null
   visitedCells: string[]
   frontierCells: string[]
   currentCell: string | null
@@ -64,6 +66,8 @@ export type ForLoopBFSPlaybackHandle = {
 
 // Manages algorithm selection, run-time result storage, and step-by-step playback for all 6 grid search modes.
 export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Params): ForLoopBFSPlaybackHandle {
+  const [playbackMode, setPlaybackMode] = useState<GridPlaybackMode>('visual')
+  const [currentStep, setCurrentStep] = useState<GridStep | null>(null)
   const [visitedCells, setVisitedCells] = useState<string[]>([])
   const [frontierCells, setFrontierCells] = useState<string[]>([])
   const [currentCell, setCurrentCell] = useState<string | null>(null)
@@ -87,6 +91,7 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
     setVisitedCells([])
     setFrontierCells([])
     setCurrentCell(null)
+    setCurrentStep(null)
   }, [])
 
   const pb = useStepPlayback({
@@ -101,6 +106,7 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
         clearVisuals()
         setCurrentPhase(null)
         setCurrentSubPhase(null)
+        setCurrentStep(null)
         return
       }
 
@@ -119,6 +125,7 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
       }
 
       const step = result.steps[newIndex]
+      setCurrentStep(step ?? null)
       setVisitedCells([...visitedSetRef.current])
       setFrontierCells(step.frontierCells)
       setCurrentCell(step.currentCell)
@@ -144,14 +151,26 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
       : corner === 'bl' ? `${rows - 1},0`
       : `${rows - 1},${cols - 1}`
     let result: GridResult
-    if (mode.startsWith('for')) {
-      result = runForLoopOuter(islands, rows, cols, connectivity, scanMode, innerAlgo)
-    } else if (mode.startsWith('bfs')) {
-      const keys = startCells && startCells.length > 0 ? startCells : [defaultKey]
-      result = runOuterBFS(islands, rows, cols, connectivity, keys, innerAlgo)
+    if (playbackMode === 'visual') {
+      if (mode.startsWith('for')) {
+        result = runForLoopOuter(islands, rows, cols, connectivity, scanMode, innerAlgo)
+      } else if (mode.startsWith('bfs')) {
+        const keys = startCells && startCells.length > 0 ? startCells : [defaultKey]
+        result = runOuterBFS(islands, rows, cols, connectivity, keys, innerAlgo)
+      } else {
+        const key = startCells && startCells.length > 0 ? startCells[0] : defaultKey
+        result = runOuterDFS(islands, rows, cols, connectivity, key, innerAlgo)
+      }
     } else {
-      const key = startCells && startCells.length > 0 ? startCells[0] : defaultKey
-      result = runOuterDFS(islands, rows, cols, connectivity, key, innerAlgo)
+      if (mode.startsWith('for')) {
+        result = runForLoopOuterCode(islands, rows, cols, connectivity, scanMode, innerAlgo)
+      } else if (mode.startsWith('bfs')) {
+        const keys = startCells && startCells.length > 0 ? startCells : [defaultKey]
+        result = runOuterBFSCode(islands, rows, cols, connectivity, keys, innerAlgo)
+      } else {
+        const key = startCells && startCells.length > 0 ? startCells[0] : defaultKey
+        result = runOuterDFSCode(islands, rows, cols, connectivity, key, innerAlgo)
+      }
     }
     resultRef.current = result
     // Island colors built once at run time so they show during traversal, not just at completion.
@@ -179,11 +198,15 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
     clearVisuals()
     setCurrentPhase(null)
     setCurrentSubPhase(null)
+    setCurrentStep(null)
   }
 
   const canRun = islands.size > 0 && cols > 0
 
   return {
+    playbackMode,
+    setPlaybackMode,
+    currentStep,
     visitedCells,
     frontierCells,
     currentCell,
@@ -209,3 +232,4 @@ export function useForLoopBFSPlayback({ islands, rows, cols, connectivity }: Par
     setPlaybackSpeed: pb.setPlaybackSpeed,
   }
 }
+
