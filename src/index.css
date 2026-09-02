@@ -96,6 +96,62 @@ html:-webkit-full-screen .canvas-panel {
 	box-sizing: border-box;
 }
 
+:fullscreen .canvas-header,
+:-webkit-full-screen .canvas-header,
+html:fullscreen .canvas-header,
+html:-webkit-full-screen .canvas-header {
+	zoom: var(--sidebar-scale, 1);
+}
+
+:fullscreen .nqueens-left,
+:-webkit-full-screen .nqueens-left,
+html:fullscreen .nqueens-left,
+html:-webkit-full-screen .nqueens-left {
+	width: 360px;
+	zoom: var(--sidebar-scale, 1);
+	box-sizing: border-box;
+}
+
+:fullscreen .canvas-mode-toggle,
+:-webkit-full-screen .canvas-mode-toggle,
+html:fullscreen .canvas-mode-toggle,
+html:-webkit-full-screen .canvas-mode-toggle,
+:fullscreen .canvas-zoom-controls,
+:-webkit-full-screen .canvas-zoom-controls,
+html:fullscreen .canvas-zoom-controls,
+html:-webkit-full-screen .canvas-zoom-controls {
+	zoom: var(--sidebar-scale, 1);
+}
+
+:fullscreen .node,
+:-webkit-full-screen .node,
+html:fullscreen .node,
+html:-webkit-full-screen .node,
+:fullscreen .node-label,
+:-webkit-full-screen .node-label,
+html:fullscreen .node-label,
+html:-webkit-full-screen .node-label {
+	zoom: var(--sidebar-scale, 1);
+}
+
+:fullscreen .edge-toggle,
+:-webkit-full-screen .edge-toggle,
+html:fullscreen .edge-toggle,
+html:-webkit-full-screen .edge-toggle {
+	transform: translate(-50%, -50%) rotate(var(--edge-angle, 0deg)) scale(var(--sidebar-scale, 1));
+}
+
+:fullscreen .edge-weight-badge,
+:-webkit-full-screen .edge-weight-badge,
+html:fullscreen .edge-weight-badge,
+html:-webkit-full-screen .edge-weight-badge,
+:fullscreen .edge-weight-input,
+:-webkit-full-screen .edge-weight-input,
+html:fullscreen .edge-weight-input,
+html:-webkit-full-screen .edge-weight-input {
+	transform: translate(-50%, -50%) scale(var(--sidebar-scale, 1));
+}
+
 :fullscreen .canvas,
 :-webkit-full-screen .canvas,
 html:fullscreen .canvas,
