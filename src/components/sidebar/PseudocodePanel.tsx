@@ -96,6 +96,27 @@ const FLIP_ICON = (
   </svg>
 )
 
+const ZOOM_OUT_ICON = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="11" cy="11" r="7" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    <line x1="8" y1="11" x2="14" y2="11" />
+  </svg>
+)
+
+const ZOOM_IN_ICON = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="11" cy="11" r="7" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    <line x1="11" y1="8" x2="11" y2="14" />
+    <line x1="8" y1="11" x2="14" y2="11" />
+  </svg>
+)
+
+const MIN_SCALE = 0.8
+const MAX_SCALE = 2.2
+const SCALE_STEP = 0.15
+
 // Pseudocode panel. The flip button toggles between Code and Logic; varsRows is only shown in
 // Code mode (each inner array is one row of space-separated spans). The pop-out button detaches a
 // draggable, always-on-top copy that live-mirrors the same content + highlighting.
@@ -111,6 +132,7 @@ export const PseudocodePanel = ({
 }: PseudocodePanelProps) => {
   const [isFlipping, setIsFlipping] = useState(false)
   const [isDetached, setIsDetached] = useState(false)
+  const [fontScale, setFontScale] = useState(1)
   const [pos, setPos] = useState({ x: 96, y: 96 })
   const [size, setSize] = useState<{ width: number; height?: number }>({ width: 400 })
   const [isResizing, setIsResizing] = useState(false)
@@ -136,6 +158,32 @@ export const PseudocodePanel = ({
     setIsFlipping(true)
     setTimeout(() => onFlip(), 90)
     setTimeout(() => setIsFlipping(false), 180)
+  }
+
+  const handleZoomIn = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setFontScale((prev) => Math.min(MAX_SCALE, Math.round((prev + SCALE_STEP) * 100) / 100))
+  }
+
+  const handleZoomOut = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setFontScale((prev) => Math.max(MIN_SCALE, Math.round((prev - SCALE_STEP) * 100) / 100))
+  }
+
+  const handleResetZoom = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setFontScale(1)
+  }
+
+  const handleWheelZoom = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault()
+      if (e.deltaY < 0) {
+        setFontScale((prev) => Math.min(MAX_SCALE, Math.round((prev + 0.1) * 100) / 100))
+      } else if (e.deltaY > 0) {
+        setFontScale((prev) => Math.max(MIN_SCALE, Math.round((prev - 0.1) * 100) / 100))
+      }
+    }
   }
 
   // Open the floating copy directly on top of the inline card; toggle it shut if already open.
@@ -287,7 +335,9 @@ export const PseudocodePanel = ({
             top: pos.y,
             width: size.width,
             height: size.height ? `${size.height}px` : undefined,
-          }}
+            '--pseudo-font-scale': fontScale,
+          } as React.CSSProperties}
+          onWheel={handleWheelZoom}
         >
           {/* Side & corner resize handles */}
           <div
@@ -367,6 +417,40 @@ export const PseudocodePanel = ({
               Pseudocode
             </span>
             <div className="pseudocode-detached-actions">
+              <div className="pseudocode-zoom-group">
+                <button
+                  type="button"
+                  className="pseudocode-zoom-btn"
+                  title="Decrease font size (Ctrl + Scroll Down)"
+                  aria-label="Decrease font size"
+                  disabled={fontScale <= MIN_SCALE}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={handleZoomOut}
+                >
+                  {ZOOM_OUT_ICON}
+                </button>
+                <button
+                  type="button"
+                  className={`pseudocode-zoom-badge${fontScale !== 1 ? ' pseudocode-zoom-badge--custom' : ''}`}
+                  title="Reset font size to 100%"
+                  aria-label="Reset font size to 100%"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={handleResetZoom}
+                >
+                  {Math.round(fontScale * 100)}%
+                </button>
+                <button
+                  type="button"
+                  className="pseudocode-zoom-btn"
+                  title="Increase font size (Ctrl + Scroll Up)"
+                  aria-label="Increase font size"
+                  disabled={fontScale >= MAX_SCALE}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={handleZoomIn}
+                >
+                  {ZOOM_IN_ICON}
+                </button>
+              </div>
               <button
                 type="button"
                 title="Flip code / logic"
