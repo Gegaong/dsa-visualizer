@@ -1,4 +1,4 @@
-import type { GridStep, GridResult, InnerAlgo } from './gridTypes'
+import type { GridStep, GridResult, InnerAlgo, GridSubPhase } from './gridTypes'
 import { runInnerBFS, runInnerDFS, runInnerBFSCode, runInnerDFSCode } from './gridInnerSearch'
 import { getInBoundsNeighbors, computeDiscoverySteps } from './gridShared'
 

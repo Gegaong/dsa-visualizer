@@ -141,7 +141,7 @@ export function runInnerFillCode(
 
   if (outerStyle === 'for') {
     // Line 11: island ← []
-    steps.push(makeStep(11, startKey, [], null, 'inner-start'))
+    steps.push(makeStep(11, startKey, [], 'inner-start'))
 
     // Line 12: queue / stack ← [start]
     container.push(startKey)

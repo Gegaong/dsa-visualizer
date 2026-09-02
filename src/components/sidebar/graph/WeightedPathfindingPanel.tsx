@@ -259,7 +259,7 @@ function getWPHighlights(
   playbackMode: WPPlaybackMode,
   currentStep: WeightedPathStep | PriorityPathStep | null,
 ): Set<number> {
-  if (playbackMode === 'code' && (algorithm === 'bfs' || algorithm === 'dfs') && currentStep && 'codeLine' in currentStep && currentStep.codeLine !== undefined) {
+  if (playbackMode === 'code' && currentStep && 'codeLine' in currentStep && currentStep.codeLine !== undefined) {
     if (isLogic) {
       return new Set(currentStep.logicLines ?? [0, 1])
     }
@@ -377,7 +377,7 @@ export const WeightedPathfindingPanel = ({
     onRunWP(algorithm)
   }
 
-  const frozen = isWPSessionActive
+  const frozen = isWPPlaybackPlaying
 
   const stepDisplay = formatStepDisplay(wpStepIndex, wpStepTotal)
   const pathFound = wpOutput === null ? '—' : wpOutput.pathFound ? 'Yes' : 'No'
@@ -389,8 +389,7 @@ export const WeightedPathfindingPanel = ({
       ? wpOutput.pathNodeLabels.join(' → ')
       : null
 
-  const isBfsDfs = algorithm === 'bfs' || algorithm === 'dfs'
-  const isCodeMode = playbackMode === 'code' && isBfsDfs && currentStep && 'codeLine' in currentStep && currentStep.codeLine !== undefined
+  const isCodeMode = playbackMode === 'code' && currentStep && 'codeLine' in currentStep && currentStep.codeLine !== undefined
 
   return (
     <div className="sidebar-page-body sidebar-page-body--pathfinder">
@@ -499,30 +498,28 @@ export const WeightedPathfindingPanel = ({
 
       <div className="sidebar-section sidebar-section--wp-playback">
         <h3>Playback</h3>
-        {isBfsDfs && (
-          <div className="playback-mode-toggle" role="radiogroup" aria-label="Playback mode">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={playbackMode === 'visual'}
-              className={`playback-mode-btn ${playbackMode === 'visual' ? 'playback-mode-btn--active' : ''}`}
-              disabled={isWPSessionActive}
-              onClick={() => onPlaybackModeChange('visual')}
-            >
-              Visual Steps
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={playbackMode === 'code'}
-              className={`playback-mode-btn ${playbackMode === 'code' ? 'playback-mode-btn--active' : ''}`}
-              disabled={isWPSessionActive}
-              onClick={() => onPlaybackModeChange('code')}
-            >
-              Line by Line
-            </button>
-          </div>
-        )}
+        <div className="playback-mode-toggle" role="radiogroup" aria-label="Playback mode">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={playbackMode === 'visual'}
+            className={`playback-mode-btn ${playbackMode === 'visual' ? 'playback-mode-btn--active' : ''}`}
+            disabled={isWPSessionActive}
+            onClick={() => onPlaybackModeChange('visual')}
+          >
+            Visual Steps
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={playbackMode === 'code'}
+            className={`playback-mode-btn ${playbackMode === 'code' ? 'playback-mode-btn--active' : ''}`}
+            disabled={isWPSessionActive}
+            onClick={() => onPlaybackModeChange('code')}
+          >
+            Line by Line
+          </button>
+        </div>
         <PlaybackControls
           runLabel="Run pathfinder"
           stopLabel="Stop run"
@@ -542,7 +539,7 @@ export const WeightedPathfindingPanel = ({
         />
         <p className="hint">
           {isWPSessionActive && isCodeMode && !isWPPlaybackComplete
-            ? `Line ${(currentStep as WeightedPathStep).codeLine! + 1} · Step ${formatStepDisplay(wpStepIndex, wpStepTotal)}`
+            ? `Line ${currentStep.codeLine! + 1} · Step ${formatStepDisplay(wpStepIndex, wpStepTotal)}`
             : wpStatusText}
         </p>
       </div>

@@ -118,6 +118,19 @@ export type PriorityPathStep = {
   eventType: 'discover' | 'settle' | 'assumed'
   queueSizeAfter: number
   settleReason?: string
+  codeLine?: number
+  logicLines?: number[]
+  uLabel?: string | null
+  dVal?: number | null
+  gVal?: number | null
+  hVal?: number | null
+  fVal?: number | null
+  nbLabel?: string | null
+  newDistVal?: number | null
+  newGVal?: number | null
+  pqLabels?: string[]
+  costMap?: Record<string, number>
+  visitedLabels?: string[]
 }
 
 export type PriorityPathResult = {

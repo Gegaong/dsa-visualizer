@@ -83,18 +83,14 @@ html:-webkit-full-screen .workspace {
 	min-height: 0;
 	height: auto;
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+	grid-template-columns: minmax(0, 1fr) calc(400px * var(--sidebar-scale, 1));
 	align-items: stretch;
 }
 
 :fullscreen .canvas-panel,
 :-webkit-full-screen .canvas-panel,
 html:fullscreen .canvas-panel,
-html:-webkit-full-screen .canvas-panel,
-:fullscreen .canvas-panel--nqueens,
-:-webkit-full-screen .canvas-panel--nqueens,
-html:fullscreen .canvas-panel--nqueens,
-html:-webkit-full-screen .canvas-panel--nqueens {
+html:-webkit-full-screen .canvas-panel {
 	height: 100%;
 	min-height: 0;
 	box-sizing: border-box;
@@ -118,37 +114,9 @@ html:-webkit-full-screen .binary-tree-canvas-area {
 :fullscreen .sidebar,
 :-webkit-full-screen .sidebar,
 html:fullscreen .sidebar,
-html:-webkit-full-screen .sidebar,
-:fullscreen .sidebar.is-canvas-setup,
-:-webkit-full-screen .sidebar.is-canvas-setup,
-html:fullscreen .sidebar.is-canvas-setup,
-html:-webkit-full-screen .sidebar.is-canvas-setup,
-:fullscreen .sidebar.is-algorithm-setup,
-:-webkit-full-screen .sidebar.is-algorithm-setup,
-html:fullscreen .sidebar.is-algorithm-setup,
-html:-webkit-full-screen .sidebar.is-algorithm-setup,
-:fullscreen .sidebar.is-pathfinder-setup,
-:-webkit-full-screen .sidebar.is-pathfinder-setup,
-html:fullscreen .sidebar.is-pathfinder-setup,
-html:-webkit-full-screen .sidebar.is-pathfinder-setup,
-:fullscreen .sidebar.is-traversal-setup,
-:-webkit-full-screen .sidebar.is-traversal-setup,
-html:fullscreen .sidebar.is-traversal-setup,
-html:-webkit-full-screen .sidebar.is-traversal-setup,
-:fullscreen .sidebar.is-bst-setup,
-:-webkit-full-screen .sidebar.is-bst-setup,
-html:fullscreen .sidebar.is-bst-setup,
-html:-webkit-full-screen .sidebar.is-bst-setup,
-:fullscreen .sidebar.is-grid-search,
-:-webkit-full-screen .sidebar.is-grid-search,
-html:fullscreen .sidebar.is-grid-search,
-html:-webkit-full-screen .sidebar.is-grid-search,
-:fullscreen .sidebar.is-nqueens,
-:-webkit-full-screen .sidebar.is-nqueens,
-html:fullscreen .sidebar.is-nqueens,
-html:-webkit-full-screen .sidebar.is-nqueens {
-	height: 100%;
-	max-height: 100%;
-	min-height: 0;
+html:-webkit-full-screen .sidebar {
+	width: 400px;
+	height: 680px;
+	zoom: var(--sidebar-scale, 1);
 	box-sizing: border-box;
 }

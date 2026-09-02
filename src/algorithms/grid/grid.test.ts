@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { getInBoundsNeighbors, computeDiscoverySteps } from './gridShared'
-import { runInnerBFS, runInnerDFS, runInnerBFSCode, runInnerDFSCode } from './gridInnerSearch'
+import { runInnerBFS, runInnerDFS } from './gridInnerSearch'
 import { runForLoopOuter, runForLoopOuterCode } from './gridForLoopOuter'
 import type { ForLoopScanMode } from './gridForLoopOuter'
 import { runOuterBFS, runOuterBFSCode, runOuterDFS, runOuterDFSCode } from './gridOuterSearch'

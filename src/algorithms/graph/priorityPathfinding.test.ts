@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 
-import { runAStar, runDijkstra, runGreedy, runPriorityPathfinding } from './priorityPathfinding'
+import {
+  runAStar,
+  runAStarCode,
+  runDijkstra,
+  runDijkstraCode,
+  runGreedy,
+  runGreedyCode,
+  runPriorityPathfinding,
+} from './priorityPathfinding'
 
 import { makeGraph } from '../__testutils__/fixtures'
 
@@ -82,5 +90,69 @@ describe('priority pathfinding', () => {
     const result = runPriorityPathfinding(graph.nodes, graph.edges, 'A', 'D', (g) => g, () => 0, 'Dijkstra', 'none')
     expect(result.pathCost).toBe(4)
     expect(result.steps.every((s) => s.eventType === 'discover')).toBe(true)
+  })
+
+  describe('code execution mode (line by line)', () => {
+    it('runDijkstraCode matches visual run and produces valid debugger steps', () => {
+      const visual = runDijkstra(graph.nodes, graph.edges, 'A', 'D')
+      const code = runDijkstraCode(graph.nodes, graph.edges, 'A', 'D')
+
+      expect(code.pathFound).toBe(true)
+      expect(code.pathCost).toBe(visual.pathCost)
+      expect(code.pathNodeIds).toEqual(visual.pathNodeIds)
+      expect(code.steps.length).toBeGreaterThan(visual.steps.length)
+
+      for (const step of code.steps) {
+        expect(step.codeLine).toBeDefined()
+        expect(step.codeLine).toBeGreaterThanOrEqual(0)
+        expect(step.codeLine).toBeLessThanOrEqual(9)
+        expect(step.logicLines).toBeDefined()
+        expect(step.logicLines!.length).toBeGreaterThan(0)
+      }
+    })
+
+    it('runAStarCode matches visual run and produces valid debugger steps', () => {
+      const visual = runAStar(graph.nodes, graph.edges, 'A', 'D', ADMISSIBLE)
+      const code = runAStarCode(graph.nodes, graph.edges, 'A', 'D', ADMISSIBLE)
+
+      expect(code.pathFound).toBe(true)
+      expect(code.pathCost).toBe(visual.pathCost)
+      expect(code.pathNodeIds).toEqual(visual.pathNodeIds)
+
+      for (const step of code.steps) {
+        expect(step.codeLine).toBeDefined()
+        expect(step.codeLine).toBeGreaterThanOrEqual(0)
+        expect(step.codeLine).toBeLessThanOrEqual(9)
+        expect(step.logicLines).toBeDefined()
+        expect(step.logicLines!.length).toBeGreaterThan(0)
+      }
+    })
+
+    it('runGreedyCode matches visual run and produces valid debugger steps', () => {
+      const g = makeGraph(['A', 'B', 'C', 'D'], [['A', 'B', 1], ['B', 'D', 1], ['A', 'C', 1], ['C', 'D', 100]])
+      const visual = runGreedy(g.nodes, g.edges, 'A', 'D', 100)
+      const code = runGreedyCode(g.nodes, g.edges, 'A', 'D', 100)
+
+      expect(code.pathFound).toBe(true)
+      expect(code.pathCost).toBe(visual.pathCost)
+      expect(code.pathNodeIds).toEqual(visual.pathNodeIds)
+
+      for (const step of code.steps) {
+        expect(step.codeLine).toBeDefined()
+        expect(step.codeLine).toBeGreaterThanOrEqual(0)
+        expect(step.codeLine).toBeLessThanOrEqual(8)
+        expect(step.logicLines).toBeDefined()
+        expect(step.logicLines!.length).toBeGreaterThan(0)
+      }
+    })
+
+    it('handles unreachable goal in code mode', () => {
+      const { nodes, edges } = makeGraph(['A', 'B', 'X'], [['A', 'B', 1]])
+      const code = runDijkstraCode(nodes, edges, 'A', 'X')
+      expect(code.pathFound).toBe(false)
+      expect(code.pathCost).toBeNull()
+      const lastStep = code.steps[code.steps.length - 1]
+      expect(lastStep.codeLine).toBe(9)
+    })
   })
 })

@@ -451,7 +451,6 @@ export function runWeightedPathfindingCode(
   steps.push(makeCodeStep(10, [18, 19], finalNodeId, null, bestGoalCost === Infinity ? 0 : bestGoalCost, 'discover', {
     uLabel: null,
     cVal: null,
-    bestCostVal: bestGoalCost === Infinity ? null : bestGoalCost,
   }))
 
   return {

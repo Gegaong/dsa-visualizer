@@ -6,8 +6,6 @@ import {
   useState,
 } from 'react'
 
-export type WPPhase = 'ready' | 'step-start' | 'step-discover' | 'step-settle' | 'done-found' | 'done-empty'
-
 import type { GraphEdge, GraphNode } from '../types'
 
 import type {
@@ -28,9 +26,14 @@ import {
   getDirectedEdgeInfo,
 } from '../algorithms/graph/weightedPathfinding'
 
-import { formatCost, sanitizeNodeLabelInput } from '../utils/format'
-
-import { runDijkstra, runAStar, runGreedy } from '../algorithms/graph/priorityPathfinding'
+import {
+  runDijkstra,
+  runDijkstraCode,
+  runAStar,
+  runAStarCode,
+  runGreedy,
+  runGreedyCode,
+} from '../algorithms/graph/priorityPathfinding'
 
 import {
   buildWPCompletionStatus,
@@ -45,7 +48,11 @@ import {
   PLAYBACK_DEFAULT_DELAY_MS,
 } from '../utils/constants'
 
+import { formatCost, sanitizeNodeLabelInput } from '../utils/format'
+
 import { useStepPlayback } from './useStepPlayback'
+
+export type WPPhase = 'ready' | 'step-start' | 'step-discover' | 'step-settle' | 'done-found' | 'done-empty'
 
 const IDLE_STATUS = 'Enter start and goal node labels, then run the pathfinder.'
 
@@ -222,8 +229,8 @@ export function useWeightedPathfindingPlayback({
           }
         }
 
-        let currentEdgeId: string | null = null
-        let currentNodeId: string | null = null
+        let currentEdgeId: string | null
+        let currentNodeId: string | null
 
         if (currentStep.codeLine !== undefined) {
           if (currentStep.eventType === 'settle') {
@@ -370,35 +377,162 @@ export function useWeightedPathfindingPlayback({
           }
         }
 
-        const currentEdgeId = currentStep.eventType === 'discover' && currentStep.fromNodeId !== null
-          ? getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
-          : null
+        let currentEdgeId: string | null
+        let currentNodeId: string | null
+
+        if (currentStep.codeLine !== undefined) {
+          if (currentStep.eventType === 'settle' || currentStep.eventType === 'assumed') {
+            currentNodeId = currentStep.nodeId
+            currentEdgeId = null
+          } else if (currentStep.codeLine >= 5 && currentStep.codeLine <= 8 && currentStep.fromNodeId !== null) {
+            currentEdgeId = getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
+            currentNodeId = currentStep.nodeId
+          } else if (currentStep.codeLine === 3 || currentStep.codeLine === 4) {
+            currentNodeId = currentStep.nodeId
+            currentEdgeId = null
+          } else {
+            currentNodeId = null
+            currentEdgeId = null
+          }
+        } else {
+          currentNodeId = currentStep.eventType === 'settle' || currentStep.eventType === 'assumed' ? null : currentStep.nodeId
+          currentEdgeId = currentStep.eventType === 'discover' && currentStep.fromNodeId !== null
+            ? getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
+            : null
+        }
 
         const algo = algorithmRef.current
-        const h = formatCost(currentStep.hCost)
-        let discoverMsg: string
-        if (algo === 'greedy') {
-          discoverMsg = currentStep.fromNodeId === null
-            ? `${currentStep.nodeLabel} queued — start node (h = ${h}) · Greedy`
-            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (h = ${h}) · Greedy`
-        } else if (algo === 'astar') {
-          const f = formatCost(currentStep.priority)
-          discoverMsg = currentStep.fromNodeId === null
-            ? `${currentStep.nodeLabel} queued — start node (g = 0, h = ${h}, f = ${h}) · A*`
-            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${formatCost(currentStep.edgeWeight ?? 0)}, g = ${formatCost(currentStep.gCost)}, h = ${h}, f = ${f}) · A*`
+        let statusMsg: string
+
+        if (currentStep.eventType === 'settle' || currentStep.eventType === 'assumed') {
+          statusMsg = currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${formatCost(currentStep.gCost)} · ${label}`
+        } else if (currentStep.codeLine !== undefined) {
+          if (algo === 'dijkstra') {
+            switch (currentStep.codeLine) {
+              case 0:
+                statusMsg = `Dijkstra(graph, ${startNodeLabel}, ${goalNodeLabel}) · Start shortest path search`
+                break
+              case 1:
+                statusMsg = `Initializing dist[v] = ∞, dist[${startNodeLabel}] = 0, pq = [(0, ${startNodeLabel})]`
+                break
+              case 2:
+                statusMsg = `Checking if priority queue is empty...`
+                break
+              case 3:
+                statusMsg = `Popped node ${currentStep.uLabel} (dist: ${formatCost(currentStep.dVal ?? 0)})`
+                break
+              case 4:
+                statusMsg = `Settled ${currentStep.uLabel} (dist: ${formatCost(currentStep.dVal ?? 0)})`
+                break
+              case 5:
+                statusMsg = `Iterating over neighbors of ${currentStep.uLabel}`
+                break
+              case 6:
+                statusMsg = `Computing newDist to ${currentStep.nbLabel}: dist[${currentStep.uLabel}] (${formatCost(currentStep.dVal ?? 0)}) + weight = ${formatCost(currentStep.newDistVal ?? 0)}`
+                break
+              case 7:
+                statusMsg = `Checking if newDist (${formatCost(currentStep.newDistVal ?? 0)}) < dist[${currentStep.nbLabel}]`
+                break
+              case 8:
+                statusMsg = `Updating dist[${currentStep.nbLabel}] = ${formatCost(currentStep.newDistVal ?? 0)} and pushing to priority queue`
+                break
+              case 9:
+                statusMsg = `Search complete. ${r.pathFound ? `Path found with cost ${r.pathCost}` : 'No path exists'}`
+                break
+              default:
+                statusMsg = `Executing line ${currentStep.codeLine + 1} · Dijkstra`
+            }
+          } else if (algo === 'astar') {
+            switch (currentStep.codeLine) {
+              case 0:
+                statusMsg = `AStar(graph, ${startNodeLabel}, ${goalNodeLabel}) · Start A* search`
+                break
+              case 1:
+                statusMsg = `Initializing g[v] = ∞, g[${startNodeLabel}] = 0, pq = [(h(${startNodeLabel}), ${startNodeLabel})]`
+                break
+              case 2:
+                statusMsg = `Checking if priority queue is empty...`
+                break
+              case 3:
+                statusMsg = `Popped node ${currentStep.uLabel} with priority f = ${formatCost(currentStep.fVal ?? 0)} (g = ${formatCost(currentStep.gVal ?? 0)}, h = ${formatCost(currentStep.hVal ?? 0)})`
+                break
+              case 4:
+                statusMsg = `Settling ${currentStep.uLabel} at cost g = ${formatCost(currentStep.gVal ?? 0)}`
+                break
+              case 5:
+                statusMsg = `Iterating over neighbors of ${currentStep.uLabel}`
+                break
+              case 6:
+                statusMsg = `Computing newG to ${currentStep.nbLabel}: g[${currentStep.uLabel}] (${formatCost(currentStep.gVal ?? 0)}) + weight = ${formatCost(currentStep.newGVal ?? 0)}`
+                break
+              case 7:
+                statusMsg = `Checking if newG (${formatCost(currentStep.newGVal ?? 0)}) < g[${currentStep.nbLabel}]`
+                break
+              case 8:
+                statusMsg = `Updating g[${currentStep.nbLabel}] = ${formatCost(currentStep.newGVal ?? 0)} and pushing to priority queue`
+                break
+              case 9:
+                statusMsg = `Search complete. ${r.pathFound ? `Path found with cost ${r.pathCost}` : 'No path exists'}`
+                break
+              default:
+                statusMsg = `Executing line ${currentStep.codeLine + 1} · A*`
+            }
+          } else {
+            // Greedy
+            switch (currentStep.codeLine) {
+              case 0:
+                statusMsg = `Greedy(graph, ${startNodeLabel}, ${goalNodeLabel}) · Start Greedy Best-First search`
+                break
+              case 1:
+                statusMsg = `Initializing pq = [(h(${startNodeLabel}), ${startNodeLabel})], visited = {}`
+                break
+              case 2:
+                statusMsg = `Checking if priority queue is empty...`
+                break
+              case 3:
+                statusMsg = `Popped node ${currentStep.uLabel} with heuristic h = ${formatCost(currentStep.hVal ?? 0)}`
+                break
+              case 4:
+                statusMsg = `Marking ${currentStep.uLabel} visited (h = ${formatCost(currentStep.hVal ?? 0)})`
+                break
+              case 5:
+                statusMsg = `Iterating over neighbors of ${currentStep.uLabel}`
+                break
+              case 6:
+                statusMsg = `Checking if neighbor ${currentStep.nbLabel} not yet reached (nb ∉ prev)`
+                break
+              case 7:
+                statusMsg = `Setting prev[${currentStep.nbLabel}] = ${currentStep.uLabel} and pushing to priority queue`
+                break
+              case 8:
+                statusMsg = `Search complete. ${r.pathFound ? `Path found with cost ${r.pathCost}` : 'No path exists'}`
+                break
+              default:
+                statusMsg = `Executing line ${currentStep.codeLine + 1} · Greedy`
+            }
+          }
         } else {
-          discoverMsg = currentStep.fromNodeId === null
-            ? `${currentStep.nodeLabel} queued — start node, cost 0 · ${label}`
-            : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${formatCost(currentStep.edgeWeight ?? 0)}, total cost ${formatCost(currentStep.gCost)}) · ${label}`
+          const h = formatCost(currentStep.hCost)
+          if (algo === 'greedy') {
+            statusMsg = currentStep.fromNodeId === null
+              ? `${currentStep.nodeLabel} queued — start node (h = ${h}) · Greedy`
+              : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (h = ${h}) · Greedy`
+          } else if (algo === 'astar') {
+            const f = formatCost(currentStep.priority)
+            statusMsg = currentStep.fromNodeId === null
+              ? `${currentStep.nodeLabel} queued — start node (g = 0, h = ${h}, f = ${h}) · A*`
+              : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${formatCost(currentStep.edgeWeight ?? 0)}, g = ${formatCost(currentStep.gCost)}, h = ${h}, f = ${f}) · A*`
+          } else {
+            statusMsg = currentStep.fromNodeId === null
+              ? `${currentStep.nodeLabel} queued — start node, cost 0 · ${label}`
+              : `${currentStep.nodeLabel} queued — via ${currentStep.fromNodeLabel} (edge +${formatCost(currentStep.edgeWeight ?? 0)}, total cost ${formatCost(currentStep.gCost)}) · ${label}`
+          }
         }
-        const statusMsg = currentStep.eventType === 'settle' || currentStep.eventType === 'assumed'
-          ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${formatCost(currentStep.gCost)} · ${label}`)
-          : discoverMsg
 
         setWpSettledNodeIds([...settledSet])
         setWpTentativeNodeIds([...tentativeMap.keys()])
         setWpAssumedNodeIds([...assumedSet])
-        setWpCurrentNodeId(currentStep.eventType === 'settle' || currentStep.eventType === 'assumed' ? null : currentStep.nodeId)
+        setWpCurrentNodeId(currentNodeId)
         setWpCurrentEdgeId(currentEdgeId)
         setWpCostByNodeId(costByNodeId)
         setWpVisitedEdgeIds([...visitedEdgeSet])
@@ -528,11 +662,17 @@ export function useWeightedPathfindingPlayback({
           ? runWeightedPathfindingCode(nodes, edges, startNode.id, goalNode.id, algorithm)
           : runWeightedPathfinding(nodes, edges, startNode.id, goalNode.id, algorithm)
       } else if (algorithm === 'dijkstra') {
-        r = runDijkstra(nodes, edges, startNode.id, goalNode.id)
+        r = playbackMode === 'code'
+          ? runDijkstraCode(nodes, edges, startNode.id, goalNode.id)
+          : runDijkstra(nodes, edges, startNode.id, goalNode.id)
       } else if (algorithm === 'astar') {
-        r = runAStar(nodes, edges, startNode.id, goalNode.id, pixelsPerUnit)
+        r = playbackMode === 'code'
+          ? runAStarCode(nodes, edges, startNode.id, goalNode.id, pixelsPerUnit)
+          : runAStar(nodes, edges, startNode.id, goalNode.id, pixelsPerUnit)
       } else {
-        r = runGreedy(nodes, edges, startNode.id, goalNode.id, pixelsPerUnit)
+        r = playbackMode === 'code'
+          ? runGreedyCode(nodes, edges, startNode.id, goalNode.id, pixelsPerUnit)
+          : runGreedy(nodes, edges, startNode.id, goalNode.id, pixelsPerUnit)
       }
 
       if (r.steps.length === 0) {
@@ -552,12 +692,18 @@ export function useWeightedPathfindingPlayback({
   )
 
   const handleStartNodeLabelChange = useCallback((value: string) => {
+    if (resultRef.current || isRunning) {
+      resetWPVisualization()
+    }
     setStartNodeLabel(sanitizeNodeLabelInput(value))
-  }, [])
+  }, [resetWPVisualization, isRunning])
 
   const handleGoalNodeLabelChange = useCallback((value: string) => {
+    if (resultRef.current || isRunning) {
+      resetWPVisualization()
+    }
     setGoalNodeLabel(sanitizeNodeLabelInput(value))
-  }, [])
+  }, [resetWPVisualization, isRunning])
 
   const stepWPForward = useCallback(() => {
     if (!result) return
@@ -695,9 +841,35 @@ export function useWeightedPathfindingPlayback({
           }
           return [[`u = —`], [`${frontierLabel} = [${startLabel}]`], [`cost = {${startLabel}: 0}`]]
         }
-        if (wpAlgorithm === 'greedy') return [[`u = —`], [`pq = [${startLabel}]`], [`visited = []`]]
-        const costLabel = wpAlgorithm === 'astar' ? 'g' : 'dist'
-        return [[`u = —`], [`pq = [${startLabel}]`], [`${costLabel} = {${startLabel}: 0}`]]
+        if (wpAlgorithm === 'greedy') {
+          if (playbackMode === 'code') {
+            return [
+              [`u = —`, `h = —`, `nb = —`],
+              [`pq = [${startLabel}]`],
+              [`visited = []`],
+            ]
+          }
+          return [[`u = —`], [`pq = [${startLabel}]`], [`visited = []`]]
+        }
+        if (wpAlgorithm === 'astar') {
+          if (playbackMode === 'code') {
+            return [
+              [`u = —`, `g = —`, `h = —`, `f = —`],
+              [`nb = —`, `newG = —`, `pq = [${startLabel}]`],
+              [`g = {${startLabel}: 0}`],
+            ]
+          }
+          return [[`u = —`], [`pq = [${startLabel}]`], [`g = {${startLabel}: 0}`]]
+        }
+        // Dijkstra
+        if (playbackMode === 'code') {
+          return [
+            [`u = —`, `d = —`, `nb = —`, `newDist = —`],
+            [`pq = [(0, ${startLabel})]`],
+            [`dist = {${startLabel}: 0}`],
+          ]
+        }
+        return [[`u = —`], [`pq = [${startLabel}]`], [`dist = {${startLabel}: 0}`]]
       }
 
       if (result.kind === 'bfsdfs') {
@@ -780,6 +952,75 @@ export function useWeightedPathfindingPlayback({
       const si = Math.min(playback.stepIndex, result.steps.length - 1)
       const step = result.steps[si]
       const algo = wpAlgorithm
+
+      if (playbackMode === 'code' && step.codeLine !== undefined) {
+        const costEntriesStr = step.costMap ? Object.entries(step.costMap).map(([lbl, c]) => `${lbl}: ${formatCost(c)}`).join(', ') : ''
+        const pqStr = step.pqLabels && step.pqLabels.length > 0
+          ? (step.pqLabels.length > 3
+              ? `[${step.pqLabels.slice(0, 3).join(', ')}, +${step.pqLabels.length - 3}]`
+              : `[${step.pqLabels.join(', ')}]`)
+          : '[]'
+
+        if (algo === 'greedy') {
+          const visitedStr = step.visitedLabels && step.visitedLabels.length > 0 ? `[${step.visitedLabels.join(', ')}]` : '[]'
+          if (isDone) {
+            return [
+              [`u = —`, `h = —`, `nb = —`],
+              [`pq = []`],
+              [`visited = ${visitedStr}`],
+            ]
+          }
+          const uStr = step.uLabel ?? '—'
+          const hStr = step.hVal !== null && step.hVal !== undefined ? formatCost(step.hVal) : '—'
+          const nbStr = step.nbLabel ?? '—'
+          return [
+            [`u = ${uStr}`, `h = ${hStr}`, `nb = ${nbStr}`],
+            [`pq = ${pqStr}`],
+            [`visited = ${visitedStr}`],
+          ]
+        }
+
+        if (algo === 'astar') {
+          if (isDone) {
+            return [
+              [`u = —`, `g = —`, `h = —`, `f = —`],
+              [`nb = —`, `newG = —`, `pq = []`],
+              [`g = {${costEntriesStr}}`],
+            ]
+          }
+          const uStr = step.uLabel ?? '—'
+          const gStr = step.gVal !== null && step.gVal !== undefined ? formatCost(step.gVal) : '—'
+          const hStr = step.hVal !== null && step.hVal !== undefined ? formatCost(step.hVal) : '—'
+          const fStr = step.fVal !== null && step.fVal !== undefined ? formatCost(step.fVal) : '—'
+          const nbStr = step.nbLabel ?? '—'
+          const newGStr = step.newGVal !== null && step.newGVal !== undefined ? formatCost(step.newGVal) : '—'
+          return [
+            [`u = ${uStr}`, `g = ${gStr}`, `h = ${hStr}`, `f = ${fStr}`],
+            [`nb = ${nbStr}`, `newG = ${newGStr}`, `pq = ${pqStr}`],
+            [`g = {${costEntriesStr}}`],
+          ]
+        }
+
+        // Dijkstra code mode
+        if (isDone) {
+          return [
+            [`u = —`, `d = —`, `nb = —`, `newDist = —`],
+            [`pq = []`],
+            [`dist = {${costEntriesStr}}`],
+          ]
+        }
+        const uStr = step.uLabel ?? '—'
+        const dStr = step.dVal !== null && step.dVal !== undefined ? formatCost(step.dVal) : '—'
+        const nbStr = step.nbLabel ?? '—'
+        const newDistStr = step.newDistVal !== null && step.newDistVal !== undefined ? formatCost(step.newDistVal) : '—'
+        return [
+          [`u = ${uStr}`, `d = ${dStr}`, `nb = ${nbStr}`, `newDist = ${newDistStr}`],
+          [`pq = ${pqStr}`],
+          [`dist = {${costEntriesStr}}`],
+        ]
+      }
+
+      // Visual mode priority variables
       const settledSet = new Set<string>()
       const bestKnownCost = new Map<string, number>()
       for (const s of result.steps.slice(0, si + 1)) {

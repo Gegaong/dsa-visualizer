@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react'
@@ -141,7 +142,14 @@ function App() {
   const nextBinaryTreeId = useRef(1)
 
   // Saved state per canvas type so switching between them preserves each canvas independently.
-  type SavedCanvasState = { nodes: GraphNode[]; edges: GraphEdge[]; nextId: number; isUndirectedMode: boolean; canvasZoom: number }
+  type SavedCanvasState = {
+    nodes: GraphNode[]
+    edges: GraphEdge[]
+    nextId: number
+    isUndirectedMode: boolean
+    canvasZoom: number
+    lastCanvasSize?: { width: number; height: number }
+  }
   const savedGraphState = useRef<SavedCanvasState>({ nodes: [], edges: [], nextId: 1, isUndirectedMode: false, canvasZoom: 1 })
   const savedWeightedState = useRef<SavedCanvasState>({ nodes: [], edges: [], nextId: 1, isUndirectedMode: false, canvasZoom: 1 })
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
@@ -352,10 +360,6 @@ function App() {
   const lastCanvasSizeRef = useRef<{ width: number; height: number } | null>(null)
 
   useEffect(() => {
-    lastCanvasSizeRef.current = null
-  }, [canvasType])
-
-  useEffect(() => {
     if (!canvasElement) return
     const obs = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect
@@ -378,7 +382,7 @@ function App() {
             }))
           })
 
-          const shiftSaved = (saved: { nodes: GraphNode[] }) => {
+          const shiftSaved = (saved: { nodes: GraphNode[]; lastCanvasSize?: { width: number; height: number } }) => {
             if (saved.nodes.length > 0) {
               saved.nodes = saved.nodes.map((node) => ({
                 ...node,
@@ -386,6 +390,7 @@ function App() {
                 y: Math.max(0, Math.min(height - NODE_SIZE, Math.round(node.y + dy))),
               }))
             }
+            saved.lastCanvasSize = { width, height }
           }
           if (canvasType === 'graph') {
             shiftSaved(savedWeightedState.current)
@@ -393,11 +398,38 @@ function App() {
             shiftSaved(savedGraphState.current)
           }
         }
+      } else {
+        // Initial measurement for this canvas element: record it in current saved state too
+        if (canvasType === 'graph') {
+          savedGraphState.current.lastCanvasSize = { width, height }
+        } else if (canvasType === 'weighted-graph') {
+          savedWeightedState.current.lastCanvasSize = { width, height }
+        }
       }
     })
     obs.observe(canvasElement)
     return () => obs.disconnect()
   }, [canvasElement, canvasType])
+
+  // Dynamically sets --sidebar-scale on the workspace so the entire sidebar scales proportionally as a single unit when fullscreened.
+  const workspaceRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = workspaceRef.current
+    if (!el) return
+    const updateScale = () => {
+      const h = el.clientHeight
+      const scale = document.fullscreenElement && h > 0 ? h / 680 : 1
+      el.style.setProperty('--sidebar-scale', String(scale))
+    }
+    const obs = new ResizeObserver(updateScale)
+    obs.observe(el)
+    document.addEventListener('fullscreenchange', updateScale)
+    updateScale()
+    return () => {
+      obs.disconnect()
+      document.removeEventListener('fullscreenchange', updateScale)
+    }
+  }, [])
 
   // Keeps grid islands and start markers centered when column count expands/shrinks on canvas resize.
   const prevGridColsRef = useRef(gridCols)
@@ -486,9 +518,23 @@ function App() {
 
     // Save current graph canvas state (grid has no node/edge state to save).
     if (canvasType === 'graph') {
-      savedGraphState.current = { nodes, edges, nextId: nextId.current, isUndirectedMode, canvasZoom }
+      savedGraphState.current = {
+        nodes,
+        edges,
+        nextId: nextId.current,
+        isUndirectedMode,
+        canvasZoom,
+        lastCanvasSize: lastCanvasSizeRef.current ?? undefined,
+      }
     } else if (canvasType === 'weighted-graph') {
-      savedWeightedState.current = { nodes, edges, nextId: nextId.current, isUndirectedMode, canvasZoom }
+      savedWeightedState.current = {
+        nodes,
+        edges,
+        nextId: nextId.current,
+        isUndirectedMode,
+        canvasZoom,
+        lastCanvasSize: lastCanvasSizeRef.current ?? undefined,
+      }
     }
 
     // Restore incoming canvas state.
@@ -498,12 +544,14 @@ function App() {
       nextId.current = savedGraphState.current.nextId
       setIsUndirectedMode(savedGraphState.current.isUndirectedMode)
       setCanvasZoom(savedGraphState.current.canvasZoom)
+      lastCanvasSizeRef.current = savedGraphState.current.lastCanvasSize ?? null
     } else if (type === 'weighted-graph') {
       setNodes(savedWeightedState.current.nodes)
       setEdges(savedWeightedState.current.edges)
       nextId.current = savedWeightedState.current.nextId
       setIsUndirectedMode(savedWeightedState.current.isUndirectedMode)
       setCanvasZoom(1)
+      lastCanvasSizeRef.current = savedWeightedState.current.lastCanvasSize ?? null
     } else {
       setNodes([])
       setEdges([])
@@ -524,6 +572,8 @@ function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!document.fullscreenElement) return
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
       e.preventDefault()
       const idx = CANVAS_ORDER.indexOf(canvasType)
@@ -866,6 +916,7 @@ function App() {
       buildPresetGraph(preset, canvasWidth, canvasHeight)
 
     // Presets are laid out for the unzoomed viewport; reset zoom so the whole graph fits.
+    lastCanvasSizeRef.current = { width: canvasWidth, height: canvasHeight }
     setCanvasZoom(1)
     setIsUndirectedMode(preset.undirected === true)
     nextId.current = nextCounter
@@ -1487,7 +1538,7 @@ function App() {
     <div className="app">
       <Header activeCanvas={canvasType} onCanvasTypeChange={handleCanvasTypeChange} />
 
-      <div className="workspace">
+      <div className="workspace" ref={workspaceRef}>
         {canvasType === 'grid' && (
           <GridCanvas
             rows={gridRows}
