@@ -12,14 +12,18 @@ import type { GraphEdge, GraphNode } from '../types'
 
 import type {
   PriorityPathResult,
+  PriorityPathStep,
   WeightedAlgorithm,
   WeightedPathResult,
+  WeightedPathStep,
+  WPPlaybackMode,
 } from '../algorithms/graph/algorithmTypes'
 
 import type { WPOutput } from '../components/sidebar/sidebarTypes'
 
 import {
   runWeightedPathfinding,
+  runWeightedPathfindingCode,
   getDirectedEdgeId,
   getDirectedEdgeInfo,
 } from '../algorithms/graph/weightedPathfinding'
@@ -48,6 +52,9 @@ const IDLE_STATUS = 'Enter start and goal node labels, then run the pathfinder.'
 type AnyResult = WeightedPathResult | PriorityPathResult
 
 export type WPPlaybackHandle = {
+  playbackMode: WPPlaybackMode
+  setPlaybackMode: (mode: WPPlaybackMode) => void
+  currentStep: WeightedPathStep | PriorityPathStep | null
   isWPRunning: boolean
   wpResult: AnyResult | null
   wpStatusText: string
@@ -117,6 +124,8 @@ export function useWeightedPathfindingPlayback({
   edges,
   pixelsPerUnit,
 }: UseWPPlaybackParams): WPPlaybackHandle {
+  const [playbackMode, setPlaybackMode] = useState<WPPlaybackMode>('visual')
+  const [currentStep, setCurrentStep] = useState<WeightedPathStep | PriorityPathStep | null>(null)
   const [result, setResult] = useState<AnyResult | null>(null)
   const resultRef = useRef<AnyResult | null>(null)
   const [isRunning, setIsRunning] = useState(false)
@@ -156,6 +165,7 @@ export function useWeightedPathfindingPlayback({
         const activeSteps = r.steps
 
         if (index < 0) {
+          setCurrentStep(null)
           setWpSettledNodeIds([])
           setWpTentativeNodeIds([])
           setWpAssumedNodeIds([])
@@ -176,6 +186,7 @@ export function useWeightedPathfindingPlayback({
 
         const bound = Math.min(index, activeSteps.length - 1)
         const currentStep = activeSteps[bound]
+        setCurrentStep(currentStep)
         const visibleSteps = activeSteps.slice(0, bound + 1)
         const settledSet = new Set<string>()
         const tentativeMap = new Map<string, number>()
@@ -211,18 +222,80 @@ export function useWeightedPathfindingPlayback({
           }
         }
 
-        const currentEdgeId = currentStep.fromNodeId !== null
-          ? getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
-          : null
+        let currentEdgeId: string | null = null
+        let currentNodeId: string | null = null
 
-        const statusMsg = currentStep.eventType === 'settle'
-          ? (currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${formatCost(currentStep.costToNode)}`)
-          : `Visiting ${currentStep.nodeLabel} · current path cost ${formatCost(currentStep.costToNode)} (step ${bound + 1}/${activeSteps.length}) · ${label}`
+        if (currentStep.codeLine !== undefined) {
+          if (currentStep.eventType === 'settle') {
+            currentNodeId = null
+            currentEdgeId = null
+          } else if (currentStep.codeLine >= 7 && currentStep.codeLine <= 9 && currentStep.fromNodeId !== null) {
+            currentEdgeId = getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
+            currentNodeId = currentStep.nodeId
+          } else if (currentStep.codeLine >= 3 && currentStep.codeLine <= 6) {
+            currentNodeId = currentStep.nodeId
+            currentEdgeId = null
+          } else {
+            currentNodeId = null
+            currentEdgeId = null
+          }
+        } else {
+          currentNodeId = currentStep.eventType === 'settle' ? null : currentStep.nodeId
+          currentEdgeId = currentStep.fromNodeId !== null
+            ? getDirectedEdgeId(edges, currentStep.fromNodeId, currentStep.nodeId)
+            : null
+        }
+
+        let statusMsg: string
+        if (currentStep.eventType === 'settle') {
+          statusMsg = currentStep.settleReason ?? `${currentStep.nodeLabel} confirmed at cost ${formatCost(currentStep.costToNode)}`
+        } else if (currentStep.codeLine !== undefined) {
+          const frontierWord = algorithmRef.current === 'dfs' ? 'stack' : 'queue'
+          switch (currentStep.codeLine) {
+            case 0:
+              statusMsg = `Weighted${label}(graph, ${startNodeLabel}, ${goalNodeLabel}) · Start pathfinding`
+              break
+            case 1:
+              statusMsg = `Initializing costs and ${frontierWord} with start node ${startNodeLabel}`
+              break
+            case 2:
+              statusMsg = `Checking if ${frontierWord} is empty...`
+              break
+            case 3:
+              statusMsg = `Dequeued path ending at ${currentStep.uLabel} (cost: ${formatCost(currentStep.cVal ?? 0)})`
+              break
+            case 4:
+              statusMsg = `Checking prune conditions for ${currentStep.uLabel}...`
+              break
+            case 5:
+              statusMsg = `Checking if ${currentStep.uLabel} is the goal node (${goalNodeLabel})`
+              break
+            case 6:
+              statusMsg = `Iterating over neighbors of ${currentStep.uLabel}`
+              break
+            case 7:
+              statusMsg = `Computing cost to neighbor ${currentStep.nbLabel}: ${formatCost(currentStep.cVal ?? 0)} + weight = ${formatCost(currentStep.newCostVal ?? 0)}`
+              break
+            case 8:
+              statusMsg = `Checking if neighbor ${currentStep.nbLabel} is unvisited on path and beats cost`
+              break
+            case 9:
+              statusMsg = `Updating cost[${currentStep.nbLabel}] = ${formatCost(currentStep.newCostVal ?? 0)} and pushing to ${frontierWord}`
+              break
+            case 10:
+              statusMsg = `Search finished. ${r.pathFound ? `Path found with cost ${r.pathCost}` : 'No path exists'}`
+              break
+            default:
+              statusMsg = `Executing line ${currentStep.codeLine + 1} · ${label}`
+          }
+        } else {
+          statusMsg = `Visiting ${currentStep.nodeLabel} · current path cost ${formatCost(currentStep.costToNode)} (step ${bound + 1}/${activeSteps.length}) · ${label}`
+        }
 
         setWpSettledNodeIds([...settledSet])
         setWpTentativeNodeIds([...tentativeMap.keys()])
-        setWpCurrentNodeId(currentStep.eventType === 'settle' ? null : currentStep.nodeId)
-        setWpCurrentEdgeId(currentStep.eventType === 'settle' ? null : currentEdgeId)
+        setWpCurrentNodeId(currentNodeId)
+        setWpCurrentEdgeId(currentEdgeId)
         setWpCostByNodeId(costByNodeId)
         setWpVisitedEdgeIds([...visitedEdgeSet])
         setWpVisitedEdgeFwdIds([...visitedEdgeFwdSet])
@@ -231,10 +304,11 @@ export function useWeightedPathfindingPlayback({
         setWpGoalNodeId(r.goalNodeId)
         setWpPathNodeIds([])
         setWpPathEdgeIds([])
-        setWpQueueSize(null)
+        setWpQueueSize(currentStep.frontierLabels?.length ?? null)
         setStatusText(statusMsg)
       } else {
         if (index < 0) {
+          setCurrentStep(null)
           setWpSettledNodeIds([])
           setWpTentativeNodeIds([])
           setWpAssumedNodeIds([])
@@ -255,6 +329,7 @@ export function useWeightedPathfindingPlayback({
 
         const bound = Math.min(index, r.steps.length - 1)
         const currentStep = r.steps[bound]
+        setCurrentStep(currentStep)
         const visibleSteps = r.steps.slice(0, bound + 1)
         const settledSet = new Set<string>()
         const assumedSet = new Set<string>()
@@ -337,7 +412,7 @@ export function useWeightedPathfindingPlayback({
         setStatusText(statusMsg)
       }
     },
-    [edges],
+    [edges, startNodeLabel, goalNodeLabel],
   )
 
   const applyStepRef = useRef(applyStep)
@@ -410,6 +485,7 @@ export function useWeightedPathfindingPlayback({
     setWpVisitedEdgeFwdIds([])
     setWpVisitedEdgeRevIds([])
     setWpQueueSize(null)
+    setCurrentStep(null)
   }, [])
 
   const resetWPVisualization = useCallback(() => {
@@ -448,7 +524,9 @@ export function useWeightedPathfindingPlayback({
 
       let r: AnyResult
       if (algorithm === 'bfs' || algorithm === 'dfs') {
-        r = runWeightedPathfinding(nodes, edges, startNode.id, goalNode.id, algorithm)
+        r = playbackMode === 'code'
+          ? runWeightedPathfindingCode(nodes, edges, startNode.id, goalNode.id, algorithm)
+          : runWeightedPathfinding(nodes, edges, startNode.id, goalNode.id, algorithm)
       } else if (algorithm === 'dijkstra') {
         r = runDijkstra(nodes, edges, startNode.id, goalNode.id)
       } else if (algorithm === 'astar') {
@@ -470,7 +548,7 @@ export function useWeightedPathfindingPlayback({
       setWpGoalNodeId(goalNode.id)
       setStatusText(`Pathfinder (${label}) ready. Press Play or step through manually.`)
     },
-    [playback, resetWPVisualization, nodes, edges, startNodeLabel, goalNodeLabel, pixelsPerUnit],
+    [playback, resetWPVisualization, nodes, edges, startNodeLabel, goalNodeLabel, pixelsPerUnit, playbackMode],
   )
 
   const handleStartNodeLabelChange = useCallback((value: string) => {
@@ -534,6 +612,9 @@ export function useWeightedPathfindingPlayback({
     : null
 
   return {
+    playbackMode,
+    setPlaybackMode,
+    currentStep,
     isWPRunning: isRunning,
     wpResult: result,
     wpStatusText,
@@ -605,6 +686,13 @@ export function useWeightedPathfindingPlayback({
         const startLabel = nodeLabels.get(result.startNodeId) ?? '?'
         if (result.kind === 'bfsdfs') {
           const frontierLabel = wpAlgorithm === 'dfs' ? 'stack' : 'queue'
+          if (playbackMode === 'code') {
+            return [
+              [`u = —`, `c = —`, `nb = —`, `newCost = —`],
+              [`bestCost = ∞`, `${frontierLabel} = [(${startLabel}, 0)]`],
+              [`cost = {${startLabel}: 0}`],
+            ]
+          }
           return [[`u = —`], [`${frontierLabel} = [${startLabel}]`], [`cost = {${startLabel}: 0}`]]
         }
         if (wpAlgorithm === 'greedy') return [[`u = —`], [`pq = [${startLabel}]`], [`visited = []`]]
@@ -616,6 +704,38 @@ export function useWeightedPathfindingPlayback({
         const activeSteps = result.steps
         const si = Math.min(playback.stepIndex, activeSteps.length - 1)
         const step = activeSteps[si]
+        const frontierLabel = wpAlgorithm === 'dfs' ? 'stack' : 'queue'
+
+        if (playbackMode === 'code' && step.codeLine !== undefined) {
+          const costEntriesStr = step.costMap ? Object.entries(step.costMap).map(([lbl, c]) => `${lbl}: ${c}`).join(', ') : ''
+          const frontierStr = step.frontierLabels && step.frontierLabels.length > 0
+            ? (step.frontierLabels.length > 3
+                ? `[${step.frontierLabels.slice(0, 3).join(', ')}, +${step.frontierLabels.length - 3}]`
+                : `[${step.frontierLabels.join(', ')}]`)
+            : '[]'
+
+          if (isDone) {
+            const bestCostStr = result.pathCost !== null ? String(result.pathCost) : '∞'
+            return [
+              [`u = —`, `c = —`, `nb = —`, `newCost = —`],
+              [`bestCost = ${bestCostStr}`, `${frontierLabel} = []`],
+              [`cost = {${costEntriesStr}}`],
+            ]
+          }
+
+          const uStr = step.uLabel ?? '—'
+          const cStr = step.cVal !== null && step.cVal !== undefined ? String(step.cVal) : '—'
+          const nbStr = step.nbLabel ?? '—'
+          const newCostStr = step.newCostVal !== null && step.newCostVal !== undefined ? String(step.newCostVal) : '—'
+          const bestCostStr = step.bestCostVal !== null && step.bestCostVal !== undefined ? String(step.bestCostVal) : '∞'
+
+          return [
+            [`u = ${uStr}`, `c = ${cStr}`, `nb = ${nbStr}`, `newCost = ${newCostStr}`],
+            [`bestCost = ${bestCostStr}`, `${frontierLabel} = ${frontierStr}`],
+            [`cost = {${costEntriesStr}}`],
+          ]
+        }
+
         const settledSet = new Set<string>()
         const bestKnownCost = new Map<string, number>()
         for (const s of activeSteps.slice(0, si + 1)) {
@@ -626,7 +746,6 @@ export function useWeightedPathfindingPlayback({
             if (ex === undefined || s.costToNode < ex) bestKnownCost.set(s.nodeId, s.costToNode)
           }
         }
-        const frontierLabel = wpAlgorithm === 'dfs' ? 'stack' : 'queue'
         const queueLabels = [...bestKnownCost.keys()]
           .filter(id => !settledSet.has(id))
           .map(id => nodeLabels.get(id) ?? id)

@@ -206,3 +206,263 @@ export function runWeightedPathfinding(
     operationCount,
   }
 }
+
+// Line-by-line Code Execution mode engine for Weighted BFS and DFS
+export function runWeightedPathfindingCode(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  startNodeId: string,
+  goalNodeId: string,
+  strategy: TraversalStrategy,
+): WeightedPathResult {
+  const empty: WeightedPathResult = {
+    kind: 'bfsdfs',
+    steps: [],
+    pathNodeIds: [],
+    startNodeId,
+    goalNodeId,
+    pathFound: false,
+    pathCost: null,
+    operationCount: 0,
+  }
+
+  if (nodes.length === 0) return empty
+
+  const { nodeById, outNeighborsById, directedEdgeMap } = buildWeightedLookups(nodes, edges)
+  const startNode = nodeById.get(startNodeId)
+  if (!startNode) return empty
+
+  const isBfs = strategy === 'bfs'
+  const containerWord = isBfs ? 'queue' : 'stack'
+
+  const steps: WeightedPathStep[] = []
+  let order = 1
+  let bestGoalCost = Infinity
+  let bestGoalPath: string[] = []
+  let operationCount = 0
+
+  const bestKnownCost = new Map<string, number>([[startNodeId, 0]])
+  const bestParent = new Map<string, string | null>([[startNodeId, null]])
+  const settledSet = new Set<string>()
+
+  const frontier: PathItem[] = []
+
+  const getCostEntries = () => {
+    const res: Record<string, number> = {}
+    for (const [id, c] of bestKnownCost) {
+      const n = nodeById.get(id)
+      if (n) res[n.label] = c
+    }
+    return res
+  }
+
+  const getFrontierLabels = () => {
+    return frontier.map((item) => {
+      const pathLabels = item.path.map((id) => nodeById.get(id)?.label ?? id).join('→')
+      return `(${pathLabels}, ${item.cost})`
+    })
+  }
+
+  const makeCodeStep = (
+    codeLine: number,
+    logicLines: number[],
+    nodeId: string,
+    fromNodeId: string | null,
+    costToNode: number,
+    eventType: 'discover' | 'settle',
+    extra: {
+      uLabel?: string | null
+      cVal?: number | null
+      nbLabel?: string | null
+      newCostVal?: number | null
+      settleReason?: string
+    } = {},
+  ): WeightedPathStep => {
+    const n = nodeById.get(nodeId)
+    return {
+      nodeId,
+      nodeLabel: n?.label ?? nodeId,
+      order: order++,
+      fromNodeId,
+      costToNode,
+      eventType,
+      codeLine,
+      logicLines,
+      uLabel: extra.uLabel ?? null,
+      cVal: extra.cVal !== undefined ? extra.cVal : null,
+      nbLabel: extra.nbLabel ?? null,
+      newCostVal: extra.newCostVal !== undefined ? extra.newCostVal : null,
+      bestCostVal: bestGoalCost === Infinity ? null : bestGoalCost,
+      frontierLabels: getFrontierLabels(),
+      costMap: getCostEntries(),
+      settleReason: extra.settleReason,
+    }
+  }
+
+  // Line 0: WeightedBFS(graph, start, goal) / WeightedDFS(graph, start, goal)
+  steps.push(makeCodeStep(0, [0, 1], startNodeId, null, 0, 'discover', {
+    uLabel: null,
+    cVal: null,
+  }))
+
+  // Line 1: cost[start] ← 0; queue/stack ← [(path=[start], c=0)]; bestCost ← ∞; bestPath ← []
+  frontier.push({ path: [startNodeId], pathSet: new Set([startNodeId]), cost: 0 })
+  operationCount++
+
+  steps.push(makeCodeStep(1, [0, 1], startNodeId, null, 0, 'discover', {
+    uLabel: null,
+    cVal: null,
+  }))
+
+  while (frontier.length > 0) {
+    const peekItem = isBfs ? frontier[0] : frontier[frontier.length - 1]
+    const peekNodeId = peekItem.path[peekItem.path.length - 1]
+
+    // Line 2: while queue/stack ≠ empty
+    steps.push(makeCodeStep(2, [3, 4, 5, 6, 7], peekNodeId, null, peekItem.cost, 'discover', {
+      uLabel: null,
+      cVal: null,
+    }))
+
+    // Line 3: (path, c) ← queue.dequeue() / stack.pop(); u ← path.last
+    const item = isBfs ? frontier.shift()! : frontier.pop()!
+    operationCount++
+    const { path, pathSet, cost } = item
+    const uId = path[path.length - 1]
+    const uNode = nodeById.get(uId)
+    const uLabel = uNode?.label ?? uId
+
+    steps.push(makeCodeStep(3, [3, 4, 5, 6, 7], uId, path.length > 1 ? path[path.length - 2] : null, cost, 'discover', {
+      uLabel,
+      cVal: cost,
+    }))
+
+    // Line 4: if c > cost[u] or c ≥ bestCost: continue
+    const currentCostForU = bestKnownCost.get(uId) ?? Infinity
+    const isPruned = cost > currentCostForU || cost >= bestGoalCost
+    steps.push(makeCodeStep(4, [3, 4, 5, 6, 7], uId, path.length > 1 ? path[path.length - 2] : null, cost, 'discover', {
+      uLabel,
+      cVal: cost,
+    }))
+    if (isPruned) continue
+
+    // Line 5: if u = goal: bestCost ← c; bestPath ← path; continue
+    if (uId === goalNodeId) {
+      if (cost < bestGoalCost) {
+        bestGoalCost = cost
+        bestGoalPath = [...path]
+      }
+      steps.push(makeCodeStep(5, [8, 9, 10], uId, path.length > 1 ? path[path.length - 2] : null, cost, 'discover', {
+        uLabel,
+        cVal: cost,
+      }))
+      continue
+    } else {
+      steps.push(makeCodeStep(5, [8, 9, 10], uId, path.length > 1 ? path[path.length - 2] : null, cost, 'discover', {
+        uLabel,
+        cVal: cost,
+      }))
+    }
+
+    // Line 6: for each neighbor nb of u in graph:
+    steps.push(makeCodeStep(6, [11, 12, 13, 14], uId, null, cost, 'discover', {
+      uLabel,
+      cVal: cost,
+    }))
+
+    const neighbors = outNeighborsById.get(uId) ?? []
+    for (const neighborId of neighbors) {
+      operationCount++
+      const neighborNode = nodeById.get(neighborId)
+      const nbLabel = neighborNode?.label ?? neighborId
+
+      const edgeInfo = directedEdgeMap.get(`${uId}:${neighborId}`)
+      const newCost = cost + (edgeInfo?.weight ?? 1)
+
+      // Line 7: newCost ← c + w(u, nb)
+      steps.push(makeCodeStep(7, [11, 12, 13, 14], neighborId, uId, newCost, 'discover', {
+        uLabel,
+        cVal: cost,
+        nbLabel,
+        newCostVal: newCost,
+      }))
+
+      // Line 8: if nb ∉ path and newCost < cost[nb] and newCost < bestCost:
+      const notInPath = !pathSet.has(neighborId)
+      const isCheaper = newCost < (bestKnownCost.get(neighborId) ?? Infinity)
+      const beatsGoal = newCost < bestGoalCost
+      const passesCheck = notInPath && isCheaper && beatsGoal
+
+      steps.push(makeCodeStep(8, [11, 12, 13, 14], neighborId, uId, newCost, 'discover', {
+        uLabel,
+        cVal: cost,
+        nbLabel,
+        newCostVal: newCost,
+      }))
+
+      if (passesCheck) {
+        bestKnownCost.set(neighborId, newCost)
+        bestParent.set(neighborId, uId)
+
+        frontier.push({
+          path: [...path, neighborId],
+          pathSet: new Set([...pathSet, neighborId]),
+          cost: newCost,
+        })
+        operationCount++
+
+        // Line 9: cost[nb] ← newCost; queue.enqueue / stack.push
+        steps.push(makeCodeStep(9, [11, 12, 13, 14], neighborId, uId, newCost, 'discover', {
+          uLabel,
+          cVal: cost,
+          nbLabel,
+          newCostVal: newCost,
+        }))
+      }
+    }
+
+    // Check for nodes that can now be settled:
+    let minPendingCost = Infinity
+    for (const fi of frontier) {
+      if (fi.cost < minPendingCost) minPendingCost = fi.cost
+    }
+
+    for (const [id, knownCost] of bestKnownCost) {
+      if (!settledSet.has(id) && knownCost <= minPendingCost) {
+        settledSet.add(id)
+        const n = nodeById.get(id)
+        if (!n) continue
+
+        const reason = minPendingCost === Infinity
+          ? `${n.label} confirmed at cost ${knownCost} — the ${containerWord} is empty, no more paths to explore`
+          : `${n.label} confirmed at cost ${knownCost} — cheapest path in the ${containerWord} costs ${minPendingCost}, so ${n.label} cannot be reached for less`
+
+        steps.push(makeCodeStep(2, [15, 16, 17], id, bestParent.get(id) ?? null, knownCost, 'settle', {
+          uLabel: n.label,
+          cVal: knownCost,
+          settleReason: reason,
+        }))
+      }
+    }
+  }
+
+  // Line 10: return bestPath if bestPath ≠ [] else no path
+  const finalNodeId = bestGoalPath.length > 0 ? bestGoalPath[bestGoalPath.length - 1] : startNodeId
+  steps.push(makeCodeStep(10, [18, 19], finalNodeId, null, bestGoalCost === Infinity ? 0 : bestGoalCost, 'discover', {
+    uLabel: null,
+    cVal: null,
+    bestCostVal: bestGoalCost === Infinity ? null : bestGoalCost,
+  }))
+
+  return {
+    kind: 'bfsdfs',
+    steps,
+    pathNodeIds: bestGoalPath,
+    startNodeId,
+    goalNodeId,
+    pathFound: bestGoalPath.length > 0,
+    pathCost: bestGoalCost === Infinity ? null : bestGoalCost,
+    operationCount,
+  }
+}
+

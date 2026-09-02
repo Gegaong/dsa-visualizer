@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-
-import type { WeightedAlgorithm } from '../../../algorithms/graph/algorithmTypes'
+import type {
+  PriorityPathStep,
+  WeightedAlgorithm,
+  WeightedPathStep,
+  WPPlaybackMode,
+} from '../../../algorithms/graph/algorithmTypes'
 
 import type { AlgorithmInfoKey } from '../../../algorithms/algorithmInfo'
 
@@ -248,7 +252,20 @@ const PRIORITY_LOGIC_HIGHLIGHTS: Record<WPPhase, number[]> = {
   'done-empty':    [17, 18],
 }
 
-function getWPHighlights(phase: WPPhase | null, isLogic: boolean, algorithm: WeightedAlgorithm): Set<number> {
+function getWPHighlights(
+  phase: WPPhase | null,
+  isLogic: boolean,
+  algorithm: WeightedAlgorithm,
+  playbackMode: WPPlaybackMode,
+  currentStep: WeightedPathStep | PriorityPathStep | null,
+): Set<number> {
+  if (playbackMode === 'code' && (algorithm === 'bfs' || algorithm === 'dfs') && currentStep && 'codeLine' in currentStep && currentStep.codeLine !== undefined) {
+    if (isLogic) {
+      return new Set(currentStep.logicLines ?? [0, 1])
+    }
+    return new Set([currentStep.codeLine])
+  }
+
   if (!phase) return new Set()
   if (algorithm === 'bfs' || algorithm === 'dfs') {
     return new Set((isLogic ? WP_LOGIC_HIGHLIGHTS : WP_CODE_HIGHLIGHTS)[phase])
@@ -261,6 +278,9 @@ function getWPHighlights(phase: WPPhase | null, isLogic: boolean, algorithm: Wei
 // ─── Props & component ────────────────────────────────────────────────────────
 
 export type WeightedPathfindingPanelProps = {
+  playbackMode: WPPlaybackMode
+  onPlaybackModeChange: (mode: WPPlaybackMode) => void
+  currentStep: WeightedPathStep | PriorityPathStep | null
   isWPSessionActive: boolean
   canRunWP: boolean
   wpStatusText: string
@@ -299,6 +319,9 @@ function formatStepDisplay(stepIndex: number, stepTotal: number): string {
 }
 
 export const WeightedPathfindingPanel = ({
+  playbackMode,
+  onPlaybackModeChange,
+  currentStep,
   isWPSessionActive,
   canRunWP,
   wpStatusText,
@@ -365,6 +388,9 @@ export const WeightedPathfindingPanel = ({
     wpOutput !== null && wpOutput.pathFound && wpOutput.pathNodeLabels.length > 0
       ? wpOutput.pathNodeLabels.join(' → ')
       : null
+
+  const isBfsDfs = algorithm === 'bfs' || algorithm === 'dfs'
+  const isCodeMode = playbackMode === 'code' && isBfsDfs && currentStep && 'codeLine' in currentStep && currentStep.codeLine !== undefined
 
   return (
     <div className="sidebar-page-body sidebar-page-body--pathfinder">
@@ -473,6 +499,30 @@ export const WeightedPathfindingPanel = ({
 
       <div className="sidebar-section sidebar-section--wp-playback">
         <h3>Playback</h3>
+        {isBfsDfs && (
+          <div className="playback-mode-toggle" role="radiogroup" aria-label="Playback mode">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={playbackMode === 'visual'}
+              className={`playback-mode-btn ${playbackMode === 'visual' ? 'playback-mode-btn--active' : ''}`}
+              disabled={isWPSessionActive}
+              onClick={() => onPlaybackModeChange('visual')}
+            >
+              Visual Steps
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={playbackMode === 'code'}
+              className={`playback-mode-btn ${playbackMode === 'code' ? 'playback-mode-btn--active' : ''}`}
+              disabled={isWPSessionActive}
+              onClick={() => onPlaybackModeChange('code')}
+            >
+              Line by Line
+            </button>
+          </div>
+        )}
         <PlaybackControls
           runLabel="Run pathfinder"
           stopLabel="Stop run"
@@ -490,7 +540,11 @@ export const WeightedPathfindingPanel = ({
           speed={wpPlaybackSpeed}
           onSpeedChange={onWPPlaybackSpeedChange}
         />
-        <p className="hint">{wpStatusText}</p>
+        <p className="hint">
+          {isWPSessionActive && isCodeMode && !isWPPlaybackComplete
+            ? `Line ${(currentStep as WeightedPathStep).codeLine! + 1} · Step ${formatStepDisplay(wpStepIndex, wpStepTotal)}`
+            : wpStatusText}
+        </p>
       </div>
 
       {isWPSessionActive && (
@@ -509,8 +563,8 @@ export const WeightedPathfindingPanel = ({
             : algorithm === 'greedy' ? GREEDY_LOGIC
             : BFS_LOGIC
           }
-          codeHighlighted={getWPHighlights(wpCurrentPhase, false, algorithm)}
-          logicHighlighted={getWPHighlights(wpCurrentPhase, true, algorithm)}
+          codeHighlighted={getWPHighlights(wpCurrentPhase, false, algorithm, playbackMode, currentStep)}
+          logicHighlighted={getWPHighlights(wpCurrentPhase, true, algorithm, playbackMode, currentStep)}
           varsRows={wpVarsRows}
           showLogic={pseudocodeShowLogic}
           onFlip={onPseudocodeFlip}

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import type { TraversalStrategy } from './algorithmTypes'
 
-import { getDirectedEdgeId, getDirectedEdgeInfo, runWeightedPathfinding } from './weightedPathfinding'
+import { getDirectedEdgeId, getDirectedEdgeInfo, runWeightedPathfinding, runWeightedPathfindingCode } from './weightedPathfinding'
 
 import { makeGraph } from '../__testutils__/fixtures'
 
@@ -70,6 +70,66 @@ describe('runWeightedPathfinding', () => {
     const steps = runWeightedPathfinding(cheap.nodes, cheap.edges, 'A', 'D', 'bfs').steps
     expect(steps.some((s) => s.eventType === 'discover')).toBe(true)
     expect(steps.some((s) => s.eventType === 'settle')).toBe(true)
+  })
+})
+
+describe('runWeightedPathfindingCode (Line by Line)', () => {
+  const cheap = makeGraph(['A', 'B', 'C', 'D'], [['A', 'B', 1], ['B', 'D', 1], ['A', 'D', 10]])
+
+  it.each(strategies)('finds the same least-cost path as visual mode (%s)', (strategy) => {
+    const visual = runWeightedPathfinding(cheap.nodes, cheap.edges, 'A', 'D', strategy)
+    const code = runWeightedPathfindingCode(cheap.nodes, cheap.edges, 'A', 'D', strategy)
+
+    expect(code.pathFound).toBe(visual.pathFound)
+    expect(code.pathCost).toBe(visual.pathCost)
+    expect(code.pathNodeIds).toEqual(visual.pathNodeIds)
+  })
+
+  it.each(strategies)('every step has valid codeLine (0–10) and non-empty logicLines (%s)', (strategy) => {
+    const result = runWeightedPathfindingCode(cheap.nodes, cheap.edges, 'A', 'D', strategy)
+    expect(result.steps.length).toBeGreaterThan(0)
+
+    for (const step of result.steps) {
+      expect(typeof step.codeLine).toBe('number')
+      expect(step.codeLine).toBeGreaterThanOrEqual(0)
+      expect(step.codeLine).toBeLessThanOrEqual(10)
+      expect(Array.isArray(step.logicLines)).toBe(true)
+      expect(step.logicLines!.length).toBeGreaterThan(0)
+    }
+  })
+
+  it.each(strategies)('reports unreachable goal identically to visual mode (%s)', (strategy) => {
+    const visual = runWeightedPathfinding(cheap.nodes, cheap.edges, 'A', 'C', strategy)
+    const code = runWeightedPathfindingCode(cheap.nodes, cheap.edges, 'A', 'C', strategy)
+
+    expect(code.pathFound).toBe(visual.pathFound)
+    expect(code.pathCost).toBeNull()
+    expect(code.pathNodeIds).toEqual([])
+  })
+
+  it.each(strategies)('returns trivial zero-cost path when start equals goal (%s)', (strategy) => {
+    const visual = runWeightedPathfinding(cheap.nodes, cheap.edges, 'A', 'A', strategy)
+    const code = runWeightedPathfindingCode(cheap.nodes, cheap.edges, 'A', 'A', strategy)
+
+    expect(code.pathFound).toBe(visual.pathFound)
+    expect(code.pathCost).toBe(0)
+    expect(code.pathNodeIds).toEqual(['A'])
+  })
+
+  it.each(strategies)('respects edge direction (%s)', (strategy) => {
+    const { nodes, edges } = makeGraph(['A', 'B'], [['A', 'B', 5, 'forward']])
+    const forwardResult = runWeightedPathfindingCode(nodes, edges, 'A', 'B', strategy)
+    expect(forwardResult.pathCost).toBe(5)
+
+    const reverseResult = runWeightedPathfindingCode(nodes, edges, 'B', 'A', strategy)
+    expect(reverseResult.pathFound).toBe(false)
+  })
+
+  it('returns empty result for empty graph', () => {
+    const result = runWeightedPathfindingCode([], [], 'A', 'B', 'bfs')
+    expect(result.pathFound).toBe(false)
+    expect(result.pathCost).toBeNull()
+    expect(result.steps).toEqual([])
   })
 })
 

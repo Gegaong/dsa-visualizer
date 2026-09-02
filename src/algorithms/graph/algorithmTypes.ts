@@ -66,6 +66,8 @@ export type BipartiteResult = {
   operationCount: number
 }
 
+export type WPPlaybackMode = 'visual' | 'code'
+
 export type WeightedPathStep = {
   nodeId: string
   nodeLabel: string
@@ -76,6 +78,15 @@ export type WeightedPathStep = {
   eventType: 'discover' | 'settle'
   // Human-readable reason shown in the sidebar when this node turned green. Only on settle steps.
   settleReason?: string
+  codeLine?: number
+  logicLines?: number[]
+  uLabel?: string | null
+  cVal?: number | null
+  nbLabel?: string | null
+  newCostVal?: number | null
+  bestCostVal?: number | null
+  frontierLabels?: string[]
+  costMap?: Record<string, number>
 }
 
 export type WeightedPathResult = {

@@ -1779,6 +1779,9 @@ function App() {
           onSidebarSectionChange={handleSidebarSectionChange}
           isWeightedMode={isWeightedMode}
           pathfinder={{
+            playbackMode: weightedPathfinding.playbackMode,
+            onPlaybackModeChange: weightedPathfinding.setPlaybackMode,
+            currentStep: weightedPathfinding.currentStep,
             isWPSessionActive: weightedPathfinding.wpResult !== null || weightedPathfinding.isWPRunning,
             canRunWP: weightedPathfinding.canRunWP,
             wpStatusText: weightedPathfinding.wpStatusText,
